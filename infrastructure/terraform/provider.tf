@@ -13,13 +13,6 @@ terraform {
     }
   }
 
-  backend "s3" {
-    bucket         = "pearls-aqi-terraform-state"
-    key            = "sargodha-aqi/terraform.tfstate"
-    region         = "ap-south-1"
-    encrypt        = true
-    dynamodb_table = "terraform-lock"
-  }
 }
 
 provider "aws" {
