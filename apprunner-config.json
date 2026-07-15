@@ -1,0 +1,6 @@
+{
+  "ImageRepository": {
+    "ImageIdentifier": "public.ecr.aws/aws-containers/hello-app-runner:latest",
+    "ImageRepositoryType": "ECR_PUBLIC"
+  }
+}

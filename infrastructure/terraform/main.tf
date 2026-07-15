@@ -220,7 +220,8 @@ resource "aws_lambda_function" "feature_pipeline" {
   memory_size   = var.lambda_memory_mb
 
   image_config {
-    command = ["data_pipeline.ingest.handler"]
+    entry_point = ["/usr/local/bin/python", "-m", "awslambdaric"]
+    command     = ["data_pipeline.ingest.handler"]
   }
 
   environment {
@@ -320,50 +321,42 @@ resource "aws_cloudwatch_log_group" "training_pipeline" {
   retention_in_days = 30
 }
 
-# ── App Runner Service (FastAPI Dashboard) ────────────────────────────────
+# ── Lambda API Service (FastAPI Dashboard via Function URL) ────────────────
 
-resource "aws_iam_role" "apprunner_build_role" {
-  name = "${var.project_name}-apprunner-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = {
-        Service = "build.apprunner.amazonaws.com"
-      }
-    }]
-  })
-}
+resource "aws_lambda_function" "api_pipeline" {
+  function_name = "${var.project_name}-api"
+  role          = aws_iam_role.lambda_role.arn
+  package_type  = "Image"
+  image_uri     = "${aws_ecr_repository.aqi_predictor.repository_url}:latest"
+  timeout       = 30
+  memory_size   = 1024
 
-resource "aws_iam_role_policy_attachment" "apprunner_ecr_policy" {
-  role       = aws_iam_role.apprunner_build_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess"
-}
-
-resource "aws_apprunner_service" "api" {
-  service_name = "${var.project_name}-api"
-
-  source_configuration {
-    authentication_configuration {
-      access_role_arn = aws_iam_role.apprunner_build_role.arn
-    }
-    image_repository {
-      image_identifier      = "${aws_ecr_repository.aqi_predictor.repository_url}:latest"
-      image_repository_type = "ECR"
-      image_configuration {
-        port = var.app_runner_port
-      }
-    }
-    auto_deployments_enabled = true
+  image_config {
+    entry_point = ["/usr/local/bin/python", "-m", "awslambdaric"]
+    command     = ["deployment.api.main.handler"]
   }
 
-  instance_configuration {
-    cpu    = "1024"
-    memory = "2048"
+  environment {
+    variables = {
+      ENVIRONMENT    = var.environment
+      SSM_PREFIX     = "/${var.project_name}/${var.environment}"
+      PIPELINE_TYPE  = "api"
+    }
   }
 
-  depends_on = [
-    aws_iam_role_policy_attachment.apprunner_ecr_policy
-  ]
+  depends_on = [aws_ecr_repository.aqi_predictor]
+}
+
+resource "aws_lambda_function_url" "api" {
+  function_name      = aws_lambda_function.api_pipeline.function_name
+  authorization_type = "NONE"
+
+  cors {
+    allow_credentials = true
+    allow_origins     = ["*"]
+    allow_methods     = ["*"]
+    allow_headers     = ["date", "keep-alive"]
+    expose_headers    = ["keep-alive", "date"]
+    max_age           = 86400
+  }
 }

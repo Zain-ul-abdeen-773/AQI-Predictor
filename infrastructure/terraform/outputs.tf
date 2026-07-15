@@ -39,9 +39,9 @@ output "training_log_group" {
 
 # ── App Runner Outputs ───────────────────────────────────────────────────
 
-output "app_runner_url" {
-  description = "Public URL of the FastAPI Dashboard via AWS App Runner"
-  value       = "https://${aws_apprunner_service.api.service_url}"
+output "api_url" {
+  description = "The public URL of the Lambda API"
+  value       = aws_lambda_function_url.api.function_url
 }
 
 output "training_schedule_arn" {

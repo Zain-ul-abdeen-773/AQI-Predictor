@@ -23,6 +23,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
+from mangum import Mangum
 
 from config.schemas import (
     AQILevel,
@@ -423,3 +424,6 @@ async def startup():
 async def shutdown():
     """Graceful shutdown."""
     logger.info("Shutting down Pearls AQI Predictor API")
+
+# Serverless handler for AWS Lambda
+handler = Mangum(app)
