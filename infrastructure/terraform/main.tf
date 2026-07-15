@@ -220,7 +220,7 @@ resource "aws_lambda_function" "feature_pipeline" {
   memory_size   = var.lambda_memory_mb
 
   image_config {
-    entry_point = ["/usr/local/bin/python", "-m", "awslambdaric"]
+    entry_point = ["/opt/venv/bin/python", "-m", "awslambdaric"]
     command     = ["data_pipeline.ingest.handler"]
   }
 
@@ -332,7 +332,7 @@ resource "aws_lambda_function" "api_pipeline" {
   memory_size   = 1024
 
   image_config {
-    entry_point = ["/usr/local/bin/python", "-m", "awslambdaric"]
+    entry_point = ["/opt/venv/bin/python", "-m", "awslambdaric"]
     command     = ["deployment.api.main.handler"]
   }
 
