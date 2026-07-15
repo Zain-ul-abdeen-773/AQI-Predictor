@@ -6,7 +6,7 @@ phases:
       python: 3.11
     commands:
       - echo "Installing system dependencies..."
-      - apt-get update -y && apt-get install -y cmake build-essential librdkafka-dev
+      - if command -v yum > /dev/null; then yum update -y && yum install -y cmake gcc gcc-c++ make; elif command -v apt-get > /dev/null; then apt-get update -y && apt-get install -y cmake build-essential librdkafka-dev; fi
       - echo "Installing Python dependencies..."
       - pip install --upgrade pip
       - pip install -r requirements.txt
