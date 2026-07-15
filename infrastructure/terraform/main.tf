@@ -215,7 +215,7 @@ resource "aws_lambda_function" "feature_pipeline" {
   function_name = "${var.project_name}-feature-pipeline"
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
-  image_uri     = "${aws_ecr_repository.aqi_predictor.repository_url}:feature-latest"
+  image_uri     = "${aws_ecr_repository.aqi_predictor.repository_url}:latest"
   timeout       = var.lambda_timeout_seconds
   memory_size   = var.lambda_memory_mb
 
