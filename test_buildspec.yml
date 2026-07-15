@@ -2,14 +2,28 @@ version: 0.2
 
 phases:
   install:
+    runtime-versions:
+      python: 3.11
     commands:
-      - echo "Installing system dependencies..."
-      - apt-get update && apt-get install -y --no-install-recommends cmake librdkafka-dev
       - echo "Installing Python dependencies..."
       - pip install --upgrade pip
       - pip install -r requirements.txt
       - pip install pytest pytest-cov
+  pre_build:
+    commands:
+      - echo "Verifying installation..."
+      - python -c "import config.settings; print('Config module OK')"
+      - python -c "import feature_pipeline; print('Feature pipeline module OK')"
+      - python -c "import training_pipeline.evaluation; print('Training pipeline module OK')"
   build:
     commands:
       - echo "Running tests..."
-      - python -m pytest tests/
+      - python -m pytest tests/ -v --tb=short --junitxml=reports/pytest-report.xml
+    finally:
+      - echo "Test phase completed"
+
+reports:
+  pytest-reports:
+    files:
+      - "reports/pytest-report.xml"
+    file-format: JUNITXML

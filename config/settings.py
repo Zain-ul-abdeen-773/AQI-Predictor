@@ -62,15 +62,16 @@ class Settings(BaseSettings):
     Attributes:
         aqicn_api_key: API token for AQICN (https://aqicn.org/data-platform/token/).
         openweather_api_key: API key for OpenWeatherMap APIs.
-        hopsworks_api_key: API key for Hopsworks feature store.
-        hopsworks_project_name: Hopsworks project name.
+        aws_region: AWS region for SageMaker and other services.
+        sagemaker_role_arn: IAM role ARN for SageMaker operations.
+        s3_feature_store_bucket: S3 bucket for feature store offline storage.
         target_city: The city being monitored.
         target_latitude: Latitude of the target location.
         target_longitude: Longitude of the target location.
         target_timezone: IANA timezone string for the target city.
-        feature_group_name: Hopsworks feature group name.
+        feature_group_name: SageMaker Feature Group name.
         feature_group_version: Feature group version.
-        model_registry_name: Name tag for the model in Hopsworks Model Registry.
+        model_registry_name: SageMaker Model Package Group name.
         backfill_years: Number of years of historical data to backfill.
         backfill_batch_size: Rows per batch during backfill writes.
         api_retry_max_attempts: Maximum retry attempts for API calls.
@@ -105,8 +106,14 @@ class Settings(BaseSettings):
     # ── API Keys ──────────────────────────────────────────────────────────
     aqicn_api_key: str = Field(default="demo", description="AQICN API token")
     openweather_api_key: str = Field(default="", description="OpenWeatherMap API key")
-    hopsworks_api_key: str = Field(default="", description="Hopsworks API key")
-    hopsworks_project_name: str = Field(default="sargodha_aqi", description="Hopsworks project")
+
+    # ── AWS Configuration ─────────────────────────────────────────────────
+    aws_region: str = Field(default="us-east-1", description="AWS region")
+    sagemaker_role_arn: str = Field(default="", description="SageMaker execution role ARN")
+    s3_feature_store_bucket: str = Field(
+        default="pearls-aqi-feature-store",
+        description="S3 bucket for SageMaker Feature Store offline storage",
+    )
 
     # ── Target Location ───────────────────────────────────────────────────
     target_city: str = Field(default="Sargodha", description="Target city name")
@@ -114,7 +121,7 @@ class Settings(BaseSettings):
     target_longitude: float = Field(default=72.6711, description="Target longitude")
     target_timezone: str = Field(default="Asia/Karachi", description="IANA timezone")
 
-    # ── Feature Store ─────────────────────────────────────────────────────
+    # ── SageMaker Feature Store & Model Registry ────────────────────────
     feature_group_name: str = Field(default="sargodha_aqi_features")
     feature_group_version: int = Field(default=1, ge=1)
     model_registry_name: str = Field(default="sargodha_aqi_forecast_model")
@@ -138,6 +145,13 @@ class Settings(BaseSettings):
     lstm_learning_rate: float = Field(default=1e-3, gt=0.0)
     lstm_epochs: int = Field(default=100, ge=1)
     lstm_batch_size: int = Field(default=64, ge=8)
+
+    # ── Advanced Training ─────────────────────────────────────────────────
+    grad_accumulation_steps: int = Field(default=4, ge=1)
+    lr_scheduler_type: str = Field(default="cosine_warm_restarts")
+    mixed_precision: bool = Field(default=True)
+    early_stopping_patience: int = Field(default=15, ge=1)
+    early_stopping_min_delta: float = Field(default=1e-4, ge=0.0)
 
     # ── LightGBM Tuning ──────────────────────────────────────────────────
     optuna_n_trials: int = Field(default=50, ge=5)

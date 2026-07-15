@@ -412,7 +412,7 @@ class HealthResponse(BaseModel):
     Attributes:
         status: Service health status.
         version: Application version.
-        feature_store_connected: Hopsworks connection status.
+        feature_store_connected: SageMaker Feature Store connection status.
         model_loaded: Whether prediction model is loaded.
         uptime_seconds: Time since service start.
     """

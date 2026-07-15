@@ -39,10 +39,10 @@ variable "openweather_api_key" {
   sensitive   = true
 }
 
-variable "hopsworks_api_key" {
-  description = "Hopsworks Feature Store API key"
+variable "sagemaker_role_arn" {
+  description = "SageMaker execution role ARN"
   type        = string
-  sensitive   = true
+  sensitive   = false
 }
 
 # ── Schedule Configuration ────────────────────────────────────────────────

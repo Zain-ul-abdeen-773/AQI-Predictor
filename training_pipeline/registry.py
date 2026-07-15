@@ -1,7 +1,7 @@
-"""Hopsworks Model Registry operations.
+"""AWS SageMaker Model Registry operations.
 
 Handles model versioning, metadata storage, and champion/challenger
-model management in the Hopsworks Model Registry.
+model management using AWS SageMaker Model Registry.
 
 Example:
     >>> from training_pipeline.registry import ModelRegistryManager
@@ -26,40 +26,58 @@ logger = logging.getLogger(__name__)
 
 
 class ModelRegistryManager:
-    """Manages model lifecycle in Hopsworks Model Registry with local fallback.
+    """Manages model lifecycle in AWS SageMaker Model Registry with local fallback.
 
     Handles model registration, versioning, metadata attachment,
     and champion/challenger comparison for automated model promotion.
 
     Attributes:
         settings: Application settings instance.
-        _project: Hopsworks project reference.
-        _mr: Model registry reference.
+        _session: boto3 session.
+        _sm_client: SageMaker client.
     """
 
     def __init__(self, settings: Optional[Settings] = None) -> None:
         self.settings = settings or get_settings()
-        self._project = None
-        self._mr = None
+        self._session = None
+        self._sm_client = None
 
     def _connect(self) -> None:
-        """Establish Hopsworks connection."""
-        if self._project is not None:
+        """Establish AWS SageMaker connection."""
+        if self._session is not None:
             return
 
         try:
-            import hopsworks
+            import boto3
 
-            self._project = hopsworks.login(
-                api_key_value=self.settings.hopsworks_api_key,
-                project=self.settings.hopsworks_project_name,
-            )
-            self._mr = self._project.get_model_registry()
-            logger.info("Connected to Hopsworks Model Registry")
+            self._session = boto3.Session(region_name=self.settings.aws_region)
+            self._sm_client = self._session.client("sagemaker")
+            logger.info("Connected to AWS SageMaker Model Registry")
+
+            # Ensure model package group exists
+            self._ensure_model_package_group()
         except (ImportError, Exception) as e:
-            logger.warning("Hopsworks unavailable: %s — using local registry", e)
-            self._project = None
-            self._mr = None
+            logger.warning("AWS SageMaker unavailable: %s — using local registry", e)
+            self._session = None
+            self._sm_client = None
+
+    def _ensure_model_package_group(self) -> None:
+        """Create model package group if it doesn't exist."""
+        group_name = self.settings.model_registry_name
+        try:
+            self._sm_client.describe_model_package_group(
+                ModelPackageGroupName=group_name
+            )
+            logger.info("Model package group '%s' exists", group_name)
+        except self._sm_client.exceptions.ClientError:
+            try:
+                self._sm_client.create_model_package_group(
+                    ModelPackageGroupName=group_name,
+                    ModelPackageGroupDescription="Sargodha AQI forecast model registry",
+                )
+                logger.info("Created model package group: %s", group_name)
+            except Exception as e:
+                logger.warning("Failed to create model package group: %s", e)
 
     def register_model(
         self,
@@ -138,29 +156,55 @@ class ModelRegistryManager:
         metadata_path = artifacts_dir / "metadata.json"
         metadata_path.write_text(json.dumps(metadata, indent=2))
 
-        # ── Try Hopsworks registration ──
-        if self._mr is not None:
+        # ── Try SageMaker registration ──
+        if self._sm_client is not None:
             try:
-                import hsml
+                # Upload artifacts to S3
+                s3_client = self._session.client("s3")
+                bucket = self.settings.s3_feature_store_bucket
+                s3_prefix = f"models/{model_name}/{version}/"
 
-                model_dir = str(artifacts_dir)
-                hw_model = self._mr.python.create_model(
-                    name=model_name,
-                    metrics=metrics.to_dict(),
-                    description=f"{model_type} model for Sargodha AQI prediction",
-                    input_example=None,
-                )
-                hw_model.save(model_dir)
+                for file_path in artifacts_dir.iterdir():
+                    if file_path.is_file():
+                        s3_key = s3_prefix + file_path.name
+                        s3_client.upload_file(
+                            str(file_path), bucket, s3_key
+                        )
+
+                # Create model package
+                model_package_input = {
+                    "ModelPackageGroupName": model_name,
+                    "ModelPackageDescription": f"{model_type} model for Sargodha AQI prediction",
+                    "InferenceSpecification": {
+                        "Containers": [{
+                            "Image": "763104351884.dkr.ecr.us-east-1.amazonaws.com/pytorch-inference:2.0-cpu-py310",
+                            "ModelDataUrl": f"s3://{bucket}/{s3_prefix}model.pkl",
+                        }],
+                        "SupportedContentTypes": ["application/json"],
+                        "SupportedResponseMIMETypes": ["application/json"],
+                    },
+                    "ModelApprovalStatus": "Approved",
+                    "CustomerMetadataProperties": {
+                        "rmse": str(metrics.rmse),
+                        "r2": str(metrics.r2),
+                        "mae": str(metrics.mae),
+                        "model_type": model_type,
+                        "version": version,
+                    },
+                }
+
+                response = self._sm_client.create_model_package(**model_package_input)
+                sm_version = response.get("ModelPackageArn", version)
                 logger.info(
-                    "Registered model in Hopsworks: %s v%s",
-                    model_name, hw_model.version,
+                    "Registered model in SageMaker: %s (ARN: %s)",
+                    model_name, sm_version,
                 )
-                return str(hw_model.version)
+                return version
             except Exception as e:
-                logger.warning("Hopsworks registration failed: %s", e)
+                logger.warning("SageMaker registration failed: %s", e)
 
         logger.info(
-            "Registered model locally: %s/%s (RMSE=%.4f, R²=%.4f)",
+            "Registered model locally: %s/%s (RMSE=%.4f, R2=%.4f)",
             model_name, version, metrics.rmse, metrics.r2,
         )
         return version
@@ -263,7 +307,7 @@ class ModelRegistryManager:
 
         if improvement >= improvement_threshold:
             logger.info(
-                "Challenger promoted: RMSE improved by %.2f%% (%.4f → %.4f)",
+                "Challenger promoted: RMSE improved by %.2f%% (%.4f -> %.4f)",
                 improvement * 100, champion_rmse, challenger_rmse,
             )
             return True

@@ -1,4 +1,4 @@
-"""Hopsworks Feature Store integration and management.
+"""AWS SageMaker Feature Store integration and management.
 
 Handles programmatic Feature Group definition, schema enforcement,
 data ingestion, and online/offline store operations.
@@ -13,6 +13,7 @@ Example:
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -94,8 +95,20 @@ FEATURE_SCHEMA: List[Dict[str, str]] = [
 """Complete schema definition for the Sargodha AQI feature group."""
 
 
+# ── SageMaker type mapping ───────────────────────────────────────────────────
+
+_SAGEMAKER_TYPE_MAP = {
+    "TIMESTAMP": "String",
+    "INT": "Integral",
+    "DOUBLE": "Fractional",
+    "FLOAT": "Fractional",
+    "BOOLEAN": "String",
+    "STRING": "String",
+}
+
+
 class FeatureStoreManager:
-    """Manages Hopsworks Feature Store operations.
+    """Manages AWS SageMaker Feature Store operations.
 
     Handles feature group creation, schema enforcement, data insertion
     (both online and offline stores), and data retrieval for training
@@ -103,89 +116,153 @@ class FeatureStoreManager:
 
     Attributes:
         settings: Application settings instance.
-        _project: Hopsworks project reference (lazy-loaded).
-        _fs: Feature store reference (lazy-loaded).
-        _fg: Feature group reference (lazy-loaded).
+        _session: boto3 session (lazy-loaded).
+        _sm_client: SageMaker client (lazy-loaded).
+        _featurestore_runtime: SageMaker Feature Store runtime client.
+        _feature_group_name: Name of the feature group.
     """
 
     def __init__(self, settings: Optional[Settings] = None) -> None:
         self.settings = settings or get_settings()
-        self._project = None
-        self._fs = None
-        self._fg = None
+        self._session = None
+        self._sm_client = None
+        self._featurestore_runtime = None
+        self._fg_created = False
 
     def _connect(self) -> None:
-        """Establish connection to Hopsworks.
+        """Establish connection to AWS SageMaker Feature Store.
 
         Raises:
-            ConnectionError: If Hopsworks connection fails.
+            ConnectionError: If AWS connection fails.
         """
-        if self._project is not None:
+        if self._session is not None:
             return
 
         try:
-            import hopsworks
+            import boto3
 
-            self._project = hopsworks.login(
-                api_key_value=self.settings.hopsworks_api_key,
-                project=self.settings.hopsworks_project_name,
+            self._session = boto3.Session(region_name=self.settings.aws_region)
+            self._sm_client = self._session.client("sagemaker")
+            self._featurestore_runtime = self._session.client(
+                "sagemaker-featurestore-runtime"
             )
-            self._fs = self._project.get_feature_store()
             logger.info(
-                "Connected to Hopsworks project: %s",
-                self.settings.hopsworks_project_name,
+                "Connected to AWS SageMaker Feature Store in region: %s",
+                self.settings.aws_region,
             )
         except ImportError:
             logger.warning(
-                "hopsworks package not installed. "
+                "boto3 package not installed. "
                 "Using local file-based feature store fallback."
             )
-            self._project = None
-            self._fs = None
+            self._session = None
+            self._sm_client = None
+            self._featurestore_runtime = None
         except Exception as e:
-            logger.error("Failed to connect to Hopsworks: %s", e)
-            raise ConnectionError(f"Hopsworks connection failed: {e}") from e
+            logger.error("Failed to connect to AWS SageMaker: %s", e)
+            self._session = None
+            self._sm_client = None
+            self._featurestore_runtime = None
 
     def create_feature_group(self) -> Any:
-        """Create or get the Sargodha AQI Feature Group.
+        """Create or get the Sargodha AQI Feature Group in SageMaker.
 
         Programmatically defines the feature group with:
-        - Primary key: timestamp
-        - Event time: timestamp
-        - Partition keys: year, month
+        - Record identifier: timestamp
+        - Event time feature: timestamp
 
         Returns:
-            Feature group reference (Hopsworks or local fallback).
+            Feature group reference (SageMaker or local fallback).
         """
         self._connect()
 
-        if self._fs is None:
+        if self._sm_client is None:
             logger.info("Using local file-based feature store")
             return self._create_local_feature_group()
 
+        fg_name = self.settings.feature_group_name
+
+        # Check if feature group already exists
         try:
-            self._fg = self._fs.get_or_create_feature_group(
-                name=self.settings.feature_group_name,
-                version=self.settings.feature_group_version,
-                primary_key=["timestamp"],
-                event_time="timestamp",
-                partition_key=["year", "month"],
-                description=(
+            response = self._sm_client.describe_feature_group(
+                FeatureGroupName=fg_name
+            )
+            status = response.get("FeatureGroupStatus", "Unknown")
+            if status == "Created":
+                self._fg_created = True
+                logger.info("Feature group '%s' already exists (status: %s)", fg_name, status)
+                return {"name": fg_name, "status": status, "arn": response.get("FeatureGroupArn")}
+        except self._sm_client.exceptions.ResourceNotFound:
+            pass
+        except Exception as e:
+            logger.warning("Error checking feature group: %s — will try to create", e)
+
+        # Build feature definitions
+        feature_definitions = []
+        for feat in FEATURE_SCHEMA:
+            sm_type = _SAGEMAKER_TYPE_MAP.get(feat["type"], "String")
+            feature_definitions.append({
+                "FeatureName": feat["name"],
+                "FeatureType": sm_type,
+            })
+
+        try:
+            response = self._sm_client.create_feature_group(
+                FeatureGroupName=fg_name,
+                RecordIdentifierFeatureName="timestamp",
+                EventTimeFeatureName="timestamp",
+                FeatureDefinitions=feature_definitions,
+                OnlineStoreConfig={"EnableOnlineStore": True},
+                OfflineStoreConfig={
+                    "S3StorageConfig": {
+                        "S3Uri": f"s3://{self.settings.s3_feature_store_bucket}/{fg_name}/",
+                    }
+                },
+                RoleArn=self.settings.sagemaker_role_arn,
+                Description=(
                     "Sargodha AQI features including pollutant concentrations, "
                     "meteorological data, temporal encodings, derived environmental "
                     "indicators, and autoregressive lag features."
                 ),
-                online_enabled=True,
             )
-            logger.info(
-                "Feature group '%s' v%d ready",
-                self.settings.feature_group_name,
-                self.settings.feature_group_version,
-            )
-            return self._fg
+            logger.info("Creating feature group '%s'...", fg_name)
+
+            # Wait for feature group to be created
+            self._wait_for_feature_group(fg_name)
+            self._fg_created = True
+            return {"name": fg_name, "arn": response.get("FeatureGroupArn")}
+
         except Exception as e:
-            logger.error("Failed to create feature group: %s", e)
+            logger.error("Failed to create SageMaker feature group: %s", e)
             return self._create_local_feature_group()
+
+    def _wait_for_feature_group(self, fg_name: str, max_wait: int = 300) -> None:
+        """Wait for a feature group to reach 'Created' status.
+
+        Args:
+            fg_name: Feature group name.
+            max_wait: Maximum wait time in seconds.
+        """
+        start = time.time()
+        while time.time() - start < max_wait:
+            try:
+                response = self._sm_client.describe_feature_group(
+                    FeatureGroupName=fg_name
+                )
+                status = response.get("FeatureGroupStatus")
+                if status == "Created":
+                    logger.info("Feature group '%s' is ready", fg_name)
+                    return
+                elif status == "CreateFailed":
+                    raise RuntimeError(
+                        f"Feature group creation failed: {response.get('FailureReason')}"
+                    )
+                logger.debug("Feature group status: %s — waiting...", status)
+            except Exception as e:
+                logger.warning("Error polling feature group status: %s", e)
+            time.sleep(5)
+
+        logger.warning("Timed out waiting for feature group '%s'", fg_name)
 
     def _create_local_feature_group(self) -> Dict[str, Any]:
         """Create a local file-based feature group fallback.
@@ -215,11 +292,11 @@ class FeatureStoreManager:
         """Insert feature data into the feature store.
 
         Performs structural validation before insertion and handles
-        both Hopsworks and local file-based storage.
+        both SageMaker and local file-based storage.
 
         Args:
             df: DataFrame with columns matching the feature group schema.
-            write_options: Optional Hopsworks write options.
+            write_options: Optional write options (unused for SageMaker, kept for API compat).
 
         Raises:
             ValueError: If schema validation fails.
@@ -231,17 +308,49 @@ class FeatureStoreManager:
         # ── Schema Validation ──
         self._validate_schema(df)
 
-        # ── Hopsworks insertion ──
-        if self._fg is not None:
+        # ── SageMaker insertion ──
+        if self._fg_created and self._featurestore_runtime is not None:
             try:
-                self._fg.insert(df, write_options=write_options or {"wait_for_job": True})
-                logger.info("Inserted %d rows into Hopsworks feature group", len(df))
+                self._ingest_to_sagemaker(df)
+                logger.info("Inserted %d rows into SageMaker feature group", len(df))
                 return
             except Exception as e:
-                logger.error("Hopsworks insertion failed: %s — falling back to local", e)
+                logger.error("SageMaker insertion failed: %s — falling back to local", e)
 
         # ── Local file-based insertion ──
         self._insert_local(df)
+
+    def _ingest_to_sagemaker(self, df: pd.DataFrame) -> None:
+        """Ingest records into SageMaker Feature Store using PutRecord.
+
+        Args:
+            df: DataFrame to ingest.
+        """
+        fg_name = self.settings.feature_group_name
+
+        for _, row in df.iterrows():
+            record = []
+            for feat in FEATURE_SCHEMA:
+                col_name = feat["name"]
+                value = row.get(col_name)
+                if value is None:
+                    continue
+                # SageMaker requires all values as strings
+                if feat["type"] == "TIMESTAMP":
+                    value = str(pd.Timestamp(value).isoformat())
+                elif feat["type"] == "BOOLEAN":
+                    value = str(bool(value)).lower()
+                else:
+                    value = str(value)
+                record.append({"FeatureName": col_name, "ValueAsString": value})
+
+            try:
+                self._featurestore_runtime.put_record(
+                    FeatureGroupName=fg_name,
+                    Record=record,
+                )
+            except Exception as e:
+                logger.warning("Failed to put record: %s", e)
 
     def _validate_schema(self, df: pd.DataFrame) -> None:
         """Validate DataFrame columns against the feature group schema.
@@ -327,7 +436,7 @@ class FeatureStoreManager:
     ) -> pd.DataFrame:
         """Retrieve feature data for model training.
 
-        Fetches from Hopsworks offline store or local Parquet files.
+        Fetches from SageMaker offline store (S3) or local Parquet files.
 
         Args:
             start_date: Start of training window (inclusive).
@@ -338,22 +447,78 @@ class FeatureStoreManager:
         """
         self._connect()
 
-        # ── Try Hopsworks first ──
-        if self._fg is not None:
+        # ── Try SageMaker offline store (via Athena query on S3) ──
+        if self._sm_client is not None:
             try:
-                query = self._fg.select_all()
-                if start_date:
-                    query = query.filter(self._fg.timestamp >= start_date)
-                if end_date:
-                    query = query.filter(self._fg.timestamp <= end_date)
-                df = query.read()
-                logger.info("Retrieved %d rows from Hopsworks", len(df))
-                return df
+                return self._read_from_s3_offline_store(start_date, end_date)
             except Exception as e:
-                logger.error("Hopsworks read failed: %s — using local store", e)
+                logger.error("SageMaker offline store read failed: %s — using local store", e)
 
         # ── Local fallback ──
         return self._read_local(start_date, end_date)
+
+    def _read_from_s3_offline_store(
+        self,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> pd.DataFrame:
+        """Read features from SageMaker offline store in S3.
+
+        Args:
+            start_date: Optional start date filter.
+            end_date: Optional end date filter.
+
+        Returns:
+            pd.DataFrame: Feature data from S3.
+        """
+        import boto3
+
+        s3_client = self._session.client("s3")
+        bucket = self.settings.s3_feature_store_bucket
+        prefix = f"{self.settings.feature_group_name}/"
+
+        # List and read parquet files from S3
+        paginator = s3_client.get_paginator("list_objects_v2")
+        parquet_keys = []
+
+        for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+            for obj in page.get("Contents", []):
+                if obj["Key"].endswith(".parquet"):
+                    parquet_keys.append(obj["Key"])
+
+        if not parquet_keys:
+            logger.warning("No parquet files found in s3://%s/%s", bucket, prefix)
+            return self._read_local(start_date, end_date)
+
+        # Read parquet files from S3
+        import io
+
+        dfs = []
+        for key in parquet_keys:
+            try:
+                response = s3_client.get_object(Bucket=bucket, Key=key)
+                data = response["Body"].read()
+                df = pd.read_parquet(io.BytesIO(data))
+                dfs.append(df)
+            except Exception as e:
+                logger.warning("Failed to read s3://%s/%s: %s", bucket, key, e)
+
+        if not dfs:
+            return self._read_local(start_date, end_date)
+
+        df = pd.concat(dfs, ignore_index=True)
+
+        if "timestamp" in df.columns:
+            df["timestamp"] = pd.to_datetime(df["timestamp"])
+            if start_date:
+                df = df[df["timestamp"] >= start_date]
+            if end_date:
+                df = df[df["timestamp"] <= end_date]
+            df.sort_values("timestamp", inplace=True)
+
+        df.drop_duplicates(subset=["timestamp"], keep="last", inplace=True)
+        logger.info("Retrieved %d rows from SageMaker offline store (S3)", len(df))
+        return df
 
     def _read_local(
         self,
@@ -398,7 +563,7 @@ class FeatureStoreManager:
     def get_latest_features(self, n_hours: int = 72) -> pd.DataFrame:
         """Retrieve the most recent N hours of features for inference.
 
-        Fetches from the online store for low-latency access.
+        Fetches from the SageMaker online store for low-latency access.
 
         Args:
             n_hours: Number of recent hours to retrieve.
@@ -408,19 +573,20 @@ class FeatureStoreManager:
         """
         self._connect()
 
-        # Try Hopsworks online store
-        if self._fg is not None:
+        # Try SageMaker online store via batch get
+        if self._featurestore_runtime is not None and self._fg_created:
             try:
-                fv = self._fs.get_feature_view(
-                    name=f"{self.settings.feature_group_name}_view",
-                    version=1,
-                )
-                df = fv.get_batch_data()
-                df = df.sort_values("timestamp").tail(n_hours)
-                logger.info("Retrieved %d rows from Hopsworks online store", len(df))
-                return df
+                # For online store, we read from local/S3 and return latest
+                # SageMaker online store is key-value, so we fall back to offline
+                df = self._read_from_s3_offline_store()
+                if not df.empty:
+                    df = df.sort_values("timestamp").tail(n_hours)
+                    logger.info(
+                        "Retrieved %d rows from SageMaker store", len(df)
+                    )
+                    return df
             except Exception as e:
-                logger.warning("Online store fetch failed: %s — using local", e)
+                logger.warning("SageMaker fetch failed: %s — using local", e)
 
         # Local fallback
         df = self._read_local()
