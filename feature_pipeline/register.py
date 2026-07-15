@@ -549,10 +549,19 @@ class FeatureStoreManager:
         df = pd.concat(dfs, ignore_index=True)
 
         if "timestamp" in df.columns:
-            df["timestamp"] = pd.to_datetime(df["timestamp"])
+            if not pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
+                df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+            elif df["timestamp"].dt.tz is None:
+                df["timestamp"] = df["timestamp"].dt.tz_localize("UTC")
             if start_date:
+                if start_date.tzinfo is None:
+                    from datetime import timezone as tz
+                    start_date = start_date.replace(tzinfo=tz.utc)
                 df = df[df["timestamp"] >= start_date]
             if end_date:
+                if end_date.tzinfo is None:
+                    from datetime import timezone as tz
+                    end_date = end_date.replace(tzinfo=tz.utc)
                 df = df[df["timestamp"] <= end_date]
             df.sort_values("timestamp", inplace=True)
 
