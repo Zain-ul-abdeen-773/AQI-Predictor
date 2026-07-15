@@ -10,3 +10,16 @@ test_key.py
 __pycache__/
 models/
 data/backfill_features.csv
+
+# Secrets
+.env
+AQI_Predictor_accessKeys.csv
+*api-key*.csv
+*API*.csv
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+*.tfvars

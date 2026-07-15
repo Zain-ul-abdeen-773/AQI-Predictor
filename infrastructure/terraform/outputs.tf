@@ -32,6 +32,18 @@ output "feature_schedule_arn" {
   value       = aws_cloudwatch_event_rule.feature_schedule.arn
 }
 
+output "training_log_group" {
+  description = "CloudWatch log group for training pipeline"
+  value       = aws_cloudwatch_log_group.training_pipeline.name
+}
+
+# ── App Runner Outputs ───────────────────────────────────────────────────
+
+output "app_runner_url" {
+  description = "Public URL of the FastAPI Dashboard via AWS App Runner"
+  value       = "https://${aws_apprunner_service.api.service_url}"
+}
+
 output "training_schedule_arn" {
   description = "ARN of the daily training pipeline EventBridge rule"
   value       = aws_cloudwatch_event_rule.training_schedule.arn

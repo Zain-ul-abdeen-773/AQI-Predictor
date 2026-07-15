@@ -319,3 +319,51 @@ resource "aws_cloudwatch_log_group" "training_pipeline" {
   name              = "/ecs/${var.project_name}/training"
   retention_in_days = 30
 }
+
+# ── App Runner Service (FastAPI Dashboard) ────────────────────────────────
+
+resource "aws_iam_role" "apprunner_build_role" {
+  name = "${var.project_name}-apprunner-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "build.apprunner.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "apprunner_ecr_policy" {
+  role       = aws_iam_role.apprunner_build_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess"
+}
+
+resource "aws_apprunner_service" "api" {
+  service_name = "${var.project_name}-api"
+
+  source_configuration {
+    authentication_configuration {
+      access_role_arn = aws_iam_role.apprunner_build_role.arn
+    }
+    image_repository {
+      image_identifier      = "${aws_ecr_repository.aqi_predictor.repository_url}:latest"
+      image_repository_type = "ECR"
+      image_configuration {
+        port = var.app_runner_port
+      }
+    }
+    auto_deployments_enabled = true
+  }
+
+  instance_configuration {
+    cpu    = "1024"
+    memory = "2048"
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.apprunner_ecr_policy
+  ]
+}

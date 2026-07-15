@@ -6,7 +6,7 @@
 variable "aws_region" {
   description = "AWS region for resource deployment"
   type        = string
-  default     = "ap-south-1"
+  default     = "us-east-1"
 }
 
 variable "environment" {
@@ -93,4 +93,32 @@ variable "ecr_repository_name" {
   description = "ECR repository name for container images"
   type        = string
   default     = "pearls-aqi-predictor"
+}
+
+# ── App Runner Configuration ────────────────────────────────────────────────
+
+variable "app_runner_instance_role" {
+  description = "IAM Role for App Runner to access ECR"
+  type        = string
+  default     = "AppRunnerECRAccessRole"
+}
+
+variable "app_runner_port" {
+  description = "Port for App Runner to listen on"
+  type        = number
+  default     = 8000
+}
+
+# ── CI/CD Configuration ───────────────────────────────────────────────────
+
+variable "github_repository" {
+  description = "GitHub repository (owner/repo)"
+  type        = string
+  default     = "Zain-ul-abdeen-773/AQI-Predictor"
+}
+
+variable "github_branch" {
+  description = "GitHub branch to deploy"
+  type        = string
+  default     = "main"
 }
