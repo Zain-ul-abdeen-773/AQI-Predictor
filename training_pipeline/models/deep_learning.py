@@ -8,8 +8,10 @@ Key features:
 - Bidirectional LSTM for capturing forward and backward temporal patterns
 - Multi-head attention mechanism for focusing on important time steps
 - Asymmetric loss function penalizing hazardous under-predictions
-- AdamW optimizer with OneCycleLR learning rate scheduler
-- Dropout regularization throughout the network
+- Gradient accumulation for simulating large batch sizes
+- Mixed precision training (AMP) for GPU acceleration
+- ModelCheckpoint and EarlyStopping via callbacks module
+- Multiple LR scheduler options (OneCycleLR, CosineAnnealingWarmRestarts)
 
 Example:
     >>> from training_pipeline.models.deep_learning import BiLSTMAttention
@@ -21,9 +23,9 @@ Example:
 from __future__ import annotations
 
 import logging
-import pickle
+import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 import torch
@@ -31,6 +33,13 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from config.settings import get_settings
+from training_pipeline.models.callbacks import (
+    EarlyStopping,
+    EpochMetrics,
+    GradientAccumulator,
+    ModelCheckpoint,
+    TrainingLogger,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +175,7 @@ class BiLSTMNetwork(nn.Module):
     Architecture:
     1. Bidirectional LSTM layers with dropout
     2. Multi-head attention over LSTM outputs
-    3. Layer normalization
+    3. Layer normalization + residual connection
     4. Fully connected output layers producing (forecast_horizon, 1)
 
     Attributes:
@@ -200,9 +209,16 @@ class BiLSTMNetwork(nn.Module):
         self.hidden_size = hidden_size
         self.forecast_horizon = forecast_horizon
 
+        # Input projection
+        self.input_proj = nn.Sequential(
+            nn.Linear(input_size, hidden_size),
+            nn.GELU(),
+            nn.Dropout(dropout * 0.5),
+        )
+
         # Bidirectional LSTM
         self.lstm = nn.LSTM(
-            input_size=input_size,
+            input_size=hidden_size,
             hidden_size=hidden_size,
             num_layers=num_layers,
             batch_first=True,
@@ -243,6 +259,9 @@ class BiLSTMNetwork(nn.Module):
             - Predictions (batch, forecast_horizon, 1)
             - Attention weights (batch, n_heads, seq_len, seq_len)
         """
+        # Input projection
+        x = self.input_proj(x)
+
         # LSTM encoding
         lstm_out, _ = self.lstm(x)  # (batch, seq_len, 2*hidden)
 
@@ -270,8 +289,8 @@ class BiLSTMNetwork(nn.Module):
 class BiLSTMAttention:
     """High-level training wrapper for the Bi-LSTM + Attention model.
 
-    Handles data preparation, training loop with OneCycleLR scheduler,
-    early stopping, and model serialization.
+    Handles data preparation, training loop with configurable LR schedulers,
+    gradient accumulation, mixed precision, early stopping, and checkpointing.
 
     Attributes:
         input_size: Number of input features.
@@ -282,6 +301,8 @@ class BiLSTMAttention:
         learning_rate: AdamW initial learning rate.
         epochs: Maximum training epochs.
         batch_size: Training batch size.
+        accumulation_steps: Gradient accumulation steps.
+        scheduler_type: LR scheduler type.
         device: Computation device (cuda or cpu).
         model: The neural network.
         is_fitted: Whether the model is trained.
@@ -297,6 +318,9 @@ class BiLSTMAttention:
         learning_rate: Optional[float] = None,
         epochs: Optional[int] = None,
         batch_size: Optional[int] = None,
+        accumulation_steps: int = 4,
+        scheduler_type: Literal["onecycle", "cosine_warm", "plateau"] = "cosine_warm",
+        use_amp: bool = True,
     ) -> None:
         settings = get_settings()
 
@@ -308,10 +332,13 @@ class BiLSTMAttention:
         self.learning_rate = learning_rate or settings.lstm_learning_rate
         self.epochs = epochs or settings.lstm_epochs
         self.batch_size = batch_size or settings.lstm_batch_size
+        self.accumulation_steps = accumulation_steps
+        self.scheduler_type = scheduler_type
 
         # Device selection
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        logger.info("Using device: %s", self.device)
+        self.use_amp = use_amp and self.device.type == "cuda"
+        logger.info("Using device: %s (AMP=%s)", self.device, self.use_amp)
 
         # Build network
         self.model = BiLSTMNetwork(
@@ -323,7 +350,7 @@ class BiLSTMAttention:
         ).to(self.device)
 
         self.is_fitted = False
-        self.training_history: List[Dict[str, float]] = []
+        self.training_logger = TrainingLogger()
         self.feature_names: List[str] = []
 
         total_params = sum(p.numel() for p in self.model.parameters())
@@ -359,6 +386,51 @@ class BiLSTMAttention:
             y_seq.append(y[i: i + horizon])
         return np.array(X_seq), np.array(y_seq)
 
+    def _build_scheduler(
+        self,
+        optimizer: torch.optim.Optimizer,
+        steps_per_epoch: int,
+    ) -> torch.optim.lr_scheduler.LRScheduler:
+        """Build LR scheduler based on configuration.
+
+        Args:
+            optimizer: The optimizer.
+            steps_per_epoch: Number of optimizer steps per epoch.
+
+        Returns:
+            LR scheduler instance.
+        """
+        if self.scheduler_type == "onecycle":
+            return torch.optim.lr_scheduler.OneCycleLR(
+                optimizer,
+                max_lr=self.learning_rate * 10,
+                epochs=self.epochs,
+                steps_per_epoch=steps_per_epoch,
+            )
+        elif self.scheduler_type == "cosine_warm":
+            return torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                optimizer,
+                T_0=10,
+                T_mult=2,
+                eta_min=1e-6,
+            )
+        else:  # plateau
+            return torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer,
+                mode="min",
+                factor=0.5,
+                patience=5,
+                min_lr=1e-6,
+            )
+
+    def _compute_grad_norm(self) -> float:
+        """Compute the total gradient norm across all parameters."""
+        total_norm = 0.0
+        for p in self.model.parameters():
+            if p.grad is not None:
+                total_norm += p.grad.data.norm(2).item() ** 2
+        return total_norm ** 0.5
+
     def fit(
         self,
         X_train: np.ndarray,
@@ -367,8 +439,9 @@ class BiLSTMAttention:
         y_val: Optional[np.ndarray] = None,
         feature_names: Optional[List[str]] = None,
         patience: int = 15,
+        checkpoint_dir: Optional[Path] = None,
     ) -> "BiLSTMAttention":
-        """Train the Bi-LSTM model with OneCycleLR and early stopping.
+        """Train the Bi-LSTM model with full training infrastructure.
 
         Args:
             X_train: Training sequences (n_seq, lookback, features).
@@ -377,6 +450,7 @@ class BiLSTMAttention:
             y_val: Validation targets (optional).
             feature_names: Input feature names.
             patience: Early stopping patience (epochs).
+            checkpoint_dir: Directory for saving checkpoints.
 
         Returns:
             Self for method chaining.
@@ -396,50 +470,89 @@ class BiLSTMAttention:
             X_val_tensor = torch.FloatTensor(X_val).to(self.device)
             y_val_tensor = torch.FloatTensor(y_val).to(self.device)
 
-        # Optimizer and scheduler
+        # Optimizer
         optimizer = torch.optim.AdamW(
             self.model.parameters(),
             lr=self.learning_rate,
             weight_decay=1e-4,
         )
-        scheduler = torch.optim.lr_scheduler.OneCycleLR(
-            optimizer,
-            max_lr=self.learning_rate * 10,
-            epochs=self.epochs,
-            steps_per_epoch=len(dataloader),
-        )
 
+        # Effective steps per epoch accounting for gradient accumulation
+        steps_per_epoch = max(1, len(dataloader) // self.accumulation_steps)
+
+        # LR Scheduler
+        scheduler = self._build_scheduler(optimizer, steps_per_epoch)
+
+        # Loss
         criterion = AsymmetricMSELoss(
             hazard_threshold=get_settings().aqi_alert_threshold,
             penalty_factor=3.0,
         )
 
-        # ── Training Loop ──
-        best_val_loss = float("inf")
-        patience_counter = 0
-        best_state = None
+        # Callbacks
+        early_stopping = EarlyStopping(patience=patience, min_delta=1e-4)
+        grad_accumulator = GradientAccumulator(self.accumulation_steps)
+
+        checkpoint = None
+        if checkpoint_dir:
+            checkpoint = ModelCheckpoint(save_dir=checkpoint_dir, filename_prefix="bilstm")
+
+        # Mixed precision scaler
+        scaler = torch.amp.GradScaler("cuda") if self.use_amp else None
+
+        self.training_logger = TrainingLogger()
 
         logger.info(
-            "Training Bi-LSTM: %d epochs, batch_size=%d, lr=%.6f",
-            self.epochs, self.batch_size, self.learning_rate,
+            "Training Bi-LSTM: %d epochs, batch=%d, accum=%d (eff_batch=%d), "
+            "lr=%.6f, scheduler=%s, AMP=%s",
+            self.epochs, self.batch_size, self.accumulation_steps,
+            self.batch_size * self.accumulation_steps,
+            self.learning_rate, self.scheduler_type, self.use_amp,
         )
 
+        # ── Training Loop ──
         for epoch in range(self.epochs):
+            epoch_start = time.time()
             self.model.train()
             epoch_losses = []
+            grad_accumulator.reset()
 
             for batch_X, batch_y in dataloader:
-                optimizer.zero_grad()
-
-                predictions, _ = self.model(batch_X)
-                loss = criterion(predictions.squeeze(-1), batch_y)
-
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-                optimizer.step()
-                scheduler.step()
+                # Mixed precision forward pass
+                if self.use_amp:
+                    with torch.amp.autocast("cuda"):
+                        predictions, _ = self.model(batch_X)
+                        loss = criterion(predictions.squeeze(-1), batch_y)
+                    scaled_loss = grad_accumulator.scale_loss(loss)
+                    scaler.scale(scaled_loss).backward()
+                else:
+                    predictions, _ = self.model(batch_X)
+                    loss = criterion(predictions.squeeze(-1), batch_y)
+                    scaled_loss = grad_accumulator.scale_loss(loss)
+                    scaled_loss.backward()
 
                 epoch_losses.append(loss.item())
+
+                # Gradient accumulation step
+                if grad_accumulator.should_step():
+                    # Gradient clipping
+                    if self.use_amp:
+                        scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+
+                    grad_norm = self._compute_grad_norm()
+
+                    if self.use_amp:
+                        scaler.step(optimizer)
+                        scaler.update()
+                    else:
+                        optimizer.step()
+
+                    optimizer.zero_grad()
+
+                    # Step scheduler (per-step for OneCycleLR)
+                    if self.scheduler_type == "onecycle":
+                        scheduler.step()
 
             train_loss = np.mean(epoch_losses)
 
@@ -448,44 +561,65 @@ class BiLSTMAttention:
             if has_val:
                 self.model.eval()
                 with torch.no_grad():
-                    val_pred, _ = self.model(X_val_tensor)
-                    val_loss = criterion(val_pred.squeeze(-1), y_val_tensor).item()
+                    if self.use_amp:
+                        with torch.amp.autocast("cuda"):
+                            val_pred, _ = self.model(X_val_tensor)
+                            val_loss = criterion(val_pred.squeeze(-1), y_val_tensor).item()
+                    else:
+                        val_pred, _ = self.model(X_val_tensor)
+                        val_loss = criterion(val_pred.squeeze(-1), y_val_tensor).item()
 
-            # Log progress
+            # Step scheduler (per-epoch for cosine/plateau)
             current_lr = optimizer.param_groups[0]["lr"]
-            self.training_history.append({
-                "epoch": epoch + 1,
-                "train_loss": train_loss,
-                "val_loss": val_loss,
-                "learning_rate": current_lr,
-            })
+            if self.scheduler_type == "cosine_warm":
+                scheduler.step(epoch)
+            elif self.scheduler_type == "plateau":
+                scheduler.step(val_loss)
+
+            epoch_time = time.time() - epoch_start
+
+            # Log metrics
+            metrics = EpochMetrics(
+                epoch=epoch + 1,
+                train_loss=train_loss,
+                val_loss=val_loss,
+                learning_rate=current_lr,
+                grad_norm=grad_norm if 'grad_norm' in dir() else 0.0,
+                epoch_time_s=epoch_time,
+            )
+            self.training_logger.log_epoch(metrics)
 
             if (epoch + 1) % 10 == 0:
                 logger.info(
-                    "Epoch %d/%d — train_loss=%.4f, val_loss=%.4f, lr=%.6f",
-                    epoch + 1, self.epochs, train_loss, val_loss, current_lr,
+                    "Epoch %d/%d — train=%.4f, val=%.4f, lr=%.6f, "
+                    "grad_norm=%.2f, time=%.1fs",
+                    epoch + 1, self.epochs, train_loss, val_loss,
+                    current_lr, metrics.grad_norm, epoch_time,
                 )
 
+            # Checkpoint
+            if checkpoint and has_val:
+                checkpoint.step(val_loss, self.model, epoch, optimizer)
+
             # Early stopping
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                patience_counter = 0
-                best_state = {k: v.clone() for k, v in self.model.state_dict().items()}
-            else:
-                patience_counter += 1
-                if patience_counter >= patience:
-                    logger.info(
-                        "Early stopping at epoch %d (best val_loss=%.4f)",
-                        epoch + 1, best_val_loss,
-                    )
-                    break
+            if has_val and early_stopping.step(val_loss, self.model, epoch):
+                break
 
         # Restore best weights
-        if best_state is not None:
-            self.model.load_state_dict(best_state)
+        early_stopping.restore_best(self.model)
+
+        # Save training history
+        settings = get_settings()
+        history_path = settings.models_dir / "bilstm_training_history.json"
+        self.training_logger.save(history_path)
 
         self.is_fitted = True
-        logger.info("Training complete. Best validation loss: %.4f", best_val_loss)
+        logger.info(
+            "Training complete in %.1fs. Best val loss: %.6f (epoch %d)",
+            self.training_logger.total_time_s,
+            early_stopping.best_score or float("inf"),
+            early_stopping.best_epoch + 1,
+        )
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
@@ -554,8 +688,11 @@ class BiLSTMAttention:
             "learning_rate": self.learning_rate,
             "epochs": self.epochs,
             "batch_size": self.batch_size,
+            "accumulation_steps": self.accumulation_steps,
+            "scheduler_type": self.scheduler_type,
             "total_params": sum(p.numel() for p in self.model.parameters()),
-            "training_history": self.training_history[-5:] if self.training_history else [],
+            "best_epoch": self.training_logger.get_best_epoch().epoch
+            if self.training_logger.get_best_epoch() else 0,
         }
 
     def save(self, path: Path) -> None:
@@ -575,7 +712,7 @@ class BiLSTMAttention:
                 "forecast_horizon": self.forecast_horizon,
             },
             "feature_names": self.feature_names,
-            "training_history": self.training_history,
+            "training_history": self.training_logger.to_dict_list(),
             "is_fitted": self.is_fitted,
         }, path)
         logger.info("Saved BiLSTM model to %s", path)
@@ -603,7 +740,6 @@ class BiLSTMAttention:
 
         instance.model.load_state_dict(checkpoint["model_state"])
         instance.feature_names = checkpoint.get("feature_names", [])
-        instance.training_history = checkpoint.get("training_history", [])
         instance.is_fitted = checkpoint.get("is_fitted", True)
 
         logger.info("Loaded BiLSTM model from %s", path)

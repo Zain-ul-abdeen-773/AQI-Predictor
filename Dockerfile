@@ -8,10 +8,12 @@ FROM public.ecr.aws/docker/library/python:3.11-slim AS builder
 
 WORKDIR /build
 
-# Install build dependencies
+# Install build dependencies (cmake for pyarrow, librdkafka-dev for confluent-kafka)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
+    cmake \
+    librdkafka-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Create virtual environment
