@@ -93,6 +93,21 @@ resource "aws_iam_role_policy" "codebuild_policy" {
           "ecr:PutImage"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "codebuild:CreateReportGroup",
+          "codebuild:CreateReport",
+          "codebuild:UpdateReport",
+          "codebuild:BatchPutTestCases",
+          "codebuild:BatchPutCodeCoverages",
+          "codebuild:UpdateReportGroup",
+          "codebuild:PutReports",
+          "codebuild:BatchGetReportGroups",
+          "codebuild:BatchGetReports"
+        ]
+        Resource = "*"
       }
     ]
   })

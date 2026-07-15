@@ -54,6 +54,7 @@ matplotlib>=3.7
 # Testing
 pytest>=7.4
 pytest-asyncio>=0.21
+httpx>=0.23.0
 
 # LangGraph (Optional - for infrastructure validation)
 langgraph>=0.0.20
