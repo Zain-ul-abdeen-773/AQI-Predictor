@@ -122,3 +122,9 @@ variable "github_branch" {
   type        = string
   default     = "main"
 }
+
+variable "hopsworks_api_key" {
+  description = "Hopsworks API key"
+  type        = string
+  sensitive   = true
+}

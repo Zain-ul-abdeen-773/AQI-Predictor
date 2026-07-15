@@ -8,7 +8,7 @@ test_boto_invoke.py
 test_claude.py
 test_key.py
 __pycache__/
-models/
+/models/
 data/backfill_features.csv
 *claude*
 # Secrets
