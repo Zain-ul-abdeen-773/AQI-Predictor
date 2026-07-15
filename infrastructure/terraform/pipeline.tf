@@ -186,6 +186,29 @@ resource "aws_codebuild_project" "docker_build" {
   }
 }
 
+resource "aws_codebuild_project" "pytest_runner" {
+  name          = "${var.project_name}-pytest-runner"
+  description   = "Runs unit tests via pytest"
+  build_timeout = "10"
+  service_role  = aws_iam_role.codebuild_role.arn
+
+  artifacts {
+    type = "CODEPIPELINE"
+  }
+
+  environment {
+    compute_type                = "BUILD_GENERAL1_SMALL"
+    image                       = "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
+    type                        = "LINUX_CONTAINER"
+    image_pull_credentials_type = "CODEBUILD"
+  }
+
+  source {
+    type      = "CODEPIPELINE"
+    buildspec = "test_buildspec.yml"
+  }
+}
+
 resource "aws_codebuild_project" "lambda_deploy" {
   name          = "${var.project_name}-lambda-deploy"
   description   = "Deploys the Docker image to AWS Lambda"
@@ -243,6 +266,22 @@ resource "aws_codepipeline" "main" {
         ConnectionArn    = aws_codestarconnections_connection.github.arn
         FullRepositoryId = var.github_repository
         BranchName       = var.github_branch
+      }
+    }
+  }
+
+  stage {
+    name = "Test"
+    action {
+      name             = "Test"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      input_artifacts  = ["source_output"]
+      version          = "1"
+
+      configuration = {
+        ProjectName = aws_codebuild_project.pytest_runner.name
       }
     }
   }
