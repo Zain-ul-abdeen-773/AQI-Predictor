@@ -3,10 +3,7 @@ title: AQI Predictor
 emoji: 📊
 colorFrom: green
 colorTo: blue
-sdk: gradio
-sdk_version: 6.20.0
-python_version: '3.12'
-app_file: app.py
+sdk: docker
 pinned: false
 ---
 
