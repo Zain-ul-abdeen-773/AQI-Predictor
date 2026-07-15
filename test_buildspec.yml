@@ -5,6 +5,8 @@ phases:
     runtime-versions:
       python: 3.11
     commands:
+      - echo "Installing system dependencies..."
+      - apt-get update -y && apt-get install -y cmake build-essential librdkafka-dev
       - echo "Installing Python dependencies..."
       - pip install --upgrade pip
       - pip install -r requirements.txt
