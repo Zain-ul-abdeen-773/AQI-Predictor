@@ -409,10 +409,15 @@ class FeatureStoreManager:
 
             if output_file.exists():
                 # Append to existing partition
-                existing = pd.read_parquet(output_file)
+                try:
+                    existing = pd.read_parquet(output_file)
+                except Exception as e:
+                    logger.warning("Could not read existing partition %s (%s) — recreating partition", output_file, e)
+                    existing = pd.DataFrame()
                 combined = pd.concat([existing, partition_df], ignore_index=True)
-                combined.drop_duplicates(subset=["timestamp"], keep="last", inplace=True)
-                combined.sort_values("timestamp", inplace=True)
+                if not combined.empty and "timestamp" in combined.columns:
+                    combined.drop_duplicates(subset=["timestamp"], keep="last", inplace=True)
+                    combined.sort_values("timestamp", inplace=True)
                 combined.to_parquet(output_file, index=False)
                 logger.debug(
                     "Updated partition %d-%02d: %d → %d rows",
@@ -545,7 +550,17 @@ class FeatureStoreManager:
             logger.warning("No Parquet files found in %s", storage_path)
             return pd.DataFrame()
 
-        dfs = [pd.read_parquet(f) for f in parquet_files]
+        dfs = []
+        for f in parquet_files:
+            try:
+                dfs.append(pd.read_parquet(f))
+            except Exception as e:
+                logger.warning("Skipping unreadable Parquet file %s: %s", f, e)
+
+        if not dfs:
+            logger.warning("No valid Parquet files could be read from %s", storage_path)
+            return pd.DataFrame()
+
         df = pd.concat(dfs, ignore_index=True)
 
         if "timestamp" in df.columns:
