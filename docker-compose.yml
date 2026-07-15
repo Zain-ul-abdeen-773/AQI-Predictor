@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pearls-aqi-api
+    ports:
+      - "8000:8000"
+    environment:
+      - AQICN_API_KEY=${AQICN_API_KEY:-demo}
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-}
+      - HOPSWORKS_API_KEY=${HOPSWORKS_API_KEY:-}
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pearls-aqi-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - AQICN_API_KEY=${AQICN_API_KEY:-demo}
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-}
+      - HOPSWORKS_API_KEY=${HOPSWORKS_API_KEY:-}
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    depends_on:
+      api:
+        condition: service_healthy
+    command: ["streamlit", "run", "deployment/dashboard/app.py",
+              "--server.port", "8501",
+              "--server.address", "0.0.0.0",
+              "--server.headless", "true",
+              "--theme.base", "dark"]
+    restart: unless-stopped
