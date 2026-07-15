@@ -328,7 +328,7 @@ resource "aws_lambda_function" "api_pipeline" {
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${aws_ecr_repository.aqi_predictor.repository_url}:latest"
-  timeout       = 30
+  timeout       = 120
   memory_size   = 1024
 
   image_config {
@@ -359,4 +359,12 @@ resource "aws_lambda_function_url" "api" {
     expose_headers    = ["keep-alive", "date"]
     max_age           = 86400
   }
+}
+
+resource "aws_lambda_permission" "api_url" {
+  statement_id           = "FunctionURLAllowPublicAccess"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.api_pipeline.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
 }

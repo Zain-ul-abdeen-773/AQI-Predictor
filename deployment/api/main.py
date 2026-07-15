@@ -407,23 +407,6 @@ async def get_historical(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Startup / Shutdown Events
-# ──────────────────────────────────────────────────────────────────────────────
-
-
-@app.on_event("startup")
-async def startup():
-    """Pre-load model and connect to feature store on startup."""
-    logger.info("Starting Pearls AQI Predictor API...")
-    get_model_service()
-    get_feature_service()
-    logger.info("API startup complete")
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    """Graceful shutdown."""
-    logger.info("Shutting down Pearls AQI Predictor API")
-
 # Serverless handler for AWS Lambda
+# ──────────────────────────────────────────────────────────────────────────────
 handler = Mangum(app)
