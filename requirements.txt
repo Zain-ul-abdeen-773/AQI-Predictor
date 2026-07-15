@@ -39,7 +39,6 @@ uvloop>=0.17;platform_system!="Windows"
 httptools>=0.5
 
 # Dashboard
-streamlit>=1.28
 plotly>=5.15
 
 # News Feed

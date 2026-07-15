@@ -56,10 +56,25 @@ class ModelService:
 
                 # Load model
                 import pickle
+                import torch
                 model_path = artifacts_dir / "model.pkl"
                 if model_path.exists():
-                    with open(model_path, "rb") as f:
-                        self.model = pickle.load(f)
+                    try:
+                        with open(model_path, "rb") as f:
+                            data = pickle.load(f)
+                    except Exception:
+                        data = torch.load(model_path, map_location="cpu", weights_only=False)
+                        
+                    if "pipeline" in data:
+                        from training_pipeline.models.baseline import BaselineRegressor
+                        self.model = BaselineRegressor.load(model_path)
+                    elif "model_state" in data:
+                        from training_pipeline.models.deep_learning import BiLSTMRegressor
+                        self.model = BiLSTMRegressor.load(model_path)
+                    else:
+                        from training_pipeline.models.tree_ensemble import TreeEnsembleRegressor
+                        self.model = TreeEnsembleRegressor.load(model_path)
+                        
                     logger.info("Loaded champion model from %s", model_path)
 
                 # Load explainer

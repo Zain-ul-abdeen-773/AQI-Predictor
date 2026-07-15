@@ -20,6 +20,9 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
 
 from config.schemas import (
     AQILevel,
@@ -130,6 +133,15 @@ def generate_health_advisory(level: AQILevel) -> str:
 # Endpoints
 # ──────────────────────────────────────────────────────────────────────────────
 
+# Mount static files for frontend
+frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
+app.mount("/css", StaticFiles(directory=frontend_dir / "css"), name="css")
+app.mount("/js", StaticFiles(directory=frontend_dir / "js"), name="js")
+
+@app.get("/", tags=["UI"], include_in_schema=False)
+async def serve_dashboard():
+    """Serve the HTML dashboard."""
+    return FileResponse(frontend_dir / "index.html")
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
 async def health_check() -> HealthResponse:

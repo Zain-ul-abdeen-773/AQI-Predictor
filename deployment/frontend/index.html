@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Pearls AQI Predictor - Premium Air Quality Intelligence for Sargodha, Pakistan">
+    <title>Pearls AQI | Sargodha Air Quality Intelligence</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loader">
+            <div class="loader-ring"></div>
+            <span class="loader-text">Analyzing Air Quality</span>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <main class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="brand">
+                    <div class="brand-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                        </svg>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-name">Pearls AQI</span>
+                        <span class="brand-location">Sargodha, Pakistan</span>
+                    </div>
+                </div>
+                <div class="header-meta">
+                    <span class="last-updated" id="lastUpdated">--</span>
+                    <button class="refresh-btn" id="refreshBtn" aria-label="Refresh data">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6"/>
+                            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Hero Section - Current AQI -->
+        <section class="hero" id="heroSection">
+            <div class="hero-content">
+                <div class="aqi-display">
+                    <div class="aqi-label">Air Quality Index</div>
+                    <div class="aqi-value-wrapper">
+                        <span class="aqi-value" id="currentAqi">--</span>
+                        <div class="aqi-indicator" id="aqiIndicator"></div>
+                    </div>
+                    <div class="aqi-level" id="aqiLevel">Loading...</div>
+                </div>
+                
+                <div class="health-advisory" id="healthAdvisory">
+                    <div class="advisory-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+                            <path d="M12 8v4M12 16h.01"/>
+                        </svg>
+                    </div>
+                    <p class="advisory-text" id="advisoryText">Analyzing conditions...</p>
+                </div>
+            </div>
+            
+            <div class="hero-background">
+                <div class="gradient-orb orb-1"></div>
+                <div class="gradient-orb orb-2"></div>
+            </div>
+        </section>
+
+        <!-- Telemetry Cards -->
+        <section class="telemetry" id="telemetrySection">
+            <div class="telemetry-grid">
+                <article class="telemetry-card">
+                    <div class="card-icon peak">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                            <polyline points="17 6 23 6 23 12"/>
+                        </svg>
+                    </div>
+                    <div class="card-content">
+                        <span class="card-label">72h Peak</span>
+                        <span class="card-value" id="peakAqi">--</span>
+                    </div>
+                </article>
+                
+                <article class="telemetry-card">
+                    <div class="card-icon low">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/>
+                            <polyline points="17 18 23 18 23 12"/>
+                        </svg>
+                    </div>
+                    <div class="card-content">
+                        <span class="card-label">72h Low</span>
+                        <span class="card-value" id="lowAqi">--</span>
+                    </div>
+                </article>
+                
+                <article class="telemetry-card">
+                    <div class="card-icon avg">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="20" x2="18" y2="10"/>
+                            <line x1="12" y1="20" x2="12" y2="4"/>
+                            <line x1="6" y1="20" x2="6" y2="14"/>
+                        </svg>
+                    </div>
+                    <div class="card-content">
+                        <span class="card-label">3-Day Avg</span>
+                        <span class="card-value" id="avgAqi">--</span>
+                    </div>
+                </article>
+                
+                <article class="telemetry-card">
+                    <div class="card-icon model">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                    </div>
+                    <div class="card-content">
+                        <span class="card-label">Model</span>
+                        <span class="card-value model-type" id="modelType">--</span>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Forecast Summary -->
+        <section class="summary-section" id="summarySection">
+            <p class="summary-text" id="summaryText">Loading forecast summary...</p>
+        </section>
+
+        <!-- Forecast Chart -->
+        <section class="chart-section" id="forecastSection">
+            <div class="section-header">
+                <h2 class="section-title">72-Hour Forecast</h2>
+                <div class="chart-legend">
+                    <span class="legend-item">
+                        <span class="legend-color prediction"></span>
+                        Predicted AQI
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-color ci-80"></span>
+                        80% CI
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-color ci-95"></span>
+                        95% CI
+                    </span>
+                </div>
+            </div>
+            <div class="chart-container" id="forecastChart"></div>
+        </section>
+
+        <!-- Historical Chart -->
+        <section class="chart-section" id="historicalSection">
+            <div class="section-header">
+                <h2 class="section-title">Historical Trend</h2>
+                <div class="time-selector">
+                    <button class="time-btn active" data-hours="24">24h</button>
+                    <button class="time-btn" data-hours="48">48h</button>
+                    <button class="time-btn" data-hours="72">72h</button>
+                </div>
+            </div>
+            <div class="chart-container" id="historicalChart"></div>
+        </section>
+
+        <!-- SHAP Explainability -->
+        <section class="chart-section explainability" id="explainSection">
+            <div class="section-header">
+                <h2 class="section-title">Prediction Explainability</h2>
+                <span class="section-subtitle">SHAP Feature Contributions</span>
+            </div>
+            <div class="chart-container shap-container" id="shapChart"></div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p class="footer-text">Powered by Bi-LSTM Neural Networks & XGBoost Ensemble</p>
+                <p class="footer-credit">© 2024 Pearls AQI Predictor · Enterprise Air Intelligence</p>
+            </div>
+        </footer>
+    </main>
+
+    <!-- Scripts -->
+    <script src="js/app.js"></script>
+</body>
+</html>

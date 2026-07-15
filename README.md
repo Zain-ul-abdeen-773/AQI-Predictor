@@ -31,9 +31,9 @@ External APIs (AQICN, OpenWeather)
                     ┌────────────────┼────────────────┐
                     ▼                                  ▼
            ┌──────────────┐                   ┌──────────────┐
-           │  FastAPI      │                   │  Streamlit   │
-           │  /predict     │◀──────────────────│  Dashboard   │
-           │  /explain     │                   │              │
+           │  FastAPI      │                   │  Frontend    │
+           │  /predict     │◀──────────────────│  (Vanilla    │
+           │  /explain     │                   │   HTML/JS)   │
            └──────────────┘                   └──────────────┘
 ```
 
@@ -70,22 +70,22 @@ python -m data_pipeline.backfill --years 2
 python -m training_pipeline.train
 ```
 
-### 5. Launch Dashboard
+### 5. Launch Application
 
 ```bash
-# Start API server
+# Start API server (serves both backend and frontend)
 uvicorn deployment.api.main:app --reload --port 8000
 
-# In a new terminal — Start Dashboard
-streamlit run deployment/dashboard/app.py
+# Open in browser
+# http://localhost:8000
 ```
 
 ### 6. Using Docker
 
 ```bash
 docker-compose up --build
-# API:       http://localhost:8000/docs
-# Dashboard: http://localhost:8501
+# App is available at: http://localhost:8000
+# API Docs are at:     http://localhost:8000/docs
 ```
 
 ---
@@ -100,7 +100,7 @@ docker-compose up --build
 │   └── models/                # Ridge, LightGBM, Bi-LSTM
 ├── deployment/
 │   ├── api/                   # FastAPI backend
-│   └── dashboard/             # Streamlit frontend
+│   └── frontend/              # HTML/CSS/JS frontend
 ├── infrastructure/
 │   ├── terraform/             # AWS IaC (Lambda, ECS, EventBridge)
 │   └── validation_agents/     # LangGraph validation pipeline
@@ -193,9 +193,9 @@ Runs: Linter → Security (Checkov) → Policy (OPA/Rego) → Decision
 
 ## 📊 Dashboard
 
-Premium dark-mode Streamlit interface featuring:
-- 🎯 Animated AQI gauge with color-coded severity
-- 📈 3-day interactive Plotly forecast with prediction intervals
+Premium dark-mode web interface served directly via FastAPI featuring:
+- 🎯 Animated AQI gauge with color-coded severity (CSS animations)
+- 📈 3-day interactive Plotly.js forecast with prediction intervals
 - 🔍 SHAP feature contribution visualization
 - 📰 Regional news feed with risk assessment
 - ⚠️ Health advisory alerts for hazardous conditions
