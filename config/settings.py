@@ -124,7 +124,7 @@ class Settings(BaseSettings):
     # ── SageMaker Feature Store & Model Registry ────────────────────────
     feature_group_name: str = Field(default="sargodha_aqi_features")
     feature_group_version: int = Field(default=1, ge=1)
-    model_registry_name: str = Field(default="sargodha_aqi_forecast_model")
+    model_registry_name: str = Field(default="sargodha-aqi-forecast-model")
 
     # ── Data Pipeline ─────────────────────────────────────────────────────
     backfill_years: int = Field(default=5, ge=1, le=10)
