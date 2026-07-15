@@ -17,6 +17,7 @@ phases:
       - python -c "import config.settings; print('Config module OK')"
       - python -c "import feature_pipeline; print('Feature pipeline module OK')"
       - python -c "import training_pipeline.evaluation; print('Training pipeline module OK')"
+      - python -c "import infrastructure.validation_agents.validate; print('Validation agent module OK')"
   build:
     commands:
       - echo "Running tests..."

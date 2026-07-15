@@ -56,8 +56,8 @@ pytest>=7.4
 pytest-asyncio>=0.21
 
 # LangGraph (Optional - for infrastructure validation)
-# langgraph>=0.0.20
-# langchain>=0.1
+langgraph>=0.0.20
+langchain>=0.1
 
 # Infrastructure Validation (Optional)
 # checkov>=3.0

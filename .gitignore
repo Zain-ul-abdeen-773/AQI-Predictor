@@ -23,3 +23,4 @@ AQI_Predictor_accessKeys.csv
 *.tfstate.*
 .terraform.lock.hcl
 *.tfvars
+validation_report.json

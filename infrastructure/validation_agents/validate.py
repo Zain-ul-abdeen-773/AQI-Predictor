@@ -50,6 +50,7 @@ class AgentState:
         approval_status: Final approval decision (True = deploy, False = block).
         summary: Human-readable summary of all checks.
         all_issues: Aggregated list of all issues found.
+        remediation_plan: Results from the LangChain AI remediation agent.
     """
 
     terraform_dir: str = ""
@@ -57,6 +58,7 @@ class AgentState:
     lint_results: Dict[str, Any] = field(default_factory=dict)
     security_issues: Dict[str, Any] = field(default_factory=dict)
     policy_compliance: Dict[str, Any] = field(default_factory=dict)
+    remediation_plan: Dict[str, Any] = field(default_factory=dict)
     approval_status: Optional[bool] = None
     summary: str = ""
     all_issues: List[str] = field(default_factory=list)
@@ -130,6 +132,27 @@ def policy_node(state: AgentState) -> AgentState:
     return state
 
 
+def remediation_node(state: AgentState) -> AgentState:
+    """Execute the LangChain AI remediation agent.
+
+    Analyzes all detected security, lint, and policy issues and generates
+    actionable remediation plans and HCL fixes.
+
+    Args:
+        state: Current graph state.
+
+    Returns:
+        AgentState: Updated state with AI remediation plans.
+    """
+    from infrastructure.validation_agents.agents.remediation import RemediationAgent
+
+    logger.info("🤖 Running AI Remediation Agent...")
+    agent = RemediationAgent(state.terraform_code, state.all_issues)
+    state.remediation_plan = agent.run()
+
+    return state
+
+
 def decision_node(state: AgentState) -> AgentState:
     """Orchestrator decision agent — compile and decide.
 
@@ -156,12 +179,13 @@ def decision_node(state: AgentState) -> AgentState:
         ("Linter", lint_passed, state.lint_results.get("summary", "")),
         ("Security", security_passed, state.security_issues.get("summary", "")),
         ("Policy", policy_passed, state.policy_compliance.get("summary", "")),
+        ("AI Remediation", True, state.remediation_plan.get("summary", "No remediation needed")),
     ]
 
     lines = ["=" * 60, "INFRASTRUCTURE VALIDATION REPORT", "=" * 60]
 
     for name, passed, summary in checks:
-        status = "✅ PASS" if passed else "❌ FAIL"
+        status = "[PASS]" if passed else "[FAIL]"
         lines.append(f"  {status}  {name}: {summary}")
 
     lines.append("-" * 60)
@@ -169,13 +193,25 @@ def decision_node(state: AgentState) -> AgentState:
     if state.all_issues:
         lines.append(f"Issues Found ({len(state.all_issues)}):")
         for issue in state.all_issues[:20]:  # Cap at 20 for readability
-            lines.append(f"  • {issue}")
+            lines.append(f"  * {issue}")
         if len(state.all_issues) > 20:
             lines.append(f"  ... and {len(state.all_issues) - 20} more")
 
+    if state.remediation_plan.get("remediations"):
+        lines.append("-" * 60)
+        lines.append("Actionable AI Remediation Plans:")
+        for plan in state.remediation_plan["remediations"][:5]:
+            lines.append(f"  [Category: {plan.get('category', 'General')}]")
+            lines.append(f"  Recommendation: {plan.get('recommendation', '')}")
+            if plan.get("hcl_fix"):
+                lines.append("  Suggested HCL Fix:")
+                for fix_line in plan["hcl_fix"].splitlines():
+                    lines.append(f"    {fix_line}")
+            lines.append("")
+
     lines.append("-" * 60)
 
-    decision = "✅ APPROVED — Safe to deploy" if state.approval_status else "❌ BLOCKED — Fix issues before deploying"
+    decision = "[APPROVED] Safe to deploy" if state.approval_status else "[BLOCKED] Fix issues before deploying"
     lines.append(f"Decision: {decision}")
     lines.append("=" * 60)
 
@@ -193,7 +229,7 @@ class ValidationGraph:
     """State graph for infrastructure validation.
 
     Links validation agents as sequential nodes with transitional edges.
-    Execution flow: Linter → Security → Policy → Decision.
+    Execution flow: Linter → Security → Policy → Remediation → Decision.
 
     This can be replaced with LangGraph's StateGraph when the
     langgraph package is available, maintaining API compatibility.
@@ -207,6 +243,7 @@ class ValidationGraph:
             ("linter", linter_node),
             ("security", security_node),
             ("policy", policy_node),
+            ("remediation", remediation_node),
             ("decision", decision_node),
         ]
 
@@ -240,11 +277,11 @@ class ValidationGraph:
         return state
 
 
-def build_langgraph_validator() -> ValidationGraph:
+def build_langgraph_validator() -> Any:
     """Build the validation graph with LangGraph if available, else fallback.
 
     Returns:
-        ValidationGraph: Compiled validation graph.
+        ValidationGraph | StateGraph: Compiled validation graph.
     """
     try:
         from langgraph.graph import StateGraph, END
@@ -254,11 +291,13 @@ def build_langgraph_validator() -> ValidationGraph:
         graph.add_node("linter", linter_node)
         graph.add_node("security", security_node)
         graph.add_node("policy", policy_node)
+        graph.add_node("remediation", remediation_node)
         graph.add_node("decision", decision_node)
 
         graph.add_edge("linter", "security")
         graph.add_edge("security", "policy")
-        graph.add_edge("policy", "decision")
+        graph.add_edge("policy", "remediation")
+        graph.add_edge("remediation", "decision")
         graph.add_edge("decision", END)
 
         graph.set_entry_point("linter")
@@ -313,12 +352,16 @@ def main(terraform_dir: Optional[str] = None) -> bool:
     if isinstance(graph, ValidationGraph):
         final_state = graph.execute(initial_state)
     else:
-        # LangGraph compiled graph
+        # LangGraph compiled graph returns dict when invoked with dataclass state
         result = graph.invoke(initial_state)
-        final_state = result
+        if isinstance(result, dict):
+            final_state = AgentState(**result)
+        else:
+            final_state = result
 
-    # Print report
-    print(final_state.summary)
+    # Print report safely without Windows cp1252 encoding crashes
+    safe_summary = final_state.summary.encode(sys.stdout.encoding or "utf-8", errors="replace").decode(sys.stdout.encoding or "utf-8", errors="replace")
+    print(safe_summary)
 
     # Save report
     report_path = tf_dir / "validation_report.json"
@@ -327,10 +370,11 @@ def main(terraform_dir: Optional[str] = None) -> bool:
         "lint_results": final_state.lint_results,
         "security_issues": final_state.security_issues,
         "policy_compliance": final_state.policy_compliance,
+        "remediation_plan": final_state.remediation_plan,
         "total_issues": len(final_state.all_issues),
         "issues": final_state.all_issues,
     }
-    report_path.write_text(json.dumps(report, indent=2, default=str))
+    report_path.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
 
     return final_state.approval_status
 
@@ -350,8 +394,8 @@ if __name__ == "__main__":
     approved = main(args.terraform_dir)
 
     if not approved:
-        logger.error("❌ Deployment BLOCKED — fix issues and retry")
+        logger.error("[BLOCKED] Deployment BLOCKED -- fix issues and retry")
         sys.exit(1)
     else:
-        logger.info("✅ Deployment APPROVED")
+        logger.info("[APPROVED] Deployment APPROVED")
         sys.exit(0)
