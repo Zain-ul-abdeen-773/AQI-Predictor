@@ -1,0 +1,141 @@
+You are an elite, world-class MLOps Architect and Principal Deep Learning Engineer. We are building the "Pearls AQI Predictor" for Sargodha, Pakistan. This is an end-to-end, 100% serverless, enterprise-grade ML system. 
+
+To win first place in our highly competitive engineering program, we must over-engineer every layer. The codebase must be highly modular, heavily typed (using Python type hints), thoroughly documented with Google-style docstrings, and robust against production-grade edge cases (rate limits, network failure, missing features).
+
+Apply a clean architecture pattern across the following directory structure:
+.
+├── config/                  # Pydantic Settings and validation schemas
+├── data_pipeline/          # Raw ingestion, transformations, and backfilling
+├── feature_pipeline/       # Hopsworks feature group definition and ingestion
+├── training_pipeline/      # Scikit-learn baseline, PyTorch LSTM, evaluation, SHAP
+├── deployment/
+│   ├── api/                # Asynchronous FastAPI service
+│   └── dashboard/          # Ultra-minimalist Streamlit application
+├── infrastructure/
+│   ├── terraform/          # Infrastructure-as-Code for serverless runner migration
+│   └── validation_agents/  # LangGraph validation platform (Checkov + OPA)
+└── .github/workflows/      # Automated hourly and daily CI/CD runners
+
+---
+
+### STEP 1: PRODUCTION-GRADE INGESTION & FEATURE ENGINEERING
+Location Coordinate Target: Sargodha, Pakistan (Latitude: 32.0836, Longitude: 72.6711)
+
+1. Data Source Strategy:
+   * Fetch real-time weather and pollutant data simultaneously. 
+   * Primary: AQICN API (v2) for air pollutants: PM2.5, PM10, NO2, SO2, CO, O3.
+   * Secondary: OpenWeatherMap Air Pollution API and One Call API v3.0 for meteorological metrics: Temperature, Relative Humidity, Wind Speed, Wind Direction, Barometric Pressure, Precipitation.
+   * Resiliency: Implement an exponential backoff retry mechanism using the 'tenacity' library to handle API rate-limiting (HTTP 429) and transient network disconnects (HTTP 5xx).
+
+2. Deep Feature Engineering & Math:
+   * Temporal Features: Convert UTC timestamps to local Sargodha timezone (PKT). Extract hour, day of week, month, and day of year. Transform cyclical features using sine and cosine encodings to maintain temporal continuity:
+     - hour_sin = sin(2 * pi * hour / 24)
+     - hour_cos = cos(2 * pi * hour / 24)
+     - day_sin = sin(2 * pi * day_of_week / 7)
+     - day_cos = cos(2 * pi * day_of_week / 7)
+   * Derived Environmental Indicators:
+     - AQI Change Rate (First Derivative): Delta AQI / Delta t over a rolling 1-hour, 3-hour, and 6-hour window.
+     - Wind-Pollutant Vector Interaction: Decompose Wind Speed and Wind Direction into Eastward (U) and Northward (V) components. Calculate cross-products with key pollutants (PM2.5, PM10) to model horizontal spatial dispersion.
+     - Boundary Layer Proxy: Compute temperature-humidity index (THI) to proxy inversion layer trapping effects on stagnant particulate matter.
+
+3. Hopsworks Feature Store Integration:
+   * Write `data_pipeline/ingest.py` and `feature_pipeline/register.py`.
+   * Programmatically define and initialize a Hopsworks Feature Group:
+     - Feature Group Name: `sargodha_aqi_features`
+     - Version: 1
+     - Primary Keys: `['timestamp']`
+     - Event Time: `timestamp`
+     - Partition Keys: `['year', 'month']`
+   * Schema enforcement: Define precise feature types (Double, Integral, String). Ensure all calculated features pass strict structural validation before write operations.
+   * Create a separate backfill pipeline (`data_pipeline/backfill.py`) using historical data from the past 5 years. Implement data-chunking and writing pipelines in batches of 10,000 rows to prevent execution memory overflows.
+
+---
+
+### STEP 2: HYBRID MULTI-MODEL ML PIPELINE WITH DEEP LEARNING & SHAP
+Write `training_pipeline/train.py` using a strictly structured class-based framework.
+
+1. Model Zoo Architecture:
+   Implement three distinct models to highlight statistical-to-deep-learning versatility:
+   * Baseline Regressor: Scikit-learn ElasticNet or Ridge Regression with pipeline-integrated RobustScaler to process skewed pollutant distributions.
+   * Tree Ensemble: LightGBM Regressor with Bayesian Optimization hyperparameter tuning (via optuna).
+   * Deep Learning Sequence Model: PyTorch Bidirectional LSTM (Bi-LSTM) with a custom Attention Mechanism to process historical multivariate sequence data (past 72 hours) to predict future sequences (next 72 hours).
+     - PyTorch network must include Dropout layers to prevent overfitting and a final Fully Connected Layer outputting a (72, 1) prediction vector.
+     - Optimize using AdamW, a OneCycleLR learning rate scheduler, and a custom weighted loss function focusing on penalizing hazardous AQI level under-predictions (Asymmetrical Loss).
+
+2. Evaluation Rigor:
+   * Use TimeSeriesSplit (5-fold cross-validation) to prevent temporal data leakage.
+   * Log metrics continuously: Root Mean Squared Error (RMSE), Mean Absolute Error (MAE), and Coefficient of Determination (R²).
+   * Save the best performing model dynamically to the Hopsworks Model Registry under the tag `sargodha_aqi_forecast_model`. Save structural metadata including final validation metrics and hyperparameter configurations as JSON payloads inside the registry.
+
+3. Model Interpretability (Explainable AI):
+   * Integrate SHAP (SHapley Additive exPlanations).
+   * Initialize a SHAP TreeExplainer (for LightGBM) or GradientExplainer (for PyTorch).
+   * Compute Shapley values for the inference payload.
+   * Serialize the explainer object alongside the model artifact so that local feature importance can be evaluated in real-time on the client-side.
+
+---
+
+### STEP 3: ULTRA-MINIMALIST DASHBOARD & HIGH-THROUGHPUT API
+Implement a modern, clean, minimalist architectural layout.
+
+1. High-Throughput API Backend (`deployment/api/main.py`):
+   * Built on FastAPI using modern asynchronous patterns (`async/await`).
+   * `/predict` Endpoint: Programmatically fetches the latest feature vectors from Hopsworks Online Feature Store, pulls the active model from the registry, executes inference, and generates the 3-day AQI prediction.
+   * `/explain` Endpoint: Evaluates SHAP values for the real-time prediction payload and returns feature contribution values in JSON format.
+   * Health-check endpoints and robust error-handling middleware.
+
+2. Minimalist Streamlit Interface (`deployment/dashboard/app.py`):
+   * Design Language: Clean, Scandinavian-minimalist aesthetics. Dark Mode by default.
+     - Background: Pure dark gray (`#121212`), Sidebar: `#1E1E1E`, Accent/Primary: Platinum (`#E0E0E0`) or soft warnings (`#FFB300`).
+     - No cluttered visual cards. High typography hierarchy with clean, large numerals for current AQI metrics.
+   * KPI Indicators:
+     - Display a single, beautifully styled prominent circle with the current AQI value. Color transitions gracefully: Emerald Green (Good), Ochre Yellow (Moderate), Crimson Red (Hazardous).
+     - Display a neat horizontal 3-day forecasting timeline using interactive minimalist Plotly line-charts (with clean gridlines turned off and a smooth cubic interpolation curve).
+   * Local Regional News Integration:
+     - Implement a news ingestion pipeline that pulls regional news from Pakistan media RSS feeds using keyword targets (e.g., "Sargodha crop burning", "smog", "pollution", "factory emissions").
+     - Process headings through a lightweight transformers pipeline (`cardiffnlp/twitter-roberta-base-sentiment` or simple zero-shot classifier) to display a clean indicator card reflecting "Regional Industrial/Agricultural Activity Risk Factor" (Low, Moderate, High).
+   * Dynamic Interpretability Visualizations:
+     - Render a clean horizontal bar chart displaying SHAP feature contributions (e.g., "Wind direction reduced prediction by -12", "PM2.5 elevated prediction by +45").
+   * Actionable Alerts:
+     - Soft modal popups when forecast AQI crosses critical thresholds (>150), displaying clean health advice alongside structured municipal action recommendations.
+
+3. Complete Containerization:
+   * Write a multi-stage `Dockerfile` optimized to keep image sizes under 500MB.
+   * Clean out development dependencies, use lightweight base images (e.g., `python:3.11-slim`), and configure gunicorn/uvicorn workers to scale dynamically under system load.
+
+---
+
+### STEP 4: SEAMLESS CI/CD RUNNERS & CLOUD INFRASTRUCTURE (TERRAFORM)
+1. Infrastructure-as-Code (`infrastructure/terraform/`):
+   * Write declarative AWS provisioning files (`provider.tf`, `variables.tf`, `main.tf`, `outputs.tf`).
+   * Provision AWS EventBridge schedules to run automated tasks serverlessly.
+   * Define an AWS Lambda function with container support to execute the feature ingestion script.
+   * Setup an AWS ECS Task (on Fargate) to execute the daily ML model training pipeline.
+   * Use SSM Parameter Store to securely pass Hopsworks, AQICN, and OpenWeather API keys at runtime.
+
+2. Automated CI/CD Workflows (`.github/workflows/`):
+   * `feature_pipeline_cron.yml`: Triggers every hour. Installs dependencies, executes the feature generation script, pushes data to Hopsworks, and runs modular unit-tests.
+   * `training_pipeline_cron.yml`: Triggers daily. Runs automated data extraction from the Hopsworks offline store, checks for data drift, re-trains models, executes evaluations, compares metric limits with the current registry champion, and conditionally promotes the challenger model.
+
+---
+
+### STEP 5: AGENTIC INFRASTRUCTURE VALIDATION (THE UNTHINKABLE DIFFERENTIATOR)
+We will build a custom LangGraph multi-agent validator (`infrastructure/validation_agents/validate.py`) that acts as a gatekeeper for our Terraform deployments.
+
+1. State Definition:
+   * Define a state class `AgentState` containing keys: `terraform_code`, `lint_results`, `security_issues`, `policy_compliance`, and `approval_status`.
+
+2. Agent Roles & Nodes:
+   * Linter Agent: Run standard linter commands programmatically and record syntax structural health.
+   * Security Analyzer Agent: Invoke `checkov` CLI against local Terraform templates to detect credentials leaks, permissive IAM roles, and non-encrypted parameters.
+   * Policy Evaluation Agent: Run Open Policy Agent (OPA) policies written in Rego syntax to check for compliance rules (e.g., "No public S3 buckets", "All ECS tasks must run on FARGATE", "SSM parameter values must be encrypted").
+   * Orchestrator/Decision Agent: Compile all analysis states. If any check fails, flag `approval_status = False` and stop execution. If all checks pass, output `approval_status = True`.
+
+3. Graph Execution:
+   * Construct the state graph, link nodes with transitional edges, and compile the graph.
+   * Integrate this script inside your GitHub Actions pipeline. If the LangGraph output flags `approval_status == False`, the deployment workflow must immediately terminate.
+
+---
+
+### EXECUTION COMMAND:
+Begin executing now. Provide the highly-modular, production-grade python files, schemas, and structural implementations. Start with **Step 1: Feature Pipeline Development** and output the code files.
