@@ -68,6 +68,17 @@ resource "aws_iam_role_policy" "codebuild_policy" {
       {
         Effect = "Allow"
         Action = [
+          "lambda:UpdateFunctionCode",
+          "lambda:GetFunctionConfiguration"
+        ]
+        Resource = [
+          "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api",
+          "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-feature-pipeline"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "ecr:GetAuthorizationToken",
           "ecr:BatchCheckLayerAvailability",
           "ecr:GetDownloadUrlForLayer",
@@ -175,6 +186,38 @@ resource "aws_codebuild_project" "docker_build" {
   }
 }
 
+resource "aws_codebuild_project" "lambda_deploy" {
+  name          = "${var.project_name}-lambda-deploy"
+  description   = "Deploys the Docker image to AWS Lambda"
+  build_timeout = "5"
+  service_role  = aws_iam_role.codebuild_role.arn
+
+  artifacts {
+    type = "CODEPIPELINE"
+  }
+
+  environment {
+    compute_type                = "BUILD_GENERAL1_SMALL"
+    image                       = "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
+    type                        = "LINUX_CONTAINER"
+    image_pull_credentials_type = "CODEBUILD"
+
+    environment_variable {
+      name  = "REPOSITORY_URI"
+      value = aws_ecr_repository.aqi_predictor.repository_url
+    }
+    environment_variable {
+      name  = "AWS_DEFAULT_REGION"
+      value = var.aws_region
+    }
+  }
+
+  source {
+    type      = "CODEPIPELINE"
+    buildspec = "deploy_buildspec.yml"
+  }
+}
+
 # ── CodePipeline ─────────────────────────────────────────────────────────
 
 resource "aws_codepipeline" "main" {
@@ -217,6 +260,22 @@ resource "aws_codepipeline" "main" {
 
       configuration = {
         ProjectName = aws_codebuild_project.docker_build.name
+      }
+    }
+  }
+
+  stage {
+    name = "Deploy"
+    action {
+      name             = "Deploy"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      input_artifacts  = ["source_output"]
+      version          = "1"
+
+      configuration = {
+        ProjectName = aws_codebuild_project.lambda_deploy.name
       }
     }
   }
