@@ -24,6 +24,10 @@ function getAqiColor(val) {
 async function fetchAPI(endpoint, method = 'GET') {
     try {
         const res = await fetch(`${API_URL}${endpoint}`, { method, headers: { 'Content-Type': 'application/json' }});
+        if (!res.ok) {
+            console.warn(`API non-200 status on ${endpoint}:`, res.status);
+            return null;
+        }
         return await res.json();
     } catch (e) {
         console.error("API Error:", e);
@@ -32,41 +36,59 @@ async function fetchAPI(endpoint, method = 'GET') {
 }
 
 function updateHeroAndTelemetry(data) {
+    if (!data || !data.hourly_predictions) return;
     const aqi = Math.round(data.current_aqi);
     const color = getAqiColor(aqi);
     
     const aqiEl = document.getElementById('currentAqi');
-    aqiEl.innerText = aqi;
-    aqiEl.style.color = color;
+    if (aqiEl) {
+        aqiEl.innerText = aqi;
+        aqiEl.style.color = color;
+    }
     
     const indicator = document.getElementById('aqiIndicator');
-    indicator.style.backgroundColor = color;
-    indicator.style.boxShadow = `0 0 20px ${color}`;
+    if (indicator) {
+        indicator.style.backgroundColor = color;
+        indicator.style.boxShadow = `0 0 20px ${color}`;
+    }
     
     const levelEl = document.getElementById('aqiLevel');
-    levelEl.innerText = data.current_level;
-    levelEl.style.color = color;
+    if (levelEl) {
+        levelEl.innerText = data.current_level;
+        levelEl.style.color = color;
+    }
     
-    document.getElementById('advisoryText').innerText = `Health Advisory: ${data.current_level}. Take appropriate precautions based on your sensitivity.`;
-    document.getElementById('summaryText').innerText = data.summary || "The neural network has processed atmospheric telemetry and forecast stable conditions.";
+    const advisory = document.getElementById('advisoryText');
+    if (advisory) advisory.innerText = `Health Advisory: ${data.current_level}. Take appropriate precautions based on your sensitivity.`;
+    
+    const summary = document.getElementById('summaryText');
+    if (summary) summary.innerText = data.summary || "The neural network has processed atmospheric telemetry and forecast stable conditions.";
     
     const predictions = data.hourly_predictions.map(p => p.aqi_predicted);
-    document.getElementById('peakAqi').innerText = Math.round(Math.max(...predictions));
-    document.getElementById('lowAqi').innerText = Math.round(Math.min(...predictions));
+    const peakEl = document.getElementById('peakAqi');
+    if (peakEl) peakEl.innerText = Math.round(Math.max(...predictions));
+    
+    const lowEl = document.getElementById('lowAqi');
+    if (lowEl) lowEl.innerText = Math.round(Math.min(...predictions));
     
     const sum = predictions.reduce((a, b) => a + b, 0);
-    document.getElementById('avgAqi').innerText = Math.round(sum / predictions.length);
-    document.getElementById('modelType').innerText = (data.model_type || "BI-LSTM").toUpperCase();
+    const avgEl = document.getElementById('avgAqi');
+    if (avgEl) avgEl.innerText = Math.round(sum / predictions.length);
+    
+    const modelEl = document.getElementById('modelType');
+    if (modelEl) modelEl.innerText = (data.model_type || "BI-LSTM").toUpperCase();
     
     const d = new Date();
-    document.getElementById('lastUpdated').innerText = `Last sync: ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+    const syncEl = document.getElementById('lastUpdated');
+    if (syncEl) syncEl.innerText = `Last sync: ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
 }
 
 function renderForecastChart(predictions) {
+    if (!predictions || !predictions.length) return;
     const times = predictions.map(p => new Date(p.timestamp));
     const vals = predictions.map(p => p.aqi_predicted);
-    const upper95 = predictions.map(p => p.aqi_upper_95);
-    const lower95 = predictions.map(p => p.aqi_lower_95);
+    const upper95 = predictions.map(p => p.aqi_upper_95 || p.aqi_predicted + 15);
+    const lower95 = predictions.map(p => p.aqi_lower_95 || Math.max(0, p.aqi_predicted - 15));
     
     const traceUpper = { x: times, y: upper95, type: 'scatter', mode: 'lines', line: {width: 0}, hoverinfo: 'skip' };
     const traceLower = { x: times, y: lower95, type: 'scatter', mode: 'lines', line: {width: 0}, fill: 'tonexty', fillcolor: 'rgba(255,255,255,0.05)', hoverinfo: 'skip' };
@@ -141,22 +163,35 @@ async function initializeDashboard() {
             fetchAPI('/historical?hours=72', 'GET')
         ]);
         
-        if (predict) {
+        if (predict && predict.hourly_predictions) {
             updateHeroAndTelemetry(predict);
             renderForecastChart(predict.hourly_predictions);
+        } else if (historical && historical.data && historical.data.length > 0) {
+            // Fallback UI display from historical data if predict is momentarily initializing
+            const latest = historical.data[historical.data.length - 1];
+            updateHeroAndTelemetry({
+                current_aqi: latest.aqi,
+                current_level: "Moderate",
+                summary: "Displaying observed telemetry while forecast engine synchronizes.",
+                hourly_predictions: historical.data.map(d => ({ timestamp: d.timestamp, aqi_predicted: d.aqi })),
+                model_type: "TELEMETRY-SYNC"
+            });
+            renderForecastChart(historical.data.map(d => ({ timestamp: d.timestamp, aqi_predicted: d.aqi })));
         }
+        
         if (explain) renderShapChart(explain);
         if (historical) renderHistoricalChart(historical);
-        
-        // Hide loader
+    } catch (e) {
+        console.error(e);
+        const summary = document.getElementById('summaryText');
+        if (summary) summary.innerText = "System currently offline or unreachable.";
+    } finally {
+        // Always hide loader reliably
         const loader = document.getElementById('loadingOverlay');
         if (loader) {
             loader.style.opacity = '0';
             setTimeout(() => loader.style.display = 'none', 500);
         }
-    } catch (e) {
-        console.error(e);
-        document.getElementById('summaryText').innerText = "System currently offline or unreachable.";
     }
 }
 

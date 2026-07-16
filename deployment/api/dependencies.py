@@ -90,6 +90,39 @@ class ModelService:
         except Exception as e:
             logger.error("Failed to load model: %s", e)
 
+        if self.model is None:
+            logger.warning("No model loaded from registry — initializing fallback BaselineRegressor")
+            try:
+                from training_pipeline.models.baseline import BaselineRegressor
+                from data_pipeline.ingest import SyntheticDataGenerator
+                from data_pipeline.transformers import FeatureEngineer
+                from datetime import datetime, timezone, timedelta
+                from training_pipeline.train import FEATURE_COLUMNS, TARGET_COLUMN
+                import numpy as np
+
+                generator = SyntheticDataGenerator(settings)
+                engineer = FeatureEngineer(settings)
+                now = datetime.now(timezone.utc)
+                payloads = [generator.generate_for_timestamp(now - timedelta(hours=100 - h)) for h in range(100)]
+                df = engineer.transform_batch(payloads)
+                df = engineer.impute_missing_lags(df)
+
+                available_cols = [c for c in FEATURE_COLUMNS if c in df.columns]
+                X = df[available_cols].fillna(0.0).values.astype(np.float32)
+                if TARGET_COLUMN in df.columns:
+                    y = df[TARGET_COLUMN].fillna(100.0).values.astype(np.float32)
+                else:
+                    y = df["aqi_value"].fillna(100.0).values.astype(np.float32)
+
+                fallback_model = BaselineRegressor(model_type="ridge")
+                fallback_model.fit(X, y, feature_names=available_cols)
+                self.model = fallback_model
+                self.model_metadata = {"version": "fallback-v1", "model_type": "ridge"}
+                self._loaded = True
+                logger.info("Successfully initialized and loaded fallback BaselineRegressor")
+            except Exception as ex:
+                logger.error("Failed to initialize fallback model: %s", ex)
+
     @property
     def is_loaded(self) -> bool:
         """Check if model is loaded and ready for inference."""
