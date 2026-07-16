@@ -15,33 +15,50 @@ export default function VignetteAlert({ currentAqi = 0, isTriggered = false }: V
   return (
     <AnimatePresence>
       {active && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.8 }}
-          className="fixed inset-0 pointer-events-none z-40 overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1.0 }}
+          className="fixed inset-0 pointer-events-none z-40 overflow-hidden"
+        >
+          {/* Subtle warm amber breathing border glow around edges */}
           <motion.div
-            animate={{ opacity: [0.3, 0.6, 0.3], scale: [1, 1.01, 1] }}
-            transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ background: 'radial-gradient(circle at center, transparent 60%, rgba(180, 50, 50, 0.4) 100%)' }}
-            className="absolute inset-0 w-full h-full" />
+            animate={{
+              opacity: [0.3, 0.65, 0.3],
+              boxShadow: [
+                'inset 0 0 60px rgba(245, 158, 11, 0.25)',
+                'inset 0 0 110px rgba(245, 158, 11, 0.45)',
+                'inset 0 0 60px rgba(245, 158, 11, 0.25)',
+              ],
+            }}
+            transition={{ duration: 3.8, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute inset-0 w-full h-full rounded-3xl border-4 border-amber-400/30"
+          />
 
+          {/* Frosted Warm Amber Advisory Banner at Top */}
           <motion.div
-            initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -60, opacity: 0 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 200 }}
-            className="absolute top-5 left-1/2 -translate-x-1/2 pointer-events-auto max-w-lg w-full px-4">
-            <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-950/90 border border-red-500/40 backdrop-blur-2xl shadow-[0_8px_30px_rgba(180,50,50,0.3)] text-red-100">
-              <div className="p-2 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30">
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -50, opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+            className="absolute top-6 left-1/2 -translate-x-1/2 pointer-events-auto max-w-xl w-full px-4"
+          >
+            <div className="flex items-start gap-4 p-5 rounded-3xl bg-[#F2F4F8]/95 shadow-neumorphic-lg border border-amber-300 backdrop-blur-2xl text-[#2D3748]">
+              <div className="p-3 rounded-2xl bg-amber-100 border border-amber-300 text-amber-700 shadow-neumorphic-inset-sm">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] uppercase font-bold tracking-wider text-red-400 flex items-center gap-1">
-                    <ShieldAlert className="w-3 h-3" /> Air Quality Warning
+                  <span className="text-xs uppercase font-extrabold tracking-wider text-amber-800 flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 text-amber-600" /> Soft Advisory • Elevated Concentration
                   </span>
-                  <span className="text-[11px] font-mono font-bold bg-red-500/30 px-2 py-0.5 rounded text-white">
+                  <span className="text-xs font-mono font-bold bg-amber-200/80 text-amber-900 px-2.5 py-1 rounded-xl border border-amber-300">
                     AQI {Math.round(currentAqi)}
                   </span>
                 </div>
-                <p className="text-[12px] text-red-200/80 mt-1 leading-relaxed">
-                  Air quality has exceeded safe levels. Limit outdoor activity and keep windows closed. Consider using air purification.
+                <p className="text-xs font-medium text-[#475569] mt-1.5 leading-relaxed">
+                  Atmospheric particulate accumulation has exceeded regional thresholds (`150 AQI`). We recommend sensitive demographics limit strenuous physical outdoor activities.
                 </p>
               </div>
             </div>

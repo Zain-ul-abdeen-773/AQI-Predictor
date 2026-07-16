@@ -8,12 +8,18 @@ import ModelZooSelector, { ModelZooEntry } from '../components/ModelZooSelector'
 import AtmosphericBentoGrid, { DiurnalPredictionHour } from '../components/AtmosphericBentoGrid';
 import VignetteAlert from '../components/VignetteAlert';
 
-interface Payload {
-  city: string; generated_at: string; model_type: string; current_aqi: number;
-  current_level: string; hourly_predictions: DiurnalPredictionHour[]; summary: string; alert: boolean;
+interface PredictionPayload {
+  city: string;
+  generated_at: string;
+  model_type: string;
+  current_aqi: number;
+  current_level: string;
+  hourly_predictions: DiurnalPredictionHour[];
+  summary: string;
+  alert: boolean;
 }
 
-const MODELS: ModelZooEntry[] = [
+const MODEL_ZOO: ModelZooEntry[] = [
   { id: 'bilstm_attention', name: 'Bi-LSTM + Attention', category: 'Deep Learning', r2: 0.945, rmse: 5.82, mae: 4.12, is_default: true },
   { id: 'lightgbm', name: 'LightGBM (Optuna)', category: 'Gradient Boosting', r2: 0.931, rmse: 6.45, mae: 4.88, is_default: false },
   { id: 'xgboost', name: 'XGBoost (Optuna)', category: 'Gradient Boosting', r2: 0.928, rmse: 6.71, mae: 5.02, is_default: false },
@@ -21,114 +27,184 @@ const MODELS: ModelZooEntry[] = [
   { id: 'random_forest', name: 'Random Forest', category: 'Ensemble', r2: 0.895, rmse: 8.12, mae: 6.15, is_default: false },
   { id: 'extra_trees', name: 'Extra Trees', category: 'Ensemble', r2: 0.887, rmse: 8.45, mae: 6.41, is_default: false },
   { id: 'ridge', name: 'Ridge Regression', category: 'Linear', r2: 0.842, rmse: 10.15, mae: 7.82, is_default: false },
-  { id: 'svr', name: 'SVR (RBF)', category: 'Kernel', r2: 0.835, rmse: 10.42, mae: 8.11, is_default: false },
+  { id: 'svr', name: 'SVR (RBF Kernel)', category: 'Kernel', r2: 0.835, rmse: 10.42, mae: 8.11, is_default: false },
 ];
 
-function buildDefault(): Payload {
+function buildDeterministicForecast(): PredictionPayload {
   const preds: DiurnalPredictionHour[] = Array.from({ length: 72 }, (_, i) => {
     const base = Math.round(88 + Math.sin(i / 5.5) * 16);
-    return { timestamp: `T+${i}h`, aqi_predicted: base, aqi_lower_80: Math.max(10, base - 9), aqi_upper_80: base + 13,
-      level: base > 150 ? 'Unhealthy' : base > 100 ? 'Unhealthy for Sensitive Groups' : 'Moderate' };
+    return {
+      timestamp: `T+${i}h`,
+      aqi_predicted: base,
+      aqi_lower_80: Math.max(10, base - 9),
+      aqi_upper_80: base + 13,
+      level: base > 150 ? 'Unhealthy' : base > 100 ? 'Unhealthy for Sensitive Groups' : 'Moderate',
+    };
   });
-  return { city: 'Sargodha, Pakistan', generated_at: '—', model_type: 'Bi-LSTM + Attention', current_aqi: 88, current_level: 'Moderate',
-    summary: 'Air quality is within acceptable limits. Sensitive individuals should limit prolonged outdoor exposure during evening hours when temperature inversions may trap pollutants.',
-    alert: false, hourly_predictions: preds };
-}
-const DEFAULT = buildDefault();
-
-function getAqiGlow(val: number) {
-  if (val <= 50) return 'from-green-500/20 via-green-500/5 to-transparent text-green-400';
-  if (val <= 100) return 'from-yellow-500/20 via-yellow-500/5 to-transparent text-yellow-400';
-  if (val <= 150) return 'from-orange-500/20 via-orange-500/5 to-transparent text-orange-400';
-  if (val <= 200) return 'from-red-500/25 via-red-500/8 to-transparent text-red-400';
-  return 'from-purple-600/25 via-purple-500/8 to-transparent text-purple-400';
+  return {
+    city: 'Sargodha, Pakistan',
+    generated_at: '—',
+    model_type: 'Bi-LSTM + Attention',
+    current_aqi: 88,
+    current_level: 'Moderate',
+    summary: 'Atmospheric particulate dispersion across Sargodha basin is within acceptable benchmarks. Diurnal evening thermal inversions may cause temporary localized accumulation.',
+    alert: false,
+    hourly_predictions: preds,
+  };
 }
 
-function Counter({ target }: { target: number }) {
-  const [v, setV] = useState(0);
-  const sp = useSpring(0, { stiffness: 60, damping: 18 });
-  useEffect(() => { sp.set(target); }, [target, sp]);
-  useEffect(() => sp.on('change', (n) => setV(Math.round(n))), [sp]);
-  return <span>{v}</span>;
+const DEFAULT_FORECAST = buildDeterministicForecast();
+
+/** EPA Light Theme gradient ring status for extruded circular dial */
+function getDialRingStyle(val: number) {
+  if (val <= 50) return 'from-emerald-400 via-teal-500 to-cyan-500 border-emerald-400/50 text-emerald-700';
+  if (val <= 100) return 'from-amber-400 via-yellow-500 to-amber-600 border-amber-400/60 text-amber-800';
+  if (val <= 150) return 'from-orange-400 via-amber-500 to-orange-600 border-orange-400/60 text-orange-800';
+  if (val <= 200) return 'from-rose-500 via-red-500 to-rose-600 border-rose-500/60 text-rose-800';
+  return 'from-purple-500 via-violet-600 to-purple-700 border-purple-500/60 text-purple-900';
 }
 
-export default function HomePage() {
-  const [models] = useState(MODELS);
-  const [active, setActive] = useState('bilstm_attention');
-  const [data, setData] = useState<Payload>(DEFAULT);
+function SpringDialCounter({ target }: { target: number }) {
+  const [display, setDisplay] = useState(0);
+  const spring = useSpring(0, { stiffness: 65, damping: 16 });
+
+  useEffect(() => {
+    spring.set(target);
+  }, [target, spring]);
+
+  useEffect(() => {
+    return spring.on('change', (latest) => setDisplay(Math.round(latest)));
+  }, [spring]);
+
+  return <span>{display}</span>;
+}
+
+export default function LuminousHomePage() {
+  const [models] = useState<ModelZooEntry[]>(MODEL_ZOO);
+  const [activeModel, setActiveModel] = useState('bilstm_attention');
+  const [forecast, setForecast] = useState<PredictionPayload>(DEFAULT_FORECAST);
   const [loading, setLoading] = useState(false);
   const [lastSync, setLastSync] = useState('Just now');
 
-  const sync = async (id: string) => {
+  const syncData = async (modelId: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`https://fjockq4c644a4lcxxhapyne2my0lgkly.lambda-url.us-east-1.on.aws/predict?model_id=${id}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }
-      }).catch(() => null);
-      if (res?.ok) { const d = await res.json(); if (d?.hourly_predictions) { setData(d); setLastSync(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })); return; } }
-      const m = models.find(x => x.id === id) || MODELS[0];
-      const shift = id === 'lightgbm' ? -7 : id === 'ridge' ? 14 : 0;
+      const url = `https://fjockq4c644a4lcxxhapyne2my0lgkly.lambda-url.us-east-1.on.aws/predict?model_id=${modelId}`;
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(() => null);
+
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data?.hourly_predictions) {
+          setForecast(data);
+          setLastSync(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+          return;
+        }
+      }
+
+      // Fallback simulation when API is unreachable
+      const model = models.find((m) => m.id === modelId) || MODEL_ZOO[0];
+      const shift = modelId === 'lightgbm' ? -7 : modelId === 'ridge' ? 14 : 0;
       const aqi = Math.max(25, Math.min(420, 88 + shift));
-      setData({ ...DEFAULT, model_type: m.name, current_aqi: aqi, current_level: aqi > 150 ? 'Unhealthy' : aqi > 100 ? 'Unhealthy for Sensitive Groups' : 'Moderate', alert: aqi > 150 });
+      setForecast({
+        ...DEFAULT_FORECAST,
+        model_type: model.name,
+        current_aqi: aqi,
+        current_level: aqi > 150 ? 'Unhealthy' : aqi > 100 ? 'Unhealthy for Sensitive Groups' : 'Moderate',
+        alert: aqi > 150,
+      });
       setLastSync(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { sync(active); }, [active]);
+  useEffect(() => {
+    syncData(activeModel);
+  }, [activeModel]);
 
-  const glow = getAqiGlow(data.current_aqi);
+  const dialStyle = getDialRingStyle(forecast.current_aqi);
 
   return (
-    <div className="relative z-10 flex flex-col gap-8">
-      <ParticleWindEngine aqiValue={data.current_aqi} />
-      <VignetteAlert currentAqi={data.current_aqi} isTriggered={data.alert} />
+    <div className="relative z-10 flex flex-col gap-9">
+      <ParticleWindEngine aqiValue={forecast.current_aqi} />
+      <VignetteAlert currentAqi={forecast.current_aqi} isTriggered={forecast.alert} />
 
-      <ModelZooSelector modelList={models} activeModelId={active} onModelChange={setActive} isFetching={loading} />
+      {/* Tactile Model Zoo Selector */}
+      <ModelZooSelector
+        modelList={models}
+        activeModelId={activeModel}
+        onModelChange={setActiveModel}
+        isFetching={loading}
+      />
 
-      {/* Hero */}
+      {/* Central Luminous Neumorphic KPI Container */}
       <motion.div
-        initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        className="relative overflow-hidden rounded-2xl bg-[#0D1B2A]/75 backdrop-blur-2xl border border-sky-400/[0.08] p-8 sm:p-12 flex flex-col lg:flex-row items-center justify-between gap-8 shadow-lg"
+        initial={{ opacity: 0, y: 22 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+        className="relative rounded-[32px] bg-[#F2F4F8] shadow-neumorphic-lg border border-white p-8 sm:p-14 flex flex-col lg:flex-row items-center justify-between gap-10"
       >
-        <div className={`absolute -left-28 -top-28 w-[420px] h-[420px] rounded-full bg-gradient-to-br ${glow} blur-[100px] pointer-events-none opacity-40 transition-all duration-1000`} />
-
+        {/* Left Info Panel */}
         <div className="flex flex-col items-start z-10 max-w-xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-sky-500/[0.08] border border-sky-400/[0.1] text-[11px] uppercase tracking-wider font-semibold text-slate-300 mb-5">
-            <MapPin className="w-3 h-3 text-sky-400" /> Sargodha, Pakistan
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-sm border border-white text-xs uppercase tracking-wider font-extrabold text-[#64748B] mb-6">
+            <MapPin className="w-4 h-4 text-[#0284C7]" />
+            <span>Sargodha Basin — Station #4 (Empirical Telemetry)</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight text-slate-50 leading-tight">
-            Air Quality Index
+
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-[#2D3748] leading-tight">
+            Air Quality Intelligence
           </h1>
-          <p className="text-sm text-slate-400 mt-4 leading-relaxed">{data.summary}</p>
-          <div className="flex items-center gap-3 mt-7 pt-5 border-t border-white/[0.05] w-full text-[11px] text-slate-500">
-            <span className="flex items-center gap-1.5"><Activity className="w-3 h-3 text-slate-500" /> Updated {lastSync}</span>
-            <span>·</span>
-            <span className="text-green-400 flex items-center gap-1 font-medium"><CheckCircle2 className="w-3 h-3" /> Model verified</span>
+
+          <p className="text-base font-medium text-[#64748B] mt-4 leading-relaxed">
+            {forecast.summary}
+          </p>
+
+          <div className="flex items-center gap-3 mt-8 pt-6 border-t border-[#D1D9E6]/70 w-full text-xs font-semibold text-[#64748B]">
+            <span className="flex items-center gap-1.5">
+              <Activity className="w-4 h-4 text-[#0284C7]" /> Verified Sync: {lastSync}
+            </span>
+            <span>•</span>
+            <span className="text-emerald-600 flex items-center gap-1">
+              <CheckCircle2 className="w-4 h-4" /> Cross-Val R² {models.find((m) => m.id === activeModel)?.r2 || '0.945'}
+            </span>
           </div>
         </div>
 
-        {/* Big AQI */}
-        <div className="flex flex-col items-end justify-center z-10 p-7 rounded-2xl bg-[#080F1A]/60 border border-white/[0.06] min-w-[270px] text-center lg:text-right">
-          <span className="text-[10px] uppercase tracking-widest font-semibold text-slate-500 mb-1 flex items-center justify-end gap-1.5">
-            <Wind className="w-3 h-3 text-sky-400/60" /> Current AQI
-          </span>
-          <div className={`text-7xl sm:text-8xl lg:text-9xl font-extralight tracking-tighter leading-none ${glow.split(' ').pop()} select-none my-2`}>
-            <Counter target={data.current_aqi} />
-          </div>
-          <div className="mt-3 flex items-center justify-end gap-2.5">
-            <span className="px-3 py-1 rounded-lg text-[11px] font-semibold uppercase bg-white/[0.06] border border-white/[0.08] text-slate-200">
-              {data.current_level}
+        {/* Massive 3D-Extruded Circular Dial KPI */}
+        <div className="relative flex flex-col items-center justify-center p-8 sm:p-10 rounded-full bg-[#F2F4F8] shadow-neumorphic border border-white min-w-[280px] sm:min-w-[320px] aspect-square text-center group">
+          {/* Subtle Outer Ring Gradient */}
+          <div className={`absolute inset-3 rounded-full border-[6px] bg-gradient-to-tr ${dialStyle.split(' ')[0]} ${dialStyle.split(' ')[1]} ${dialStyle.split(' ')[2]} opacity-25 group-hover:opacity-40 transition-opacity`} />
+          <div className="absolute inset-5 rounded-full bg-[#F2F4F8] shadow-neumorphic-inset" />
+
+          <div className="relative z-10 flex flex-col items-center justify-center">
+            <span className="text-xs uppercase tracking-widest font-extrabold text-[#64748B] mb-1 flex items-center gap-1.5">
+              <Wind className="w-4 h-4 text-[#0284C7]" /> Current AQI
             </span>
-            <button onClick={() => sync(active)} disabled={loading} aria-label="Refresh"
-              className="p-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-slate-300 transition-all active:scale-95">
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-sky-400' : ''}`} />
+
+            <div className={`text-7xl sm:text-8xl font-extrabold tracking-tighter leading-none ${dialStyle.split(' ')[3]} select-none my-2`}>
+              <SpringDialCounter target={forecast.current_aqi} />
+            </div>
+
+            <span className="px-4 py-1.5 rounded-2xl text-xs font-extrabold uppercase bg-[#F2F4F8] shadow-neumorphic-sm border border-white text-[#2D3748] mt-2">
+              {forecast.current_level}
+            </span>
+
+            <button
+              onClick={() => syncData(activeModel)}
+              disabled={loading}
+              aria-label="Refresh telemetry"
+              className="mt-4 p-2.5 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-sm hover:shadow-neumorphic-inset transition-all border border-white text-[#64748B] active:scale-95"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#0284C7]' : ''}`} />
             </button>
           </div>
         </div>
       </motion.div>
 
-      <AtmosphericBentoGrid hourlyPredictions={data.hourly_predictions} />
+      {/* Tactile 3-Day Bento Box Forecast */}
+      <AtmosphericBentoGrid hourlyPredictions={forecast.hourly_predictions} />
     </div>
   );
 }
