@@ -1,5 +1,5 @@
 ---
-title: AQI Predictor
+title: AQI Predictor App
 emoji: 📊
 colorFrom: green
 colorTo: blue
