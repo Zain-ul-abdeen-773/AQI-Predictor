@@ -7,6 +7,7 @@ import ParticleWindEngine from '../components/ParticleWindEngine';
 import ModelZooSelector, { ModelZooEntry } from '../components/ModelZooSelector';
 import AtmosphericBentoGrid, { DiurnalPredictionHour } from '../components/AtmosphericBentoGrid';
 import VignetteAlert from '../components/VignetteAlert';
+import ActualVsPredictedGraph from '../components/ActualVsPredictedGraph';
 
 interface PredictionPayload {
   city: string;
@@ -205,6 +206,9 @@ export default function LuminousHomePage() {
 
       {/* Tactile 3-Day Bento Box Forecast */}
       <AtmosphericBentoGrid hourlyPredictions={forecast.hourly_predictions} />
+
+      {/* Telemetric Actual vs Predicted Trajectory Engine */}
+      <ActualVsPredictedGraph />
     </div>
   );
 }
