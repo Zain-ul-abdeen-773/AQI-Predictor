@@ -281,6 +281,7 @@ resource "aws_codepipeline" "main" {
         ConnectionArn    = aws_codestarconnections_connection.github.arn
         FullRepositoryId = var.github_repository
         BranchName       = var.github_branch
+        DetectChanges    = "true"
       }
     }
   }
