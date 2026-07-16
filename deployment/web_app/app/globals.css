@@ -2,26 +2,54 @@
 
 @layer base {
   body {
-    background-color: #111114;
-    color: #F0F0F5;
+    background-color: #F2F4F8;
+    color: #2D3748;
     font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
-    letter-spacing: -0.01em;
   }
 }
 
-/* Soft scrollbar */
+/* Custom Neumorphic Utilities */
+.shadow-neumorphic {
+  box-shadow: -8px -8px 18px rgba(255, 255, 255, 0.85), 8px 8px 18px rgba(209, 217, 230, 0.75);
+}
+
+.shadow-neumorphic-sm {
+  box-shadow: -4px -4px 10px rgba(255, 255, 255, 0.9), 4px 4px 10px rgba(209, 217, 230, 0.65);
+}
+
+.shadow-neumorphic-lg {
+  box-shadow: -14px -14px 28px rgba(255, 255, 255, 0.95), 14px 14px 28px rgba(209, 217, 230, 0.85);
+}
+
+.shadow-neumorphic-inset {
+  box-shadow: inset -5px -5px 12px rgba(255, 255, 255, 0.9), inset 5px 5px 12px rgba(209, 217, 230, 0.75);
+}
+
+.shadow-neumorphic-inset-sm {
+  box-shadow: inset -3px -3px 6px rgba(255, 255, 255, 0.9), inset 3px 3px 6px rgba(209, 217, 230, 0.7);
+}
+
+/* Glass plus Neumorphic soft glow */
+.neumorphic-glass {
+  background: rgba(242, 244, 248, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Scrollbar for light luminous theme */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #111114;
+  background: #F2F4F8;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: #D1D9E6;
   border-radius: 9999px;
+  border: 1px solid #FFFFFF;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(80, 180, 160, 0.35);
+  background: #B6C3D6;
 }

@@ -1,18 +1,18 @@
+import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import './globals.css';
 import LiquidNavigation from '../components/LiquidNavigation';
 
 const inter = Inter({
   subsets: ['latin'],
-  weight: ['100', '200', '300', '400', '500', '600', '700', '800'],
   variable: '--font-inter',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'Pearls AQI — Air Quality Prediction for Sargodha',
+  title: 'Pearls AQI — Luminous Neumorphic Air Quality Intelligence (Sargodha)',
   description:
-    'Machine learning-powered air quality index prediction for the Sargodha region, Pakistan. Featuring 8 regression models and SHAP explainability.',
+    'Awwwards-winning Luminous Neumorphic (Soft UI) air quality prediction platform for the Sargodha region, powered by an 8-Model Machine Learning Zoo and volumetric atmospheric simulation.',
 };
 
 export default function RootLayout({
@@ -21,9 +21,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body
-        className={`${inter.variable} font-sans bg-[#111114] text-white min-h-screen antialiased overflow-x-hidden selection:bg-teal-500 selection:text-black`}
+        className={`${inter.variable} font-sans bg-[#F2F4F8] text-[#2D3748] min-h-screen antialiased overflow-x-hidden selection:bg-[#0284C7] selection:text-white`}
       >
         <LiquidNavigation />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 pb-20 relative z-10">
