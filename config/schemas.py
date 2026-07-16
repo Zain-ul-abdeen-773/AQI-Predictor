@@ -46,6 +46,11 @@ class ModelType(str, Enum):
     LIGHTGBM = "lightgbm"
     BILSTM_ATTENTION = "bilstm_attention"
     ENSEMBLE = "ensemble"
+    XGBOOST = "xgboost"
+    RANDOM_FOREST = "random_forest"
+    EXTRA_TREES = "extra_trees"
+    GRADIENT_BOOSTING = "gradient_boosting"
+    SVR = "svr"
 
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -155,10 +155,12 @@ function renderShapChart(explainData) {
     Plotly.newPlot('shapChart', [trace], layout, { displayModeBar: false, responsive: true });
 }
 
-async function initializeDashboard() {
+let selectedModelId = 'bilstm_attention';
+
+async function initializeDashboard(modelId = selectedModelId) {
     try {
         const [predict, explain, historical] = await Promise.all([
-            fetchAPI('/predict', 'POST'),
+            fetchAPI(`/predict?model_id=${modelId}`, 'POST'),
             fetchAPI('/explain', 'POST'),
             fetchAPI('/historical?hours=72', 'GET')
         ]);
@@ -174,7 +176,7 @@ async function initializeDashboard() {
                 current_level: "Moderate",
                 summary: "Displaying observed telemetry while forecast engine synchronizes.",
                 hourly_predictions: historical.data.map(d => ({ timestamp: d.timestamp, aqi_predicted: d.aqi })),
-                model_type: "TELEMETRY-SYNC"
+                model_type: modelId.toUpperCase()
             });
             renderForecastChart(historical.data.map(d => ({ timestamp: d.timestamp, aqi_predicted: d.aqi })));
         }
@@ -196,9 +198,25 @@ async function initializeDashboard() {
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => {
-    document.getElementById('loadingOverlay').style.display = 'flex';
-    setTimeout(() => document.getElementById('loadingOverlay').style.opacity = '1', 10);
-    initializeDashboard();
+    const loader = document.getElementById('loadingOverlay');
+    if (loader) {
+        loader.style.display = 'flex';
+        setTimeout(() => loader.style.opacity = '1', 10);
+    }
+    initializeDashboard(selectedModelId);
 });
 
-document.addEventListener('DOMContentLoaded', initializeDashboard);
+const selectorEl = document.getElementById('modelSelector');
+if (selectorEl) {
+    selectorEl.addEventListener('change', (e) => {
+        selectedModelId = e.target.value;
+        const loader = document.getElementById('loadingOverlay');
+        if (loader) {
+            loader.style.display = 'flex';
+            setTimeout(() => loader.style.opacity = '1', 10);
+        }
+        initializeDashboard(selectedModelId);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => initializeDashboard(selectedModelId));
