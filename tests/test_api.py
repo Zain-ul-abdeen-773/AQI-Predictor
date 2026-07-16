@@ -93,3 +93,27 @@ class TestAPIDocumentation:
         assert response.status_code == 200
         schema = response.json()
         assert schema["info"]["title"] == "Pearls AQI Predictor API"
+
+
+class TestModelZooEndpoints:
+    """Tests for 8-Model Zoo selection and metrics endpoints."""
+
+    def test_list_models_returns_8_models(self, client):
+        """Verify /models returns exactly 8 models with metrics and default selection."""
+        response = client.get("/models")
+        assert response.status_code == 200
+        data = response.json()
+        assert "models" in data
+        assert "default_model_id" in data
+        assert len(data["models"]) == 8
+        default_model = next(m for m in data["models"] if m["is_default"])
+        assert default_model["id"] == data["default_model_id"]
+        assert default_model["r2"] >= 0.90
+
+    def test_predict_with_specific_model_id(self, client):
+        """Verify /predict accepts model_id and returns predictions using that model."""
+        response = client.post("/predict?model_id=ridge")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["model_type"] == "ridge"
+        assert len(data["hourly_predictions"]) == 72

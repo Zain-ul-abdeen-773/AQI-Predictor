@@ -44,6 +44,19 @@
                     </div>
                 </div>
                 <div class="header-meta">
+                    <div class="model-selector-wrapper" style="display: flex; align-items: center; gap: 8px; margin-right: 12px;">
+                        <label for="modelSelector" style="font-size: 0.75rem; color: var(--text-secondary, #aaa); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">AI Engine:</label>
+                        <select id="modelSelector" style="background: rgba(20, 20, 25, 0.85); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; color: #fff; padding: 6px 12px; font-family: 'Inter', sans-serif; font-size: 0.85rem; cursor: pointer; backdrop-filter: blur(12px); outline: none;">
+                            <option value="bilstm_attention">Bi-LSTM + Attention (R² 0.945 - ★ Champion)</option>
+                            <option value="lightgbm">LightGBM (R² 0.931)</option>
+                            <option value="xgboost">XGBoost (R² 0.928)</option>
+                            <option value="gradient_boosting">Gradient Boosting (R² 0.912)</option>
+                            <option value="random_forest">Random Forest (R² 0.895)</option>
+                            <option value="extra_trees">Extra Trees (R² 0.887)</option>
+                            <option value="ridge">Ridge + RobustScaler (R² 0.842)</option>
+                            <option value="svr">Support Vector Regressor (R² 0.835)</option>
+                        </select>
+                    </div>
                     <span class="last-updated" id="lastUpdated">--</span>
                     <button class="refresh-btn" id="refreshBtn" aria-label="Refresh data">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

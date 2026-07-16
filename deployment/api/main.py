@@ -144,6 +144,18 @@ async def serve_dashboard():
     """Serve the HTML dashboard."""
     return FileResponse(frontend_dir / "index.html")
 
+@app.get("/models", tags=["Prediction"])
+async def list_models() -> Dict[str, Any]:
+    """Get all 8 models in the Model Zoo along with evaluation metrics (RMSE, MAE, R2) and default selection."""
+    model_service = get_model_service()
+    if not model_service.is_loaded:
+        model_service.load()
+    return {
+        "models": model_service.get_all_models_list(),
+        "default_model_id": model_service.default_model_id,
+    }
+
+
 @app.get("/health", response_model=HealthResponse, tags=["System"])
 async def health_check() -> HealthResponse:
     """Service health and readiness check.
@@ -164,24 +176,26 @@ async def health_check() -> HealthResponse:
 
 
 @app.post("/predict", response_model=ForecastResponse, tags=["Prediction"])
-async def predict() -> ForecastResponse:
+async def predict(
+    model_id: Optional[str] = Query(
+        None,
+        description="Select model from 8 models zoo: bilstm_attention, lightgbm, xgboost, gradient_boosting, random_forest, extra_trees, ridge, svr",
+    )
+) -> ForecastResponse:
     """Generate a 3-day (72-hour) AQI forecast for Sargodha.
 
     Workflow:
     1. Fetches latest feature vectors from the Feature Store
-    2. Loads the champion model from the Model Registry
+    2. Loads the selected or champion model from the Model Zoo
     3. Executes inference
     4. Returns hourly predictions with uncertainty bounds
-
-    Returns:
-        ForecastResponse: Complete 3-day AQI forecast.
-
-    Raises:
-        HTTPException: If model is not loaded or prediction fails.
     """
     settings = get_settings()
     model_service = get_model_service()
     feature_service = get_feature_service()
+
+    if not model_service.is_loaded:
+        model_service.load()
 
     if not model_service.is_loaded:
         raise HTTPException(
@@ -221,7 +235,8 @@ async def predict() -> ForecastResponse:
 
     # ── Run inference ──
     try:
-        model = model_service.model
+        model = model_service.get_model(model_id)
+        selected_meta = model_service.get_model_metadata(model_id)
 
         # Handle different model types
         if hasattr(model, "pipeline"):
@@ -278,13 +293,16 @@ async def predict() -> ForecastResponse:
     alert = any(p.aqi_predicted > settings.aqi_alert_threshold for p in hourly_predictions)
 
     # Model type detection
-    model_type = ModelType.LIGHTGBM
-    if hasattr(model_service.model, "model_type"):
-        mt = model_service.model.model_type
-        if "ridge" in str(mt).lower():
-            model_type = ModelType.RIDGE
-        elif "lstm" in str(mt).lower():
-            model_type = ModelType.BILSTM_ATTENTION
+    try:
+        model_type = ModelType(selected_meta.get("id", "bilstm_attention"))
+    except ValueError:
+        model_type = ModelType.BILSTM_ATTENTION
+        if hasattr(model, "model_type"):
+            mt = model.model_type
+            if "ridge" in str(mt).lower():
+                model_type = ModelType.RIDGE
+            elif "lstm" in str(mt).lower():
+                model_type = ModelType.BILSTM_ATTENTION
 
     summary = generate_health_advisory(classify_aqi(np.mean(predictions)))
 
