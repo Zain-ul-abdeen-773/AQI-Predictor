@@ -94,27 +94,32 @@ const ARCHITECTURE_ZOO_METADATA: ModelZooEntry[] = [
   },
 ];
 
-const DEFAULT_SARGODHA_TELEMETRY: PredictionTelemetryPayload = {
-  city: 'Sargodha, Pakistan',
-  generated_at: new Date().toISOString(),
-  model_type: 'Bi-LSTM + Multi-Head Self-Attention',
-  current_aqi: 88,
-  current_level: 'Moderate',
-  summary: 'Atmospheric particulate dispersion is within nominal thresholds. Diurnal evening temperature inversion may cause slight localized accumulation.',
-  alert: false,
-  hourly_predictions: Array.from({ length: 72 }, (_, index) => {
-    const timeOffset = new Date(Date.now() + index * 3600000).toISOString();
-    const cycleSine = Math.sin(index / 5.5) * 16 + Math.random() * 3;
+function buildDeterministicForecast(): PredictionTelemetryPayload {
+  const predictions: DiurnalPredictionHour[] = Array.from({ length: 72 }, (_, index) => {
+    const cycleSine = Math.sin(index / 5.5) * 16;
     const baseVal = Math.round(88 + cycleSine);
     return {
-      timestamp: timeOffset,
+      timestamp: `T+${index}h`,
       aqi_predicted: baseVal,
       aqi_lower_80: Math.max(10, baseVal - 9),
       aqi_upper_80: baseVal + 13,
       level: baseVal > 150 ? 'Unhealthy' : baseVal > 100 ? 'Unhealthy for Sensitive Groups' : 'Moderate',
     };
-  }),
-};
+  });
+
+  return {
+    city: 'Sargodha, Pakistan',
+    generated_at: '—',
+    model_type: 'Bi-LSTM + Multi-Head Self-Attention',
+    current_aqi: 88,
+    current_level: 'Moderate',
+    summary: 'Atmospheric particulate dispersion is within nominal thresholds. Diurnal evening temperature inversion may cause slight localized accumulation.',
+    alert: false,
+    hourly_predictions: predictions,
+  };
+}
+
+const DEFAULT_SARGODHA_TELEMETRY = buildDeterministicForecast();
 
 function SpringCountUp({ target }: { target: number }) {
   const [renderedVal, setRenderedVal] = useState(0);
