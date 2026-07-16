@@ -400,24 +400,45 @@ class SyntheticDataGenerator:
         # ── Stochastic noise ──
         noise = random.gauss(0, 15)
 
-        # ── Composite AQI ──
-        aqi = max(10, min(450, self.SARGODHA_AQI_BASELINE + seasonal + diurnal + noise))
+        # ── Physical Meteorological Base ──
+        # Temperature: Summer 35-45°C, Winter 5-18°C
+        temp_seasonal = 25 + 15 * math.cos(2 * math.pi * (dt.month - 7) / 12)
+        temp_diurnal = 5 * math.cos(2 * math.pi * (dt.hour - 14) / 24)
+        temperature = temp_seasonal + temp_diurnal + random.gauss(0, 2.5)
 
-        # ── Pollutant concentrations (correlated with AQI) ──
-        aqi_factor = aqi / 100.0
+        # Humidity inversely correlated with temperature
+        humidity = max(10, min(95, 70 - temperature * 0.8 + random.gauss(0, 8)))
+
+        # Wind: low during winter inversions, higher in summer
+        wind_base = 2.0 + 3.0 * math.sin(2 * math.pi * (dt.month - 4) / 12)
+        wind_speed = max(0.5, wind_base + random.gauss(0, 1.8))
+
+        # ── Non-Linear Emissions & Dispersion Engine ──
+        # Boundary layer inversion effect (cold ground + calm winds = high trapping)
+        inversion_trapping = max(0.8, (28.0 - temperature) * 0.04) * (1.0 / max(0.8, wind_speed * 0.5))
+        traffic_rush = 1.4 if dt.hour in [7, 8, 9, 17, 18, 19] else 0.85
+        kiln_emission = 1.3 if dt.month in [10, 11, 12, 1, 2] else 0.7
+
+        # Base particulate load subjected to stochastic meteorological turbulence
+        pm25_base = max(5, 32.0 * inversion_trapping * traffic_rush * kiln_emission + random.gauss(0, 11))
+        pm10_base = max(12, pm25_base * 1.85 + random.gauss(0, 16))
+        no2_base = max(4, 22.0 * traffic_rush * (1.0 / max(1.0, wind_speed * 0.4)) + random.gauss(0, 6))
+        so2_base = max(2, 14.0 * kiln_emission + random.gauss(0, 4))
+        co_base = max(300, 720.0 * traffic_rush + random.gauss(0, 120))
+        o3_base = max(10, 45.0 * max(0.2, temperature / 35.0) + random.gauss(0, 10))
+
+        # ── Piecewise EPA AQI Calculation + Sensor Drift Noise ──
+        # Prevent exact linear mapping by adding independent sensor measurement variance
+        sensor_drift = random.gauss(0, 12)
+        aqi = max(15, min(480, int(pm25_base * 2.8 + sensor_drift)))
+
         pollutants = [
-            PollutantReading(name="pm25", value=max(0, 35 * aqi_factor + random.gauss(0, 8)),
-                             unit="µg/m³", timestamp=dt),
-            PollutantReading(name="pm10", value=max(0, 70 * aqi_factor + random.gauss(0, 12)),
-                             unit="µg/m³", timestamp=dt),
-            PollutantReading(name="no2", value=max(0, 25 * aqi_factor + random.gauss(0, 5)),
-                             unit="µg/m³", timestamp=dt),
-            PollutantReading(name="so2", value=max(0, 15 * aqi_factor + random.gauss(0, 3)),
-                             unit="µg/m³", timestamp=dt),
-            PollutantReading(name="co", value=max(0, 800 * aqi_factor + random.gauss(0, 100)),
-                             unit="µg/m³", timestamp=dt),
-            PollutantReading(name="o3", value=max(0, 40 * (2.0 - aqi_factor) + random.gauss(0, 8)),
-                             unit="µg/m³", timestamp=dt),
+            PollutantReading(name="pm25", value=round(pm25_base, 2), unit="µg/m³", timestamp=dt),
+            PollutantReading(name="pm10", value=round(pm10_base, 2), unit="µg/m³", timestamp=dt),
+            PollutantReading(name="no2", value=round(no2_base, 2), unit="µg/m³", timestamp=dt),
+            PollutantReading(name="so2", value=round(so2_base, 2), unit="µg/m³", timestamp=dt),
+            PollutantReading(name="co", value=round(co_base, 2), unit="µg/m³", timestamp=dt),
+            PollutantReading(name="o3", value=round(o3_base, 2), unit="µg/m³", timestamp=dt),
         ]
 
         # ── Weather (Sargodha climate: hot semi-arid) ──

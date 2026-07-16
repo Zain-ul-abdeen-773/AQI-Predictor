@@ -470,11 +470,11 @@ class BiLSTMAttention:
             X_val_tensor = torch.FloatTensor(X_val).to(self.device)
             y_val_tensor = torch.FloatTensor(y_val).to(self.device)
 
-        # Optimizer
+        # Optimizer (Strong L2 Weight Decay to Prevent Sequence Overfitting)
         optimizer = torch.optim.AdamW(
             self.model.parameters(),
             lr=self.learning_rate,
-            weight_decay=1e-4,
+            weight_decay=1e-2,
         )
 
         # Effective steps per epoch accounting for gradient accumulation
