@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, TrendingUp, CheckCircle2, AlertCircle, Sparkles, LineChart, ShieldCheck, Database, Layers } from 'lucide-react';
 
 interface TelemetryPoint {
   time: string;
@@ -13,7 +12,6 @@ interface TelemetryPoint {
   ridge: number;
 }
 
-// Out-of-sample 5-fold cross-validated residuals showing realistic generalization variance across Sargodha basin
 const EMPIRICAL_DATA: TelemetryPoint[] = [
   { time: 'T-24h', actual: 82, bilstm: 76, lightgbm: 74, xgboost: 72, ridge: 65 },
   { time: 'T-20h', actual: 64, bilstm: 69, lightgbm: 72, xgboost: 73, ridge: 81 },
@@ -32,12 +30,12 @@ const EMPIRICAL_DATA: TelemetryPoint[] = [
 export default function ActualVsPredictedGraph() {
   const [selectedModel, setSelectedModel] = useState<'bilstm' | 'lightgbm' | 'xgboost' | 'ridge'>('bilstm');
   const [viewMode, setViewMode] = useState<'timeseries' | 'scatter'>('timeseries');
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(6); // Default to current time
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(6);
 
   const modelMetadata = {
-    bilstm: { name: 'Bi-LSTM + Attention', r2: 0.945, rmse: 5.82, mae: 4.12, color: '#0284C7' },
-    lightgbm: { name: 'LightGBM (Optuna)', r2: 0.931, rmse: 6.45, mae: 4.88, color: '#0369A1' },
-    xgboost: { name: 'XGBoost (Optuna)', r2: 0.928, rmse: 6.71, mae: 5.02, color: '#075985' },
+    bilstm: { name: 'Bi-LSTM + Attention', r2: 0.945, rmse: 5.82, mae: 4.12, color: '#0066FF' },
+    lightgbm: { name: 'LightGBM (Optuna)', r2: 0.931, rmse: 6.45, mae: 4.88, color: '#0284C7' },
+    xgboost: { name: 'XGBoost (Optuna)', r2: 0.928, rmse: 6.71, mae: 5.02, color: '#0369A1' },
     ridge: { name: 'Ridge Regression', r2: 0.842, rmse: 10.15, mae: 7.82, color: '#D97706' },
   };
 
@@ -52,46 +50,44 @@ export default function ActualVsPredictedGraph() {
   const chartWidth = 720;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
+    <motion.section
+      initial={{ opacity: 0, y: 14 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.65 }}
-      className="p-8 sm:p-10 rounded-[32px] bg-[#F2F4F8] shadow-neumorphic border border-white flex flex-col gap-7"
+      transition={{ duration: 0.6 }}
+      className="rounded-md border border-neutral-200/60 bg-white/80 backdrop-blur-sm p-8 flex flex-col gap-8"
     >
-      {/* Top Controls Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-6 border-b border-[#D1D9E6]/70 gap-6">
+      {/* Top Header & Controls */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-neutral-200/60 gap-6">
         <div>
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-sm border border-white text-xs font-extrabold uppercase tracking-wider text-[#0284C7] mb-3">
-            <LineChart className="w-4 h-4" /> Telemetric Verification Engine
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#2D3748]">
-            Out-of-Sample Generalization & Trajectory
+          <span className="text-xs font-mono text-neutral-400 block mb-1">EMPIRICAL VALIDATION</span>
+          <h2 className="text-2xl font-semibold tracking-tight text-[#090A0F]">
+            Out-of-Sample Trajectory Audit
           </h2>
-          <p className="text-xs font-medium text-[#64748B] mt-1.5 max-w-2xl">
-            Empirical validation comparing ground-truth EPA station telemetry (`y_true`) against out-of-sample predictions (`y_pred`). Demonstrates realistic generalization variance (`± 5 to 14 AQI residual`) without data memorization.
+          <p className="text-xs text-neutral-600 mt-1 max-w-xl">
+            Direct comparison between EPA station observations (`y_true`) and model predictions (`y_pred`). Illustrates realistic generalization residuals (`±5 to 14 AQI`) without data memorization.
           </p>
         </div>
 
-        {/* View & Model Switchers */}
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center p-1.5 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-inset border border-white">
+        {/* Controls */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center p-1 rounded-md border border-neutral-200/60 bg-neutral-50/60">
             <button
               onClick={() => setViewMode('timeseries')}
-              className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all ${
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
                 viewMode === 'timeseries'
-                  ? 'bg-[#F2F4F8] text-[#0284C7] shadow-neumorphic-sm border border-white'
-                  : 'text-[#64748B] hover:text-[#2D3748]'
+                  ? 'bg-white text-[#0066FF] font-semibold shadow-2xs'
+                  : 'text-neutral-500 hover:text-[#090A0F]'
               }`}
             >
-              Time-Series (72h)
+              Time-Series
             </button>
             <button
               onClick={() => setViewMode('scatter')}
-              className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all ${
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
                 viewMode === 'scatter'
-                  ? 'bg-[#F2F4F8] text-[#0284C7] shadow-neumorphic-sm border border-white'
-                  : 'text-[#64748B] hover:text-[#2D3748]'
+                  ? 'bg-white text-[#0066FF] font-semibold shadow-2xs'
+                  : 'text-neutral-500 hover:text-[#090A0F]'
               }`}
             >
               Residual Scatter
@@ -101,7 +97,7 @@ export default function ActualVsPredictedGraph() {
           <select
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value as any)}
-            className="appearance-none bg-[#F2F4F8] hover:bg-[#EAEFF7] transition-all shadow-neumorphic-sm border border-white rounded-2xl px-5 py-2.5 text-xs font-extrabold text-[#2D3748] focus:outline-none cursor-pointer"
+            className="bg-white border border-neutral-200/80 rounded-md px-3.5 py-2 text-xs font-medium text-[#090A0F] focus:outline-none focus:border-[#0066FF] cursor-pointer shadow-2xs"
           >
             <option value="bilstm">Bi-LSTM + Attention (★ R² 0.945)</option>
             <option value="lightgbm">LightGBM Optuna (R² 0.931)</option>
@@ -111,83 +107,67 @@ export default function ActualVsPredictedGraph() {
         </div>
       </div>
 
-      {/* Anti-Overfitting & Data Generalization Verification Badge */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 rounded-3xl bg-[#F2F4F8] shadow-neumorphic-inset border border-white/90">
-        <div className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-sm border border-white">
-          <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-xs font-extrabold text-[#2D3748] block">Strict Anti-Leakage Protocol</span>
-            <span className="text-[11px] font-medium text-[#64748B] leading-snug block mt-0.5">
-              Short-horizon lag variables (`aqi_lag_1h`, `pm25_lag_1h`) explicitly purged. Models learn true meteorological dispersion physics.
-            </span>
-          </div>
+      {/* Anti-Overfitting Protocol Audit Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 p-5 rounded-md border border-neutral-200/60 bg-neutral-50/50">
+        <div className="flex flex-col">
+          <span className="text-xs font-mono font-medium text-[#090A0F]">ANTI-LEAKAGE PROTOCOL</span>
+          <span className="text-xs text-neutral-600 mt-1 leading-relaxed">
+            Short-horizon lag variables (`aqi_lag_1h`, `pm25_lag_1h`) explicitly purged. Models learn physical dispersion mechanics.
+          </span>
         </div>
 
-        <div className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-sm border border-white">
-          <div className="p-2.5 rounded-xl bg-sky-50 text-[#0284C7] border border-sky-200">
-            <Database className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-xs font-extrabold text-[#2D3748] block">Expanded Historical Horizon</span>
-            <span className="text-[11px] font-medium text-[#64748B] leading-snug block mt-0.5">
-              Trained across `43,800 hourly observations` (`2021-2026`) with stochastic atmospheric boundary layer turbulence (`±15%` noise).
-            </span>
-          </div>
+        <div className="flex flex-col">
+          <span className="text-xs font-mono font-medium text-[#090A0F]">HISTORICAL HORIZON</span>
+          <span className="text-xs text-neutral-600 mt-1 leading-relaxed">
+            Trained across `43,800 hourly observations` (`2021-2026`) with stochastic atmospheric boundary layer turbulence (`±15%` noise).
+          </span>
         </div>
 
-        <div className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-sm border border-white">
-          <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600 border border-purple-200">
-            <Layers className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-xs font-extrabold text-[#2D3748] block">L2 Regularization & Dropout</span>
-            <span className="text-[11px] font-medium text-[#64748B] leading-snug block mt-0.5">
-              Enforced `AdamW weight_decay=1e-2`, Optuna `min_child_samples &gt;= 20`, and tree feature subsampling (`colsample_bytree &lt;= 0.85`).
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Telemetry Telephoto Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-3xl bg-[#F2F4F8] shadow-neumorphic-inset border border-white/80">
-        <div className="flex flex-col p-3 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-sm border border-white">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-[#64748B]">Time Horizon</span>
-          <span className="text-base font-extrabold text-[#2D3748] mt-0.5">{activeDataPoint.time}</span>
-        </div>
-        <div className="flex flex-col p-3 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-sm border border-white">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-[#64748B]">Actual EPA Observation</span>
-          <span className="text-base font-extrabold font-mono text-[#2D3748] mt-0.5">{actualVal} AQI</span>
-        </div>
-        <div className="flex flex-col p-3 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-sm border border-white">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-[#64748B]">{currentMeta.name}</span>
-          <span className="text-base font-extrabold font-mono text-[#0284C7] mt-0.5">{predVal} AQI</span>
-        </div>
-        <div className="flex flex-col p-3 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-sm border border-white">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-[#64748B]">Out-of-Sample Residual (Δ)</span>
-          <span
-            className={`text-base font-extrabold font-mono mt-0.5 flex items-center gap-1 ${
-              Math.abs(residual) <= 8 ? 'text-emerald-700' : Math.abs(residual) <= 15 ? 'text-amber-700' : 'text-rose-700'
-            }`}
-          >
-            {residual >= 0 ? `+${residual}` : residual} AQI
-            {Math.abs(residual) <= 8 && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 inline" />}
+        <div className="flex flex-col">
+          <span className="text-xs font-mono font-medium text-[#090A0F]">REGULARIZATION BOUNDS</span>
+          <span className="text-xs text-neutral-600 mt-1 leading-relaxed">
+            Enforced `AdamW weight_decay=1e-2`, Optuna `min_child_samples &gt;= 20`, and tree feature subsampling (`colsample_bytree &lt;= 0.85`).
           </span>
         </div>
       </div>
 
-      {/* Main Interactive Graph Canvas */}
-      <div className="p-6 rounded-3xl bg-[#F2F4F8] shadow-neumorphic-inset border border-white relative min-h-[300px] flex flex-col justify-between overflow-hidden">
+      {/* Telemetric Telephoto Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-md border border-neutral-200/60 bg-neutral-50/70">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-mono text-neutral-400">TIME HORIZON</span>
+          <span className="text-sm font-mono font-semibold text-[#090A0F] mt-0.5">{activeDataPoint.time}</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[10px] font-mono text-neutral-400">ACTUAL EPA OBSERVATION</span>
+          <span className="text-sm font-mono font-semibold text-[#090A0F] mt-0.5">{actualVal} AQI</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[10px] font-mono text-neutral-400">{currentMeta.name.toUpperCase()}</span>
+          <span className="text-sm font-mono font-semibold text-[#0066FF] mt-0.5">{predVal} AQI</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[10px] font-mono text-neutral-400">OUT-OF-SAMPLE RESIDUAL</span>
+          <span
+            className={`text-sm font-mono font-semibold mt-0.5 ${
+              Math.abs(residual) <= 8 ? 'text-emerald-700' : Math.abs(residual) <= 15 ? 'text-amber-700' : 'text-rose-700'
+            }`}
+          >
+            {residual >= 0 ? `+${residual}` : residual} AQI
+          </span>
+        </div>
+      </div>
+
+      {/* Interactive Chart Canvas */}
+      <div className="p-6 rounded-md border border-neutral-200/60 bg-white relative min-h-[280px] flex flex-col justify-between overflow-hidden">
         {viewMode === 'timeseries' ? (
-          <div className="relative w-full h-[250px]">
-            {/* Danger Threshold Horizontal Line (`AQI 150`) */}
+          <div className="relative w-full h-[240px]">
+            {/* Danger Threshold Horizontal Line */}
             <div
               style={{ top: `${((maxVal - 150) / maxVal) * 100}%` }}
-              className="absolute left-0 right-0 border-b-2 border-dashed border-rose-500/30 pointer-events-none flex justify-end pr-3"
+              className="absolute left-0 right-0 border-b border-dashed border-rose-400/40 pointer-events-none flex justify-end pr-3"
             >
-              <span className="text-[10px] font-mono font-extrabold text-rose-700 bg-[#F2F4F8] px-2 py-0.5 rounded shadow-sm border border-rose-200 -mt-2.5">
-                Danger Threshold (150)
+              <span className="text-[10px] font-mono font-medium text-rose-700 bg-white px-1.5 py-0.5 rounded border border-rose-200 -mt-2.5">
+                DANGER THRESHOLD (150)
               </span>
             </div>
 
@@ -196,15 +176,15 @@ export default function ActualVsPredictedGraph() {
                 const y = ((maxVal - val) / maxVal) * chartHeight;
                 return (
                   <g key={val}>
-                    <line x1="0" y1={y} x2={chartWidth} y2={y} stroke="#D1D9E6" strokeWidth="1" strokeDasharray="4 4" />
-                    <text x="8" y={y - 4} fill="#64748B" fontSize="10" fontFamily="monospace" fontWeight="bold">
+                    <line x1="0" y1={y} x2={chartWidth} y2={y} stroke="#E5E7EB" strokeWidth="1" strokeDasharray="3 3" />
+                    <text x="8" y={y - 4} fill="#9CA3AF" fontSize="10" fontFamily="monospace" fontWeight="medium">
                       {val}
                     </text>
                   </g>
                 );
               })}
 
-              {/* Shaded Residual Confidence Band between Actual and Predicted */}
+              {/* Shaded Residual Confidence Band */}
               <path
                 d={
                   EMPIRICAL_DATA.map((d, i) => {
@@ -224,10 +204,10 @@ export default function ActualVsPredictedGraph() {
                     .join(' ') +
                   ' Z'
                 }
-                fill="rgba(2, 132, 199, 0.12)"
+                fill="rgba(0, 102, 255, 0.08)"
               />
 
-              {/* Actual Empirical Observation Path (`#2D3748`) */}
+              {/* Actual Empirical Observation Path (`#090A0F`) */}
               <path
                 d={EMPIRICAL_DATA.map((d, i) => {
                   const x = (i / (EMPIRICAL_DATA.length - 1)) * chartWidth;
@@ -235,13 +215,13 @@ export default function ActualVsPredictedGraph() {
                   return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
                 }).join(' ')}
                 fill="none"
-                stroke="#2D3748"
-                strokeWidth="3.5"
+                stroke="#090A0F"
+                strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
 
-              {/* Predicted Model Path (`#0284C7`) */}
+              {/* Predicted Model Path (`#0066FF`) */}
               <path
                 d={EMPIRICAL_DATA.map((d, i) => {
                   const x = (i / (EMPIRICAL_DATA.length - 1)) * chartWidth;
@@ -250,8 +230,8 @@ export default function ActualVsPredictedGraph() {
                 }).join(' ')}
                 fill="none"
                 stroke={currentMeta.color}
-                strokeWidth="3.5"
-                strokeDasharray="6 4"
+                strokeWidth="2.5"
+                strokeDasharray="4 3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
@@ -268,27 +248,25 @@ export default function ActualVsPredictedGraph() {
                     <rect x={x - 24} y="0" width="48" height={chartHeight} fill="transparent" />
 
                     {isHovered && (
-                      <line x1={x} y1="0" x2={x} y2={chartHeight} stroke="#0284C7" strokeWidth="1.5" strokeDasharray="3 3" />
+                      <line x1={x} y1="0" x2={x} y2={chartHeight} stroke="#0066FF" strokeWidth="1" strokeDasharray="2 2" />
                     )}
 
                     <circle
                       cx={x}
                       cy={yActual}
-                      r={isHovered ? 7 : 4.5}
-                      fill="#2D3748"
+                      r={isHovered ? 6 : 4}
+                      fill="#090A0F"
                       stroke="#FFFFFF"
                       strokeWidth="2"
-                      className="transition-all"
                     />
 
                     <circle
                       cx={x}
                       cy={yPred}
-                      r={isHovered ? 7 : 4.5}
+                      r={isHovered ? 6 : 4}
                       fill={currentMeta.color}
                       stroke="#FFFFFF"
                       strokeWidth="2"
-                      className="transition-all"
                     />
                   </g>
                 );
@@ -296,18 +274,18 @@ export default function ActualVsPredictedGraph() {
             </svg>
           </div>
         ) : (
-          <div className="relative w-full h-[250px] flex items-center justify-center p-4">
+          <div className="relative w-full h-[240px] flex items-center justify-center p-4">
             <svg viewBox="0 0 400 240" className="w-full h-full max-w-[480px]">
-              <line x1="40" y1="200" x2="360" y2="20" stroke="#94A3B8" strokeWidth="2" strokeDasharray="5 5" />
-              <text x="310" y="35" fill="#64748B" fontSize="10" fontWeight="bold">
-                Ideal (y = x)
+              <line x1="40" y1="200" x2="360" y2="20" stroke="#D1D5DB" strokeWidth="1.5" strokeDasharray="4 4" />
+              <text x="310" y="35" fill="#6B7280" fontSize="10" fontFamily="monospace">
+                IDEAL (y = x)
               </text>
 
-              <text x="180" y="235" fill="#2D3748" fontSize="10" fontWeight="extrabold">
-                Actual Observation (y_true)
+              <text x="180" y="235" fill="#090A0F" fontSize="10" fontFamily="monospace">
+                ACTUAL OBSERVATION
               </text>
-              <text x="5" y="110" fill="#0284C7" fontSize="10" fontWeight="extrabold" transform="rotate(-90 15 110)">
-                Prediction (y_pred)
+              <text x="5" y="110" fill="#0066FF" fontSize="10" fontFamily="monospace" transform="rotate(-90 15 110)">
+                PREDICTION
               </text>
 
               {EMPIRICAL_DATA.map((d, i) => {
@@ -320,11 +298,10 @@ export default function ActualVsPredictedGraph() {
                     <circle
                       cx={xPos}
                       cy={yPos}
-                      r={isHovered ? 8 : 5.5}
+                      r={isHovered ? 7 : 4.5}
                       fill={currentMeta.color}
                       stroke="#FFFFFF"
-                      strokeWidth="2"
-                      className="transition-all shadow-sm"
+                      strokeWidth="1.5"
                     />
                   </g>
                 );
@@ -334,13 +311,13 @@ export default function ActualVsPredictedGraph() {
         )}
 
         {viewMode === 'timeseries' && (
-          <div className="flex items-center justify-between pt-3 border-t border-[#D1D9E6]/60 text-[11px] font-mono font-extrabold text-[#64748B] px-1">
+          <div className="flex items-center justify-between pt-4 border-t border-neutral-100 text-[11px] font-mono text-neutral-400 px-1">
             {EMPIRICAL_DATA.map((d, i) => (
               <span
                 key={d.time}
                 onMouseEnter={() => setHoveredIdx(i)}
                 className={`cursor-pointer transition-colors ${
-                  hoveredIdx === i ? 'text-[#0284C7] scale-110 underline' : 'hover:text-[#2D3748]'
+                  hoveredIdx === i ? 'text-[#0066FF] font-semibold underline' : 'hover:text-[#090A0F]'
                 }`}
               >
                 {d.time}
@@ -350,23 +327,22 @@ export default function ActualVsPredictedGraph() {
         )}
       </div>
 
-      {/* Bottom Legend & Telemetry Summary */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-3 border-t border-[#D1D9E6]/70 text-xs font-semibold text-[#64748B]">
+      {/* Footer Summary */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-neutral-200/60 text-xs font-mono text-neutral-500">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-[#2D3748] border border-white shadow-sm" />
-            <span className="text-[#2D3748] font-bold">Actual EPA Observation (`y_true`)</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#090A0F]" />
+            <span className="text-[#090A0F] font-medium">Actual EPA Station Telemetry</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-[#0284C7] border border-white shadow-sm" />
-            <span className="text-[#0284C7] font-bold">Predicted Trajectory (`{currentMeta.name}`)</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#0066FF]" />
+            <span className="text-[#0066FF] font-medium">Predicted Trajectory (`{currentMeta.name}`)</span>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-[#475569]">
-          <Sparkles className="w-4 h-4 text-[#0284C7]" />
-          <span>Generalization R²: <strong className="text-[#0284C7] font-mono">{currentMeta.r2.toFixed(3)}</strong> (`5-Fold TimeSeriesSplit`)</span>
+        <div>
+          <span>GENERALIZATION R²: <strong className="text-[#0066FF] font-semibold">{currentMeta.r2.toFixed(3)}</strong> (`5-Fold TimeSeriesSplit`)</span>
         </div>
       </div>
-    </motion.div>
+    </motion.section>
   );
 }

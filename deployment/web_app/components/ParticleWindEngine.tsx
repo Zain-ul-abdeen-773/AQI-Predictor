@@ -43,7 +43,6 @@ export default function ParticleWindEngine({ aqiValue = 88 }: ParticleWindEngine
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let rafId: number;
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);
 
@@ -54,41 +53,39 @@ export default function ParticleWindEngine({ aqiValue = 88 }: ParticleWindEngine
     };
     window.addEventListener('resize', handleResize);
 
-    // Determine atmospheric state based on exact AQI
     const isHazardous = aqiValue > 150;
     const isUSG = aqiValue > 100 && aqiValue <= 150;
     const isModerate = aqiValue > 50 && aqiValue <= 100;
 
-    // Particle density and turbulence physics
-    const particleCount = isHazardous ? 950 : isUSG ? 700 : isModerate ? 500 : 380;
-    const baseSpeed = isHazardous ? 3.4 : isUSG ? 2.1 : isModerate ? 1.3 : 0.85;
-    const rayDiffusion = isHazardous ? 65 : isUSG ? 40 : 15;
+    const particleCount = isHazardous ? 700 : isUSG ? 550 : isModerate ? 420 : 320;
+    const baseSpeed = isHazardous ? 2.8 : isUSG ? 1.8 : isModerate ? 1.1 : 0.75;
+    const rayDiffusion = isHazardous ? 50 : 25;
 
-    // Color tones tailored for Ethereal Luminous (#F2F4F8 base)
+    // Color tones tailored for Vercel/Linear Editorial (#FAFAFC base)
     const baseTint = isHazardous
-      ? 'rgba(254, 243, 199, 0.45)' // warning amber (#FEF3C7)
+      ? 'rgba(254, 242, 242, 0.45)'
       : isUSG
-      ? 'rgba(254, 237, 213, 0.35)' // soft orange haze
+      ? 'rgba(255, 251, 235, 0.35)'
       : isModerate
-      ? 'rgba(242, 244, 248, 0.3)'  // neutral ethereal
-      : 'rgba(224, 242, 254, 0.45)'; // fresh morning blue (#E0F2FE)
+      ? 'rgba(250, 250, 252, 0.3)'
+      : 'rgba(239, 246, 255, 0.45)';
 
     const particleColors = isHazardous
-      ? ['#D97706', '#B45309', '#92400E', '#F59E0B']
+      ? ['#E11D48', '#BE123C', '#F43F5E', '#FB7185']
       : isUSG
-      ? ['#EA580C', '#C2410C', '#FB923C', '#D97706']
+      ? ['#D97706', '#B45309', '#F59E0B', '#FBBF24']
       : isModerate
       ? ['#64748B', '#475569', '#94A3B8', '#CBD5E1']
-      : ['#0284C7', '#0369A1', '#38BDF8', '#7DD3FC'];
+      : ['#0066FF', '#0284C7', '#38BDF8', '#60A5FA'];
 
     const particles: DustParticle[] = Array.from({ length: particleCount }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
       vx: (Math.random() * 0.8 + 0.3) * baseSpeed,
       vy: (Math.random() - 0.5) * baseSpeed * 0.35,
-      size: Math.random() * 2.6 + 0.6,
-      alpha: Math.random() * 0.5 + 0.15,
-      maxAlpha: Math.random() * 0.6 + 0.2,
+      size: Math.random() * 2.2 + 0.6,
+      alpha: Math.random() * 0.45 + 0.1,
+      maxAlpha: Math.random() * 0.5 + 0.15,
       angle: Math.random() * Math.PI * 2,
       angleSpeed: (Math.random() - 0.5) * 0.03,
     }));
@@ -99,15 +96,14 @@ export default function ParticleWindEngine({ aqiValue = 88 }: ParticleWindEngine
       time += 0.016;
       ctx.clearRect(0, 0, width, height);
 
-      // 1. Render base atmospheric wash
       ctx.fillStyle = baseTint;
       ctx.fillRect(0, 0, width, height);
 
-      // 2. Render Volumetric Sun Rays casting diagonally from top-left
+      // Volumetric architectural lighting rays
       ctx.save();
-      const numRays = isHazardous ? 8 : 5;
-      const rayOriginX = width * 0.15;
-      const rayOriginY = -100;
+      const numRays = isHazardous ? 6 : 4;
+      const rayOriginX = width * 0.2;
+      const rayOriginY = -120;
 
       for (let i = 0; i < numRays; i++) {
         const spreadAngle = (i - numRays / 2) * 0.18 + Math.sin(time * 0.5 + i) * 0.04;
@@ -117,31 +113,26 @@ export default function ParticleWindEngine({ aqiValue = 88 }: ParticleWindEngine
 
         const rayGrad = ctx.createLinearGradient(rayOriginX, rayOriginY, endX, endY);
         if (isHazardous) {
-          rayGrad.addColorStop(0, 'rgba(251, 191, 36, 0.22)');
-          rayGrad.addColorStop(0.5, 'rgba(217, 119, 6, 0.08)');
+          rayGrad.addColorStop(0, 'rgba(244, 63, 94, 0.15)');
+          rayGrad.addColorStop(0.5, 'rgba(225, 29, 72, 0.05)');
           rayGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
         } else {
-          rayGrad.addColorStop(0, 'rgba(255, 255, 255, 0.65)');
-          rayGrad.addColorStop(0.4, 'rgba(224, 242, 254, 0.25)');
+          rayGrad.addColorStop(0, 'rgba(0, 102, 255, 0.12)');
+          rayGrad.addColorStop(0.4, 'rgba(0, 102, 255, 0.04)');
           rayGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
         }
 
         ctx.beginPath();
         ctx.moveTo(rayOriginX, rayOriginY);
-        ctx.lineTo(endX - 120, endY);
-        ctx.lineTo(endX + 120, endY);
+        ctx.lineTo(endX - 100, endY);
+        ctx.lineTo(endX + 100, endY);
         ctx.closePath();
         ctx.fillStyle = rayGrad;
-        if (isHazardous) {
-          ctx.filter = `blur(${rayDiffusion}px)`;
-        } else {
-          ctx.filter = `blur(${rayDiffusion}px)`;
-        }
+        ctx.filter = `blur(${rayDiffusion}px)`;
         ctx.fill();
       }
       ctx.restore();
 
-      // 3. Render Microscopic Wind/Dust Particles
       const { x: px, y: py, active } = pointerRef.current;
 
       particles.forEach((p, idx) => {
@@ -152,19 +143,17 @@ export default function ParticleWindEngine({ aqiValue = 88 }: ParticleWindEngine
         p.x += p.vx + windX;
         p.y += p.vy + windY;
 
-        // Tactile cursor interaction
         if (active) {
           const dx = p.x - px;
           const dy = p.y - py;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < 140 && dist > 0) {
-            const force = (1 - dist / 140) * 3.2;
-            p.x += (dx / dist) * force;
-            p.y += (dy / dist) * force;
+            const force = (140 - dist) / 140;
+            p.x += (dx / dist) * force * 5;
+            p.y += (dy / dist) * force * 5;
           }
         }
 
-        // Screen wrap
         if (p.x > width + 20) p.x = -20;
         if (p.x < -20) p.x = width + 20;
         if (p.y > height + 20) p.y = -20;
@@ -174,19 +163,17 @@ export default function ParticleWindEngine({ aqiValue = 88 }: ParticleWindEngine
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fillStyle = particleColors[idx % particleColors.length];
         ctx.globalAlpha = p.alpha;
-        ctx.shadowBlur = isHazardous ? 6 : 3;
-        ctx.shadowColor = particleColors[idx % particleColors.length];
         ctx.fill();
+        ctx.globalAlpha = 1.0;
       });
 
-      ctx.globalAlpha = 1.0;
-      rafId = requestAnimationFrame(animate);
+      requestAnimationFrame(animate);
     };
 
-    animate();
+    const animId = requestAnimationFrame(animate);
     return () => {
       window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(rafId);
+      cancelAnimationFrame(animId);
     };
   }, [aqiValue]);
 
@@ -194,8 +181,7 @@ export default function ParticleWindEngine({ aqiValue = 88 }: ParticleWindEngine
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className="fixed inset-0 z-[-1] w-full h-full pointer-events-none"
-      style={{ backgroundColor: '#F2F4F8' }}
+      className="fixed inset-0 pointer-events-none z-0 w-full h-full"
     />
   );
 }

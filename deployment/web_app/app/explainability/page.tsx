@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Sparkles, Sliders, ArrowLeftRight, Info, Newspaper, CloudRain } from 'lucide-react';
 import ParticleWindEngine from '../../components/ParticleWindEngine';
 
 interface ShapFeature {
@@ -52,7 +51,7 @@ const EMPIRICAL_SHAP: ShapFeature[] = [
   {
     feature_name: 'Vector Wind Velocity (`m/s`)',
     shap_value: -14.2,
-    description: 'Horizontal wind currents physically sweep suspended particulates out of the valley.',
+    description: 'Horizontal wind currents physically sweep suspended particulates out of the basin.',
     regional_context: 'Anemometer feed: Moderate westerly breeze (`4.2 m/s`) entering from Salt Range foothills.',
     category: 'weather',
   },
@@ -72,7 +71,7 @@ const EMPIRICAL_SHAP: ShapFeature[] = [
   },
 ];
 
-export default function LuminousExplainabilityPage() {
+export default function EditorialExplainabilityPage() {
   const [features, setFeatures] = useState<ShapFeature[]>(EMPIRICAL_SHAP);
   const [sensitivity, setSensitivity] = useState(1.0);
   const [hoveredFeature, setHoveredFeature] = useState<string | null>(null);
@@ -86,7 +85,6 @@ export default function LuminousExplainabilityPage() {
         if (res && res.ok) {
           const data = await res.json();
           if (data?.contributions && data.contributions.length > 0) {
-            // Merge regional context with live API values
             const merged = data.contributions.map((item: any, idx: number) => ({
               ...item,
               regional_context: EMPIRICAL_SHAP[idx % EMPIRICAL_SHAP.length].regional_context,
@@ -104,57 +102,50 @@ export default function LuminousExplainabilityPage() {
   const maxVal = Math.max(...features.map((f) => Math.abs(f.shap_value * sensitivity)), 45);
 
   return (
-    <div className="relative z-10 flex flex-col gap-8 pb-14">
+    <div className="relative z-10 flex flex-col gap-14 pb-16">
       <ParticleWindEngine aqiValue={88} />
 
-      {/* Top Header Card */}
+      {/* Top Header Banner */}
       <motion.div
-        initial={{ opacity: 0, y: 18 }}
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.65 }}
-        className="p-8 sm:p-12 rounded-[32px] bg-[#F2F4F8] shadow-neumorphic border border-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+        transition={{ duration: 0.6 }}
+        className="flex flex-col md:flex-row items-start md:items-end justify-between border-b border-neutral-200/60 pb-6 gap-6"
       >
         <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-sm border border-white text-xs font-extrabold uppercase tracking-wider text-[#0284C7] mb-4">
-            <Brain className="w-4 h-4" /> Deep Learning SHAP Attribution
-          </div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-[#2D3748]">
-            Why Did the Model Predict This?
+          <span className="text-xs font-mono tracking-wider text-neutral-400 block mb-2">
+            SHAPLEY ADDITIVE EXPLANATIONS (`SHAP`)
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-[#090A0F]">
+            Model Decision Attribution
           </h1>
-          <p className="text-sm font-medium text-[#64748B] mt-3 leading-relaxed">
-            SHAP (SHapley Additive exPlanations) decomposes each hourly forecast into empirical feature contributions. Hover over interactive pill bars to expand regional news and weather context.
+          <p className="text-sm text-neutral-600 mt-2 leading-relaxed">
+            Decomposes hourly deep-learning forecasts into isolated empirical feature vectors. Hover over attribution bars to inspect localized meteorological and news telemetry.
           </p>
         </div>
 
-        <div className="flex flex-col items-start md:items-end p-5 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-inset border border-white text-xs font-semibold text-[#64748B]">
-          <span className="text-[#2D3748] font-bold text-sm flex items-center gap-1.5">
-            <ArrowLeftRight className="w-4 h-4 text-[#0284C7]" /> Axis Interpretation
-          </span>
-          <span className="mt-1 text-rose-700 font-bold">Right (+) → Increases Particulate Load</span>
-          <span className="text-[#0284C7] font-bold">Left (−) → Improves Air Quality</span>
+        <div className="flex flex-col items-start md:items-end p-4 rounded-md border border-neutral-200/60 bg-white/80 text-xs font-mono text-neutral-600">
+          <span className="text-rose-600 font-semibold text-xs">RIGHT (+) → INCREASES PM2.5</span>
+          <span className="mt-0.5 text-[#0066FF] font-semibold text-xs">LEFT (−) → CLEARS BASIN AIR</span>
         </div>
       </motion.div>
 
-      {/* Tactile Sensitivity Slider */}
+      {/* Sensitivity Multiplier Control */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
-        className="p-6 rounded-3xl bg-[#F2F4F8] shadow-neumorphic border border-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+        className="p-6 rounded-md border border-neutral-200/60 bg-white/80 backdrop-blur-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6"
       >
-        <div className="flex items-center gap-3.5">
-          <div className="p-3 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-sm border border-white text-[#0284C7]">
-            <Sliders className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-extrabold text-[#2D3748]">SHAP Sensitivity Multiplier</h3>
-            <p className="text-xs font-medium text-[#64748B]">
-              Scale empirical attribution vectors to simulate severe weather shocks (`{sensitivity.toFixed(1)}×`)
-            </p>
-          </div>
+        <div className="flex flex-col">
+          <h3 className="text-sm font-semibold text-[#090A0F] tracking-tight">SHAP Sensitivity Multiplier</h3>
+          <p className="text-xs text-neutral-500 mt-0.5">
+            Scale empirical attribution vectors to simulate extreme meteorological anomalies (`{sensitivity.toFixed(1)}×`)
+          </p>
         </div>
-        <div className="flex items-center gap-4 w-full sm:w-64 px-4 py-2 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-inset border border-white">
-          <span className="text-xs font-mono font-bold text-[#64748B]">0.5×</span>
+
+        <div className="flex items-center gap-4 w-full sm:w-64 px-4 py-2 rounded-md border border-neutral-200/60 bg-neutral-50/60">
+          <span className="text-xs font-mono text-neutral-400">0.5×</span>
           <input
             type="range"
             min="0.5"
@@ -162,36 +153,34 @@ export default function LuminousExplainabilityPage() {
             step="0.1"
             value={sensitivity}
             onChange={(e) => setSensitivity(parseFloat(e.target.value))}
-            className="w-full accent-[#0284C7] cursor-pointer h-2 bg-[#D1D9E6] rounded-lg appearance-none"
+            className="w-full accent-[#0066FF] cursor-pointer h-1.5 bg-neutral-200 rounded appearance-none"
           />
-          <span className="text-xs font-mono font-extrabold text-[#0284C7] min-w-[36px] text-right">
+          <span className="text-xs font-mono font-semibold text-[#0066FF] min-w-[36px] text-right">
             {sensitivity.toFixed(1)}×
           </span>
         </div>
       </motion.div>
 
-      {/* Interactive Pill-Shaped SHAP Attribution Matrix */}
+      {/* Attribution Matrix */}
       <motion.div
-        initial={{ opacity: 0, y: 18 }}
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.65, delay: 0.15 }}
-        className="p-8 sm:p-10 rounded-[32px] bg-[#F2F4F8] shadow-neumorphic border border-white overflow-hidden relative"
+        transition={{ duration: 0.6, delay: 0.15 }}
+        className="p-8 rounded-md border border-neutral-200/60 bg-white/80 backdrop-blur-sm flex flex-col gap-6 relative"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 pb-5 border-b border-[#D1D9E6]/60 gap-3">
-          <h2 className="text-lg font-extrabold text-[#2D3748] flex items-center gap-2.5">
-            <Sparkles className="w-5 h-5 text-[#0284C7]" />
-            Interactive Attribution Axis
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-neutral-200/60 gap-4">
+          <h2 className="text-lg font-semibold text-[#090A0F] tracking-tight">
+            Empirical Attribution Axis
           </h2>
-          <span className="text-xs font-bold text-[#64748B] flex items-center gap-1.5">
-            <Info className="w-4 h-4 text-[#0284C7]" />
-            Hover any feature pill to expand live regional news & meteorological context
+          <span className="text-xs font-mono text-neutral-400">
+            HOVER TO EXPAND REGIONAL CONTEXT
           </span>
         </div>
 
         {/* Center Zero Axis Line */}
-        <div className="absolute left-1/2 top-[104px] bottom-10 w-px bg-[#94A3B8]/50 pointer-events-none z-10 hidden md:block" />
+        <div className="absolute left-1/2 top-[88px] bottom-8 w-px bg-neutral-200 pointer-events-none z-10 hidden md:block" />
 
-        <div className="flex flex-col gap-5 relative z-20">
+        <div className="flex flex-col gap-4 relative z-20">
           {features.map((f, i) => {
             const scaledValue = f.shap_value * sensitivity;
             const isPositive = scaledValue >= 0;
@@ -203,63 +192,61 @@ export default function LuminousExplainabilityPage() {
                 key={f.feature_name}
                 onMouseEnter={() => setHoveredFeature(f.feature_name)}
                 onMouseLeave={() => setHoveredFeature(null)}
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.45, delay: i * 0.05 }}
-                className={`flex flex-col rounded-3xl transition-all duration-300 border p-5 ${
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.04 }}
+                className={`flex flex-col rounded-md transition-all border p-4 ${
                   isHovered
-                    ? 'bg-[#F2F4F8] shadow-neumorphic border-[#0284C7] scale-[1.01]'
-                    : 'bg-[#F2F4F8] shadow-neumorphic-sm border-white'
+                    ? 'bg-neutral-50/90 border-[#0066FF]/50 shadow-2xs'
+                    : 'bg-white border-neutral-200/60 hover:border-neutral-300'
                 }`}
               >
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                  {/* Left: Feature Name & Description */}
+                  {/* Left: Feature Name */}
                   <div className="w-full md:w-[35%]">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-extrabold text-[#2D3748]">{f.feature_name}</span>
-                    </div>
-                    <span className="block text-xs font-medium text-[#64748B] mt-1">{f.description}</span>
+                    <span className="text-xs font-semibold text-[#090A0F]">{f.feature_name}</span>
+                    <span className="block text-[11px] text-neutral-500 mt-0.5">{f.description}</span>
                   </div>
 
-                  {/* Center: Interactive Pill-Shaped Bars growing outward from center */}
-                  <div className="w-full md:w-[46%] flex items-center justify-center relative h-11 bg-[#F2F4F8] shadow-neumorphic-inset rounded-2xl px-3 border border-white overflow-hidden">
-                    <div className="absolute left-1/2 top-0 bottom-0 w-[2px] bg-[#64748B] z-10" />
+                  {/* Center: Attribution Bar */}
+                  <div className="w-full md:w-[48%] flex items-center justify-center relative h-8 rounded bg-neutral-50/80 px-2 border border-neutral-200/60 overflow-hidden">
+                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-neutral-300 z-10" />
 
                     {!isPositive && (
-                      <div className="absolute right-1/2 left-3 top-2 bottom-2 flex justify-end items-center">
+                      <div className="absolute right-1/2 left-2 top-1.5 bottom-1.5 flex justify-end items-center">
                         <motion.div
                           initial={{ scaleX: 0 }}
                           whileInView={{ scaleX: 1 }}
                           viewport={{ once: true }}
-                          transition={{ type: 'spring', stiffness: 220, damping: 24, delay: i * 0.05 + 0.15 }}
+                          transition={{ type: 'spring', stiffness: 250, damping: 26, delay: i * 0.04 + 0.1 }}
                           style={{ width: `${percentage}%`, originX: 1 }}
-                          className="h-full rounded-l-full bg-gradient-to-l from-[#0284C7] to-[#38BDF8] shadow-sm"
+                          className="h-full rounded-l bg-[#0066FF]/80"
                         />
                       </div>
                     )}
 
                     {isPositive && (
-                      <div className="absolute left-1/2 right-3 top-2 bottom-2 flex justify-start items-center">
+                      <div className="absolute left-1/2 right-2 top-1.5 bottom-1.5 flex justify-start items-center">
                         <motion.div
                           initial={{ scaleX: 0 }}
                           whileInView={{ scaleX: 1 }}
                           viewport={{ once: true }}
-                          transition={{ type: 'spring', stiffness: 220, damping: 24, delay: i * 0.05 + 0.15 }}
+                          transition={{ type: 'spring', stiffness: 250, damping: 26, delay: i * 0.04 + 0.1 }}
                           style={{ width: `${percentage}%`, originX: 0 }}
-                          className="h-full rounded-r-full bg-gradient-to-r from-amber-500 to-rose-500 shadow-sm"
+                          className="h-full rounded-r bg-rose-500/80"
                         />
                       </div>
                     )}
                   </div>
 
-                  {/* Right: Numerical Value Badge */}
+                  {/* Right: Numerical Badge */}
                   <div className="w-full md:w-[15%] flex justify-end">
                     <span
-                      className={`font-mono font-extrabold text-sm px-3.5 py-1.5 rounded-xl border shadow-neumorphic-sm ${
+                      className={`font-mono font-semibold text-xs px-2.5 py-1 rounded border ${
                         isPositive
-                          ? 'bg-rose-100/90 border-rose-300 text-rose-800'
-                          : 'bg-sky-100/90 border-sky-300 text-[#0284C7]'
+                          ? 'bg-rose-50 border-rose-200 text-rose-700'
+                          : 'bg-[#0066FF]/10 border-[#0066FF]/20 text-[#0066FF]'
                       }`}
                     >
                       {isPositive ? '+' : ''}
@@ -273,19 +260,16 @@ export default function LuminousExplainabilityPage() {
                   {isHovered && f.regional_context && (
                     <motion.div
                       initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                      animate={{ height: 'auto', opacity: 1, marginTop: 14 }}
+                      animate={{ height: 'auto', opacity: 1, marginTop: 12 }}
                       exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="overflow-hidden pt-3 border-t border-[#D1D9E6]/60 flex items-start gap-3"
+                      transition={{ duration: 0.25 }}
+                      className="overflow-hidden pt-3 border-t border-neutral-100 flex items-start gap-3"
                     >
-                      <div className="p-2 rounded-xl bg-[#F2F4F8] shadow-neumorphic-inset-sm text-[#0284C7]">
-                        {f.category === 'news' ? <Newspaper className="w-4 h-4" /> : <CloudRain className="w-4 h-4" />}
-                      </div>
                       <div className="flex-1">
-                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0284C7]">
-                          {f.category === 'news' ? 'Regional Intelligence & News Telemetry' : 'Meteorological Observation'}
+                        <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#0066FF]">
+                          {f.category === 'news' ? 'REGIONAL INTELLIGENCE & NEWS TELEMETRY' : 'METEOROLOGICAL OBSERVATION'}
                         </span>
-                        <p className="text-xs font-semibold text-[#475569] mt-0.5 leading-relaxed">
+                        <p className="text-xs font-medium text-neutral-600 mt-0.5 leading-relaxed">
                           {f.regional_context}
                         </p>
                       </div>

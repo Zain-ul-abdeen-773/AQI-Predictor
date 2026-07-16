@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, useSpring } from 'framer-motion';
-import { Wind, MapPin, RefreshCw, CheckCircle2, Activity } from 'lucide-react';
 import ParticleWindEngine from '../components/ParticleWindEngine';
 import ModelZooSelector, { ModelZooEntry } from '../components/ModelZooSelector';
 import AtmosphericBentoGrid, { DiurnalPredictionHour } from '../components/AtmosphericBentoGrid';
@@ -43,12 +42,12 @@ function buildDeterministicForecast(): PredictionPayload {
     };
   });
   return {
-    city: 'Sargodha, Pakistan',
+    city: 'Sargodha Basin, Pakistan',
     generated_at: '—',
     model_type: 'Bi-LSTM + Attention',
     current_aqi: 88,
     current_level: 'Moderate',
-    summary: 'Atmospheric particulate dispersion across Sargodha basin is within acceptable benchmarks. Diurnal evening thermal inversions may cause temporary localized accumulation.',
+    summary: 'Atmospheric particulate dispersion across Sargodha basin is strictly within benchmark limits. Diurnal boundary layer inversions and hygroscopic growth may cause temporary localized particulate accumulation in evening hours.',
     alert: false,
     hourly_predictions: preds,
   };
@@ -56,18 +55,9 @@ function buildDeterministicForecast(): PredictionPayload {
 
 const DEFAULT_FORECAST = buildDeterministicForecast();
 
-/** EPA Light Theme gradient ring status for extruded circular dial */
-function getDialRingStyle(val: number) {
-  if (val <= 50) return 'from-emerald-400 via-teal-500 to-cyan-500 border-emerald-400/50 text-emerald-700';
-  if (val <= 100) return 'from-amber-400 via-yellow-500 to-amber-600 border-amber-400/60 text-amber-800';
-  if (val <= 150) return 'from-orange-400 via-amber-500 to-orange-600 border-orange-400/60 text-orange-800';
-  if (val <= 200) return 'from-rose-500 via-red-500 to-rose-600 border-rose-500/60 text-rose-800';
-  return 'from-purple-500 via-violet-600 to-purple-700 border-purple-500/60 text-purple-900';
-}
-
-function SpringDialCounter({ target }: { target: number }) {
+function SpringNumberCounter({ target }: { target: number }) {
   const [display, setDisplay] = useState(0);
-  const spring = useSpring(0, { stiffness: 65, damping: 16 });
+  const spring = useSpring(0, { stiffness: 75, damping: 18 });
 
   useEffect(() => {
     spring.set(target);
@@ -80,7 +70,7 @@ function SpringDialCounter({ target }: { target: number }) {
   return <span>{display}</span>;
 }
 
-export default function LuminousHomePage() {
+export default function EditorialHomePage() {
   const [models] = useState<ModelZooEntry[]>(MODEL_ZOO);
   const [activeModel, setActiveModel] = useState('bilstm_attention');
   const [forecast, setForecast] = useState<PredictionPayload>(DEFAULT_FORECAST);
@@ -149,14 +139,12 @@ export default function LuminousHomePage() {
     syncData(activeModel);
   }, [activeModel]);
 
-  const dialStyle = getDialRingStyle(forecast.current_aqi);
-
   return (
-    <div className="relative z-10 flex flex-col gap-9">
+    <div className="relative z-10 flex flex-col gap-14">
       <ParticleWindEngine aqiValue={forecast.current_aqi} />
       <VignetteAlert currentAqi={forecast.current_aqi} isTriggered={forecast.alert} />
 
-      {/* Tactile Model Zoo Selector */}
+      {/* Model Zoo Architectural Switcher */}
       <ModelZooSelector
         modelList={models}
         activeModelId={activeModel}
@@ -164,74 +152,79 @@ export default function LuminousHomePage() {
         isFetching={loading}
       />
 
-      {/* Central Luminous Neumorphic KPI Container */}
+      {/* Editorial Asymmetrical Split-Grid (70/30 Layout with Negative Space) */}
       <motion.div
-        initial={{ opacity: 0, y: 22 }}
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
-        className="relative rounded-[32px] bg-[#F2F4F8] shadow-neumorphic-lg border border-white p-8 sm:p-14 flex flex-col lg:flex-row items-center justify-between gap-10"
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="grid grid-cols-12 gap-8 items-start"
       >
-        {/* Left Info Panel */}
-        <div className="flex flex-col items-start z-10 max-w-xl">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-sm border border-white text-xs uppercase tracking-wider font-extrabold text-[#64748B] mb-6">
-            <MapPin className="w-4 h-4 text-[#0284C7]" />
-            <span>Sargodha Basin — Station #4 (Empirical Telemetry)</span>
+        {/* Left Column (8 cols): High-Contrast Editorial Typography */}
+        <div className="col-span-12 lg:col-span-8 flex flex-col justify-between py-2">
+          <div className="flex flex-col">
+            <span className="text-xs font-mono tracking-wider text-neutral-400 mb-2">
+              SARGODHA BASIN • STATION #4 TELEMETRY
+            </span>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-[#090A0F] leading-[1.08]">
+              Atmospheric Intelligence Engine
+            </h1>
+            <p className="text-base sm:text-lg font-normal text-neutral-600 mt-5 max-w-2xl leading-relaxed">
+              {forecast.summary}
+            </p>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-[#2D3748] leading-tight">
-            Air Quality Intelligence
-          </h1>
-
-          <p className="text-base font-medium text-[#64748B] mt-4 leading-relaxed">
-            {forecast.summary}
-          </p>
-
-          <div className="flex items-center gap-3 mt-8 pt-6 border-t border-[#D1D9E6]/70 w-full text-xs font-semibold text-[#64748B]">
-            <span className="flex items-center gap-1.5">
-              <Activity className="w-4 h-4 text-[#0284C7]" /> Verified Sync: {lastSync}
-            </span>
+          <div className="flex flex-wrap items-center gap-6 mt-12 pt-6 border-t border-neutral-200/60 text-xs font-mono text-neutral-500">
+            <span>SYNC TIMESTAMP: <strong className="text-[#090A0F]">{lastSync}</strong></span>
             <span>•</span>
-            <span className="text-emerald-600 flex items-center gap-1">
-              <CheckCircle2 className="w-4 h-4" /> Cross-Val R² {models.find((m) => m.id === activeModel)?.r2 || '0.945'}
-            </span>
+            <span>MODEL GENERALIZATION: <strong className="text-[#0066FF]">5-FOLD TimeSeriesSplit</strong></span>
+            <span>•</span>
+            <span>BENCHMARK LEADER R²: <strong className="text-[#090A0F]">0.945</strong></span>
           </div>
         </div>
 
-        {/* Massive 3D-Extruded Circular Dial KPI */}
-        <div className="relative flex flex-col items-center justify-center p-8 sm:p-10 rounded-full bg-[#F2F4F8] shadow-neumorphic border border-white min-w-[280px] sm:min-w-[320px] aspect-square text-center group">
-          {/* Subtle Outer Ring Gradient */}
-          <div className={`absolute inset-3 rounded-full border-[6px] bg-gradient-to-tr ${dialStyle.split(' ')[0]} ${dialStyle.split(' ')[1]} ${dialStyle.split(' ')[2]} opacity-25 group-hover:opacity-40 transition-opacity`} />
-          <div className="absolute inset-5 rounded-full bg-[#F2F4F8] shadow-neumorphic-inset" />
-
-          <div className="relative z-10 flex flex-col items-center justify-center">
-            <span className="text-xs uppercase tracking-widest font-extrabold text-[#64748B] mb-1 flex items-center gap-1.5">
-              <Wind className="w-4 h-4 text-[#0284C7]" /> Current AQI
+        {/* Right Column (4 cols): Architectural Telemetry Block with Precision Blue Action */}
+        <div className="col-span-12 lg:col-span-4 flex flex-col justify-between p-6 rounded-md border border-neutral-200/60 bg-white/80 backdrop-blur-sm">
+          <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
+            <span className="text-xs font-mono font-medium text-neutral-400">INDEX READING</span>
+            <span className={`px-2 py-0.5 rounded text-[11px] font-mono font-semibold ${
+              forecast.current_aqi > 150
+                ? 'bg-rose-100 text-rose-700'
+                : forecast.current_aqi > 100
+                ? 'bg-amber-100 text-amber-800'
+                : 'bg-emerald-100 text-emerald-800'
+            }`}>
+              {forecast.current_level.toUpperCase()}
             </span>
+          </div>
 
-            <div className={`text-7xl sm:text-8xl font-extrabold tracking-tighter leading-none ${dialStyle.split(' ')[3]} select-none my-2`}>
-              <SpringDialCounter target={forecast.current_aqi} />
+          <div className="py-8 flex flex-col items-start">
+            <div className="text-7xl font-semibold tracking-tighter text-[#090A0F] font-mono leading-none">
+              <SpringNumberCounter target={forecast.current_aqi} />
             </div>
-
-            <span className="px-4 py-1.5 rounded-2xl text-xs font-extrabold uppercase bg-[#F2F4F8] shadow-neumorphic-sm border border-white text-[#2D3748] mt-2">
-              {forecast.current_level}
+            <span className="text-xs font-mono text-neutral-400 mt-2">
+              MICROGRAMS / M³ COMPOSITE EQUIVALENT
             </span>
+          </div>
 
+          <div className="pt-4 border-t border-neutral-100 flex flex-col gap-3">
             <button
               onClick={() => syncData(activeModel)}
               disabled={loading}
-              aria-label="Refresh telemetry"
-              className="mt-4 p-2.5 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-sm hover:shadow-neumorphic-inset transition-all border border-white text-[#64748B] active:scale-95"
+              className="w-full py-2.5 px-4 rounded-md bg-[#0066FF] hover:bg-[#0052CC] text-white text-xs font-semibold tracking-wide transition-colors flex items-center justify-center gap-2 shadow-2xs active:scale-[0.99]"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#0284C7]' : ''}`} />
+              <span>{loading ? 'CALIBRATING TELEMETRY...' : 'REFRESH STATION DATA'}</span>
             </button>
+            <span className="text-[10px] font-mono text-center text-neutral-400">
+              Direct telemetry stream via AWS Lambda containerized engine
+            </span>
           </div>
         </div>
       </motion.div>
 
-      {/* Tactile 3-Day Bento Box Forecast */}
+      {/* 3-Day Diurnal Prediction Matrix */}
       <AtmosphericBentoGrid hourlyPredictions={forecast.hourly_predictions} />
 
-      {/* Telemetric Actual vs Predicted Trajectory Engine */}
+      {/* Telemetric Verification Engine */}
       <ActualVsPredictedGraph />
     </div>
   );
