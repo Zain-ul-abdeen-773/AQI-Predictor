@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart2, Cpu, Clock, Award, TrendingUp } from 'lucide-react';
 import ParticleWindEngine from '../../components/ParticleWindEngine';
+import ActualVsPredictedGraph from '../../components/ActualVsPredictedGraph';
 
 const LEADERBOARD_ZOO = [
   { rank: 1, name: 'Bi-LSTM + Attention', r2: 0.945, rmse: 5.82, mae: 4.12, color: 'from-[#0284C7] to-[#38BDF8]', best: true },
@@ -59,6 +60,9 @@ export default function LuminousAnalyticsPage() {
           <span className="mt-1 font-bold text-[#475569]">5-Fold TimeSeriesSplit Cross-Validation</span>
         </div>
       </motion.div>
+
+      {/* Actual vs Predicted Interactive Telemetry Graph */}
+      <ActualVsPredictedGraph />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Leaderboard Table */}
