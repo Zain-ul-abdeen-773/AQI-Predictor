@@ -144,7 +144,7 @@ export default function ActualVsPredictedGraph() {
           <div>
             <span className="text-xs font-extrabold text-[#2D3748] block">L2 Regularization & Dropout</span>
             <span className="text-[11px] font-medium text-[#64748B] leading-snug block mt-0.5">
-              Enforced `AdamW weight_decay=1e-2`, Optuna `min_child_samples >= 20`, and tree feature subsampling (`colsample_bytree <= 0.85`).
+              Enforced `AdamW weight_decay=1e-2`, Optuna `min_child_samples &gt;= 20`, and tree feature subsampling (`colsample_bytree &lt;= 0.85`).
             </span>
           </div>
         </div>
