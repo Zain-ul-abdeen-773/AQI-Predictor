@@ -1,78 +1,27 @@
 @import "tailwindcss";
 
 @layer base {
-  :root {
-    --bg-obsidian: #0A0A0A;
-    --surface-glass: rgba(255, 255, 255, 0.04);
-    --border-glass: rgba(255, 255, 255, 0.1);
-  }
-
   body {
-    background-color: #0A0A0A;
-    color: #F8FAFC;
+    background-color: #111114;
+    color: #F0F0F5;
     font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
-    letter-spacing: -0.015em;
+    letter-spacing: -0.01em;
   }
 }
 
-@keyframes pulse-vignette {
-  0%, 100% {
-    opacity: 0.35;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.65;
-    transform: scale(1.02);
-  }
-}
-
-@keyframes float-slow {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-8px) rotate(1deg);
-  }
-}
-
-.animate-vignette {
-  animation: pulse-vignette 3.5s ease-in-out infinite;
-}
-
-.animate-floating {
-  animation: float-slow 6s ease-in-out infinite;
-}
-
-/* Glassmorphism Utilities */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.035);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
-}
-
-.glass-panel-heavy {
-  background: rgba(10, 10, 10, 0.65);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
-}
-
-/* Custom Atmospheric Scrollbar */
+/* Soft scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #0A0A0A;
+  background: #111114;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(16, 185, 129, 0.5);
+  background: rgba(80, 180, 160, 0.35);
 }

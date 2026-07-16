@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Cpu, Award, Sparkles, CheckCircle, ShieldCheck, Layers } from 'lucide-react';
+import { Cpu, Award, Sparkles, Layers } from 'lucide-react';
 
 export interface ModelZooEntry {
   id: string;
@@ -31,77 +31,72 @@ export default function ModelZooSelector({
   const currentModel = modelList.find((m) => m.id === activeModelId) || modelList[0];
 
   return (
-    <div className="relative z-30 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5 p-5 rounded-3xl bg-white/[0.04] backdrop-blur-2xl border border-white/10 shadow-[0_16px_50px_rgba(0,0,0,0.65)] hover:border-white/20 transition-all duration-300">
-      {/* Left: Model Category & Champion Badge */}
-      <div className="flex items-center gap-4">
-        <div className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 border border-emerald-500/30 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-          <Cpu className="w-6 h-6 animate-pulse" />
+    <div className="relative z-30 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 rounded-2xl bg-[#1a1a1f]/70 backdrop-blur-xl border border-white/[0.08] shadow-lg transition-all duration-200">
+      {/* Left: Current Model */}
+      <div className="flex items-center gap-3.5">
+        <div className="p-3 rounded-xl bg-teal-500/15 border border-teal-500/25 text-teal-400">
+          <Cpu className="w-5 h-5" />
         </div>
         <div>
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs font-mono uppercase tracking-widest font-bold text-white/55 flex items-center gap-1.5">
-              <Layers className="w-3 h-3 text-emerald-400" />
-              Neural & Ensemble Architecture Zoo
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] uppercase tracking-wider font-semibold text-white/45">
+              Active Model
             </span>
             {currentModel?.is_default && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono uppercase font-bold tracking-wider border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.3)]">
-                <Award className="w-3 h-3 text-emerald-400" /> Champion Default
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-teal-500/15 text-teal-300 text-[10px] font-semibold border border-teal-500/25">
+                <Award className="w-2.5 h-2.5" /> Best R²
               </span>
             )}
           </div>
-          <h3 className="text-base md:text-lg font-bold text-white tracking-tight mt-1 flex items-center gap-2">
-            {currentModel?.name || 'Loading Model Zoo Architecture...'}
+          <h3 className="text-sm font-semibold text-white/90 tracking-tight mt-0.5">
+            {currentModel?.name || 'Loading...'}
           </h3>
         </div>
       </div>
 
-      {/* Right: Telemetry Benchmarks & Select Dropdown */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 w-full lg:w-auto">
-        {/* Real-time Validation Metrics Pill */}
-        <div className="flex items-center justify-between sm:justify-start gap-5 px-5 py-2.5 rounded-2xl bg-black/50 border border-white/10 text-xs text-white/70 shadow-inner">
+      {/* Right: Metrics & Select */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+        {/* Validation Metrics */}
+        <div className="flex items-center gap-4 px-4 py-2 rounded-xl bg-black/30 border border-white/[0.06] text-[11px] text-white/60">
           <div className="flex flex-col">
-            <span className="text-[10px] font-mono uppercase text-white/40 tracking-wider">R² Accuracy</span>
-            <span className="font-mono font-bold text-emerald-400 text-sm">
-              {currentModel?.r2 ? currentModel.r2.toFixed(3) : '0.945'}
+            <span className="text-[9px] uppercase text-white/35 tracking-wider">R²</span>
+            <span className="font-mono font-bold text-teal-400 text-sm">
+              {currentModel?.r2?.toFixed(3) || '—'}
             </span>
           </div>
-          <div className="h-7 w-[1px] bg-white/10" />
+          <div className="h-6 w-px bg-white/[0.08]" />
           <div className="flex flex-col">
-            <span className="text-[10px] font-mono uppercase text-white/40 tracking-wider">RMSE Error</span>
-            <span className="font-mono font-semibold text-white text-sm">
-              {currentModel?.rmse ? currentModel.rmse.toFixed(2) : '5.82'}
-            </span>
-          </div>
-          <div className="h-7 w-[1px] bg-white/10" />
-          <div className="flex flex-col">
-            <span className="text-[10px] font-mono uppercase text-white/40 tracking-wider">MAE Error</span>
+            <span className="text-[9px] uppercase text-white/35 tracking-wider">RMSE</span>
             <span className="font-mono font-semibold text-white/80 text-sm">
-              {currentModel?.mae ? currentModel.mae.toFixed(2) : '4.12'}
+              {currentModel?.rmse?.toFixed(2) || '—'}
+            </span>
+          </div>
+          <div className="h-6 w-px bg-white/[0.08]" />
+          <div className="flex flex-col">
+            <span className="text-[9px] uppercase text-white/35 tracking-wider">MAE</span>
+            <span className="font-mono font-semibold text-white/70 text-sm">
+              {currentModel?.mae?.toFixed(2) || '—'}
             </span>
           </div>
         </div>
 
-        {/* Dynamic Model Dropdown */}
-        <div className="relative min-w-[260px]">
+        {/* Model Dropdown */}
+        <div className="relative min-w-[240px]">
           <select
             value={activeModelId}
             onChange={(e) => onModelChange(e.target.value)}
             disabled={isFetching}
-            aria-label="Select AI Engine Model"
-            className="w-full appearance-none bg-white/[0.08] hover:bg-white/[0.14] transition-all duration-200 border border-white/20 rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/60 cursor-pointer pr-10"
+            aria-label="Select prediction model"
+            className="w-full appearance-none bg-white/[0.06] hover:bg-white/[0.1] transition-colors border border-white/[0.12] rounded-xl px-4 py-2.5 text-sm font-medium text-white/90 focus:outline-none focus:ring-2 focus:ring-teal-500/40 cursor-pointer pr-9"
           >
             {modelList.map((entry) => (
-              <option
-                key={entry.id}
-                value={entry.id}
-                className="bg-[#101014] text-white py-2.5 font-medium"
-              >
-                {entry.name} — R² {entry.r2.toFixed(3)} {entry.is_default ? '★ (Champion)' : ''}
+              <option key={entry.id} value={entry.id} className="bg-[#18181c] text-white py-2">
+                {entry.name} — R² {entry.r2.toFixed(3)} {entry.is_default ? '★' : ''}
               </option>
             ))}
           </select>
-          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/60">
-            <Sparkles className={`w-4 h-4 ${isFetching ? 'animate-spin text-emerald-400' : 'text-emerald-400'}`} />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/40">
+            <Sparkles className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin text-teal-400' : ''}`} />
           </div>
         </div>
       </div>

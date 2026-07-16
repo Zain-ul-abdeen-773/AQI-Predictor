@@ -4,42 +4,37 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Wind, Activity, BarChart2, ShieldCheck, Zap } from 'lucide-react';
+import { Wind, Activity, BarChart2, ShieldCheck } from 'lucide-react';
 
 export default function LiquidNavigation() {
   const currentPath = usePathname();
 
   const navItems = [
-    { label: '3-Day Overview', route: '/', icon: Activity },
-    { label: 'EDA & Model Telemetry', route: '/analytics', icon: BarChart2 },
-    { label: 'SHAP Explainability', route: '/explainability', icon: ShieldCheck },
+    { label: 'Overview', route: '/', icon: Activity },
+    { label: 'Model Comparison', route: '/analytics', icon: BarChart2 },
+    { label: 'Explainability', route: '/explainability', icon: ShieldCheck },
   ];
 
   return (
-    <header className="sticky top-5 z-50 max-w-7xl mx-auto px-4 sm:px-6 mb-8">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3.5 px-5 rounded-3xl bg-white/[0.045] backdrop-blur-3xl border border-white/10 shadow-[0_16px_50px_rgba(0,0,0,0.7)] hover:border-white/20 transition-all duration-300">
-        {/* Brand & Atmospheric Station Badge */}
-        <Link href="/" className="flex items-center gap-3.5 group">
-          <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 border border-emerald-500/30 group-hover:border-emerald-400/60 transition-all shadow-[0_0_20px_rgba(16,185,129,0.25)]">
-            <Wind className="w-5 h-5 text-emerald-400 group-hover:rotate-180 transition-transform duration-700 ease-in-out" />
+    <header className="sticky top-4 z-50 max-w-7xl mx-auto px-4 sm:px-6 mb-8">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3 px-5 rounded-2xl bg-[#1a1a1f]/80 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all duration-300">
+        {/* Brand */}
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500/25 to-sky-500/15 border border-teal-500/25 group-hover:border-teal-400/50 transition-all">
+            <Wind className="w-[18px] h-[18px] text-teal-400 group-hover:rotate-90 transition-transform duration-500" />
           </div>
           <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <span className="text-base font-bold tracking-tight text-white group-hover:text-emerald-300 transition-colors">
-                Pearls AQI Engine
-              </span>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase font-bold tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                Sargodha #4
-              </span>
-            </div>
-            <span className="text-[11px] text-white/50 tracking-wide">
-              Atmospheric Obsidian • Spatial Hyper-Minimalism
+            <span className="text-[15px] font-semibold tracking-tight text-white/90 group-hover:text-white transition-colors">
+              Pearls AQI
+            </span>
+            <span className="text-[10px] text-white/40 tracking-wide">
+              Sargodha Region • Air Quality Intelligence
             </span>
           </div>
         </Link>
 
-        {/* Liquid Multi-Page Route Tabs */}
-        <nav className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-black/40 border border-white/5">
+        {/* Nav Tabs */}
+        <nav className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/[0.05]">
           {navItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = currentPath === item.route;
@@ -48,32 +43,31 @@ export default function LiquidNavigation() {
               <Link
                 key={item.route}
                 href={item.route}
-                className={`relative px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-colors flex items-center gap-2 z-10 ${
-                  isActive ? 'text-white' : 'text-white/60 hover:text-white'
+                className={`relative px-4 py-2 rounded-lg text-[13px] font-medium transition-colors flex items-center gap-2 z-10 ${
+                  isActive ? 'text-white' : 'text-white/50 hover:text-white/80'
                 }`}
               >
                 {isActive && (
                   <motion.div
-                    layoutId="liquid-nav-tab"
-                    className="absolute inset-0 bg-white/[0.12] rounded-xl border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.1)] z-[-1]"
-                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                    layoutId="active-tab"
+                    className="absolute inset-0 bg-white/[0.1] rounded-lg border border-white/[0.12] z-[-1]"
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
                 )}
-                <IconComponent className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-white/40'}`} />
+                <IconComponent className={`w-3.5 h-3.5 ${isActive ? 'text-teal-400' : 'text-white/35'}`} />
                 <span>{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Live Engine Status Indicator */}
-        <div className="hidden xl:flex items-center gap-3 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs font-mono text-white/70">
-          <div className="relative flex items-center justify-center w-2 h-2">
-            <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
-            <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
-          </div>
-          <span>60 FPS Particle Stream</span>
-          <Zap className="w-3.5 h-3.5 text-amber-400" />
+        {/* Status Dot — subtle, no jargon */}
+        <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-[11px] text-white/50">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-60" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-teal-500" />
+          </span>
+          <span>Live</span>
         </div>
       </div>
     </header>
