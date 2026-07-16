@@ -10,9 +10,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Pearls AQI — Luminous Neumorphic Air Quality Intelligence (Sargodha)',
+  title: 'Pearls AQI — Atmospheric Intelligence Engine (Sargodha)',
   description:
-    'Awwwards-winning Luminous Neumorphic (Soft UI) air quality prediction platform for the Sargodha region, powered by an 8-Model Machine Learning Zoo and volumetric atmospheric simulation.',
+    'High-end editorial air quality prediction platform for the Sargodha region, powered by an 8-Model Machine Learning Zoo with telemetric verification.',
 };
 
 export default function RootLayout({
@@ -23,10 +23,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} font-sans bg-[#F2F4F8] text-[#2D3748] min-h-screen antialiased overflow-x-hidden selection:bg-[#0284C7] selection:text-white`}
+        className={`${inter.variable} font-sans bg-[#FAFAFC] text-[#090A0F] min-h-screen antialiased overflow-x-hidden selection:bg-[#0066FF]/15 selection:text-[#0066FF]`}
       >
         <LiquidNavigation />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 pb-20 relative z-10">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 pb-24 relative z-10">
           {children}
         </main>
       </body>

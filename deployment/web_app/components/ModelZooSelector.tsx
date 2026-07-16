@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Cpu, Award, Sparkles } from 'lucide-react';
 
 export interface ModelZooEntry {
   id: string;
@@ -30,72 +29,70 @@ export default function ModelZooSelector({
   const currentModel = modelList.find((m) => m.id === activeModelId) || modelList[0];
 
   return (
-    <div className="relative z-30 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 p-6 rounded-3xl bg-[#F2F4F8] shadow-neumorphic border border-white/80 transition-all duration-300">
-      {/* Left: Active Model Overview */}
-      <div className="flex items-center gap-4">
-        <div className="p-3.5 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-inset border border-white flex items-center justify-center text-[#0284C7]">
-          <Cpu className="w-6 h-6" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs uppercase tracking-wider font-bold text-[#64748B]">
-              Active Regression Engine
+    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6 rounded-md border border-neutral-200/60 bg-white/70 backdrop-blur-sm">
+      {/* Left: Active Model Architecture Identity */}
+      <div className="flex flex-col">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-mono font-medium tracking-tight text-neutral-400">
+            ENGINE ARCHITECTURE
+          </span>
+          {currentModel?.is_default && (
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#0066FF]/10 text-[#0066FF]">
+              BENCHMARK LEADER
             </span>
-            {currentModel?.is_default && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#F2F4F8] shadow-neumorphic-sm text-[#0284C7] text-[11px] font-bold border border-white">
-                <Award className="w-3 h-3 text-[#0284C7]" /> Benchmark Leader
-              </span>
-            )}
-          </div>
-          <h3 className="text-lg font-bold text-[#2D3748] tracking-tight mt-1">
-            {currentModel?.name || 'Loading...'}
-          </h3>
+          )}
         </div>
+        <h3 className="text-xl font-semibold tracking-tight text-[#090A0F] mt-1">
+          {currentModel?.name || 'Loading...'}
+        </h3>
+        <span className="text-xs text-neutral-500 mt-0.5">
+          {currentModel?.category} pipeline • Out-of-sample 5-fold TimeSeriesSplit validation
+        </span>
       </div>
 
-      {/* Right: Validation Metrics & Model Selector */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto">
-        {/* Cross-Validation Telemetry */}
-        <div className="flex items-center gap-5 px-5 py-3 rounded-2xl bg-[#F2F4F8] shadow-neumorphic-inset border border-white text-xs text-[#475569]">
+      {/* Right: Validation Metrics & Model Selector Dropdown */}
+      <div className="flex flex-wrap items-center gap-5 w-full md:w-auto">
+        {/* Verification Metrics Table */}
+        <div className="flex items-center gap-6 px-4 py-2 rounded-md border border-neutral-200/60 bg-neutral-50/60 text-xs">
           <div className="flex flex-col">
-            <span className="text-[10px] uppercase font-semibold text-[#94A3B8] tracking-wider">R² Accuracy</span>
-            <span className="font-mono font-extrabold text-[#0284C7] text-base">
+            <span className="text-[10px] font-mono text-neutral-400">R² ACCURACY</span>
+            <span className="font-mono font-semibold text-[#0066FF] text-sm">
               {currentModel?.r2?.toFixed(3) || '—'}
             </span>
           </div>
-          <div className="h-8 w-px bg-[#D1D9E6]/60" />
+          <div className="h-6 w-px bg-neutral-200" />
           <div className="flex flex-col">
-            <span className="text-[10px] uppercase font-semibold text-[#94A3B8] tracking-wider">RMSE</span>
-            <span className="font-mono font-bold text-[#2D3748] text-base">
+            <span className="text-[10px] font-mono text-neutral-400">RMSE</span>
+            <span className="font-mono font-medium text-[#090A0F] text-sm">
               {currentModel?.rmse?.toFixed(2) || '—'}
             </span>
           </div>
-          <div className="h-8 w-px bg-[#D1D9E6]/60" />
+          <div className="h-6 w-px bg-neutral-200" />
           <div className="flex flex-col">
-            <span className="text-[10px] uppercase font-semibold text-[#94A3B8] tracking-wider">MAE</span>
-            <span className="font-mono font-bold text-[#475569] text-base">
+            <span className="text-[10px] font-mono text-neutral-400">MAE</span>
+            <span className="font-mono font-medium text-neutral-600 text-sm">
               {currentModel?.mae?.toFixed(2) || '—'}
             </span>
           </div>
         </div>
 
-        {/* Tactile Model Selector Dropdown */}
-        <div className="relative min-w-[260px]">
+        {/* Model Dropdown Selector */}
+        <div className="relative min-w-[240px] flex-1 md:flex-none">
           <select
             value={activeModelId}
             onChange={(e) => onModelChange(e.target.value)}
             disabled={isFetching}
             aria-label="Select prediction model"
-            className="w-full appearance-none bg-[#F2F4F8] hover:bg-[#EAEFF7] transition-all shadow-neumorphic-sm border border-white rounded-2xl px-5 py-3.5 text-sm font-bold text-[#2D3748] focus:outline-none focus:ring-2 focus:ring-[#0284C7]/40 cursor-pointer pr-10"
+            className="w-full appearance-none bg-white hover:bg-neutral-50 transition-colors border border-neutral-200/80 rounded-md px-4 py-2.5 text-xs font-medium text-[#090A0F] focus:outline-none focus:border-[#0066FF] cursor-pointer pr-8 shadow-2xs"
           >
             {modelList.map((entry) => (
-              <option key={entry.id} value={entry.id} className="bg-[#F2F4F8] text-[#2D3748] font-semibold py-2">
-                {entry.name} — R² {entry.r2.toFixed(3)} {entry.is_default ? '★' : ''}
+              <option key={entry.id} value={entry.id} className="text-[#090A0F] font-medium py-1">
+                {entry.name} (R² {entry.r2.toFixed(3)}) {entry.is_default ? '★' : ''}
               </option>
             ))}
           </select>
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B]">
-            <Sparkles className={`w-4 h-4 ${isFetching ? 'animate-spin text-[#0284C7]' : ''}`} />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400 font-mono text-xs">
+            {isFetching ? '...' : '▼'}
           </div>
         </div>
       </div>
