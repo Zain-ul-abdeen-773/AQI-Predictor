@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import Navigation from '../components/Navigation';
+import LiquidNavigation from '../components/LiquidNavigation';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -10,9 +10,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Pearls AQI | Sargodha Atmospheric Obsidian Intelligence',
+  title: 'Pearls AQI | Atmospheric Obsidian Spatial Intelligence (Sargodha Region)',
   description:
-    'Spatial Hyper-Minimalist Awwwards-winning Air Quality Index prediction engine for Sargodha, Pakistan powered by 8-Model Zoo and SHAP explainability.',
+    'Awwwards-winning Spatial Hyper-Minimalist air quality prediction engine for Sargodha, Pakistan powered by an 8-Model AI Zoo and SHAP explainability kernel.',
 };
 
 export default function RootLayout({
@@ -25,8 +25,8 @@ export default function RootLayout({
       <body
         className={`${inter.variable} font-sans bg-[#0A0A0A] text-white min-h-screen antialiased overflow-x-hidden selection:bg-emerald-500 selection:text-black`}
       >
-        <Navigation />
-        <main className="max-w-7xl mx-auto px-4 md:px-6 pb-20 relative z-10">
+        <LiquidNavigation />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 pb-24 relative z-10">
           {children}
         </main>
       </body>
