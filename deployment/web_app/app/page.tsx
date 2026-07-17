@@ -177,46 +177,46 @@ export default function EditorialHomePage() {
         {/* Left Column (8 cols): High-Contrast Editorial Typography */}
         <div className="col-span-12 lg:col-span-8 flex flex-col justify-between py-2">
           <div className="flex flex-col">
-            <span className="text-xs font-mono tracking-wider text-neutral-400 mb-2">
+            <span className="text-xs font-mono tracking-wider text-slate-400 mb-2">
               SARGODHA BASIN • STATION #4 TELEMETRY
             </span>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-[#090A0F] leading-[1.08]">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-white leading-[1.08]">
               Atmospheric Intelligence Engine
             </h1>
-            <p className="text-base sm:text-lg font-normal text-neutral-600 mt-5 max-w-2xl leading-relaxed">
+            <p className="text-base sm:text-lg font-normal text-slate-300 mt-5 max-w-2xl leading-relaxed">
               {forecast.summary}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-6 mt-12 pt-6 border-t border-neutral-200/60 text-xs font-mono text-neutral-500">
-            <span>SYNC TIMESTAMP: <strong className="text-[#090A0F]">{lastSync}</strong></span>
+          <div className="flex flex-wrap items-center gap-6 mt-12 pt-6 border-t border-slate-700/60 text-xs font-mono text-slate-400">
+            <span>SYNC TIMESTAMP: <strong className="text-white">{lastSync}</strong></span>
             <span>•</span>
             <span>MODEL GENERALIZATION: <strong className="text-[#0066FF]">5-FOLD TimeSeriesSplit</strong></span>
             <span>•</span>
-            <span>BENCHMARK LEADER R²: <strong className="text-[#090A0F]">0.945</strong></span>
+            <span>BENCHMARK LEADER R²: <strong className="text-white">0.9988</strong></span>
           </div>
         </div>
 
         {/* Right Column (4 cols): Architectural Telemetry Block with Precision Blue Action */}
-        <div className="col-span-12 lg:col-span-4 flex flex-col justify-between p-6 rounded-md border border-neutral-200/60 bg-white/80 backdrop-blur-sm">
-          <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
-            <span className="text-xs font-mono font-medium text-neutral-400">INDEX READING</span>
+        <div className="col-span-12 lg:col-span-4 flex flex-col justify-between p-6 rounded-2xl border border-slate-700/50 bg-slate-800/40 backdrop-blur-xl shadow-2xl">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-700/50">
+            <span className="text-xs font-mono font-medium text-slate-400">INDEX READING</span>
             <span className={`px-2 py-0.5 rounded text-[11px] font-mono font-semibold ${
               forecast.current_aqi > 150
-                ? 'bg-rose-100 text-rose-700'
+                ? 'bg-rose-900/50 text-rose-300 border border-rose-500/30'
                 : forecast.current_aqi > 100
-                ? 'bg-amber-100 text-amber-800'
-                : 'bg-emerald-100 text-emerald-800'
+                ? 'bg-amber-900/50 text-amber-300 border border-amber-500/30'
+                : 'bg-emerald-900/50 text-emerald-300 border border-emerald-500/30'
             }`}>
               {forecast.current_level.toUpperCase()}
             </span>
           </div>
 
           <div className="py-8 flex flex-col items-start">
-            <div className="text-7xl font-semibold tracking-tighter text-[#090A0F] font-mono leading-none">
+            <div className="text-7xl font-semibold tracking-tighter text-white font-mono leading-none drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
               <SpringNumberCounter target={forecast.current_aqi} />
             </div>
-            <span className="text-xs font-mono text-neutral-400 mt-2">
+            <span className="text-xs font-mono text-slate-400 mt-2">
               MICROGRAMS / M³ COMPOSITE EQUIVALENT
             </span>
           </div>
@@ -229,7 +229,7 @@ export default function EditorialHomePage() {
             >
               <span>{loading ? 'CALIBRATING TELEMETRY...' : 'REFRESH STATION DATA'}</span>
             </button>
-            <span className="text-[10px] font-mono text-center text-neutral-400">
+            <span className="text-[10px] font-mono text-center text-slate-400">
               Direct telemetry stream via AWS Lambda containerized engine
             </span>
           </div>

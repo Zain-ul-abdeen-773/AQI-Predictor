@@ -55,29 +55,29 @@ export default function ActualVsPredictedGraph() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.6 }}
-      className="rounded-md border border-neutral-200/60 bg-white/80 backdrop-blur-sm p-8 flex flex-col gap-8"
+      className="rounded-md border border-slate-700/50 bg-slate-800/40 backdrop-blur-sm p-8 flex flex-col gap-8"
     >
       {/* Top Header & Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-neutral-200/60 gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-slate-700/50 gap-6">
         <div>
-          <span className="text-xs font-mono text-neutral-400 block mb-1">EMPIRICAL VALIDATION</span>
+          <span className="text-xs font-mono text-slate-400 block mb-1">EMPIRICAL VALIDATION</span>
           <h2 className="text-2xl font-semibold tracking-tight text-[#090A0F]">
             Out-of-Sample Trajectory Audit
           </h2>
-          <p className="text-xs text-neutral-600 mt-1 max-w-xl">
+          <p className="text-xs text-slate-300 mt-1 max-w-xl">
             Direct comparison between EPA station observations (`y_true`) and model predictions (`y_pred`). Illustrates realistic generalization residuals (`±5 to 14 AQI`) without data memorization.
           </p>
         </div>
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center p-1 rounded-md border border-neutral-200/60 bg-neutral-50/60">
+          <div className="flex items-center p-1 rounded-md border border-slate-700/50 bg-slate-900/50">
             <button
               onClick={() => setViewMode('timeseries')}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
                 viewMode === 'timeseries'
-                  ? 'bg-white text-[#0066FF] font-semibold shadow-2xs'
-                  : 'text-neutral-500 hover:text-[#090A0F]'
+                  ? 'bg-slate-800 text-[#0066FF] font-semibold shadow-2xs'
+                  : 'text-slate-400 hover:text-[#090A0F]'
               }`}
             >
               Time-Series
@@ -86,8 +86,8 @@ export default function ActualVsPredictedGraph() {
               onClick={() => setViewMode('scatter')}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
                 viewMode === 'scatter'
-                  ? 'bg-white text-[#0066FF] font-semibold shadow-2xs'
-                  : 'text-neutral-500 hover:text-[#090A0F]'
+                  ? 'bg-slate-800 text-[#0066FF] font-semibold shadow-2xs'
+                  : 'text-slate-400 hover:text-[#090A0F]'
               }`}
             >
               Residual Scatter
@@ -97,7 +97,7 @@ export default function ActualVsPredictedGraph() {
           <select
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value as any)}
-            className="bg-white border border-neutral-200/80 rounded-md px-3.5 py-2 text-xs font-medium text-[#090A0F] focus:outline-none focus:border-[#0066FF] cursor-pointer shadow-2xs"
+            className="bg-slate-800 border border-slate-700/80 rounded-md px-3.5 py-2 text-xs font-medium text-[#090A0F] focus:outline-none focus:border-[#0066FF] cursor-pointer shadow-2xs"
           >
             <option value="bilstm">Bi-LSTM + Attention (★ R² 0.945)</option>
             <option value="lightgbm">LightGBM Optuna (R² 0.931)</option>
@@ -108,45 +108,45 @@ export default function ActualVsPredictedGraph() {
       </div>
 
       {/* Anti-Overfitting Protocol Audit Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 p-5 rounded-md border border-neutral-200/60 bg-neutral-50/50">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 p-5 rounded-md border border-slate-700/50 bg-slate-900/50">
         <div className="flex flex-col">
           <span className="text-xs font-mono font-medium text-[#090A0F]">ANTI-LEAKAGE PROTOCOL</span>
-          <span className="text-xs text-neutral-600 mt-1 leading-relaxed">
+          <span className="text-xs text-slate-300 mt-1 leading-relaxed">
             Short-horizon lag variables (`aqi_lag_1h`, `pm25_lag_1h`) explicitly purged. Models learn physical dispersion mechanics.
           </span>
         </div>
 
         <div className="flex flex-col">
           <span className="text-xs font-mono font-medium text-[#090A0F]">HISTORICAL HORIZON</span>
-          <span className="text-xs text-neutral-600 mt-1 leading-relaxed">
+          <span className="text-xs text-slate-300 mt-1 leading-relaxed">
             Trained across `43,800 hourly observations` (`2021-2026`) with stochastic atmospheric boundary layer turbulence (`±15%` noise).
           </span>
         </div>
 
         <div className="flex flex-col">
           <span className="text-xs font-mono font-medium text-[#090A0F]">REGULARIZATION BOUNDS</span>
-          <span className="text-xs text-neutral-600 mt-1 leading-relaxed">
+          <span className="text-xs text-slate-300 mt-1 leading-relaxed">
             Enforced `AdamW weight_decay=1e-2`, Optuna `min_child_samples &gt;= 20`, and tree feature subsampling (`colsample_bytree &lt;= 0.85`).
           </span>
         </div>
       </div>
 
       {/* Telemetric Telephoto Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-md border border-neutral-200/60 bg-neutral-50/70">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-md border border-slate-700/50 bg-slate-900/50">
         <div className="flex flex-col">
-          <span className="text-[10px] font-mono text-neutral-400">TIME HORIZON</span>
+          <span className="text-[10px] font-mono text-slate-400">TIME HORIZON</span>
           <span className="text-sm font-mono font-semibold text-[#090A0F] mt-0.5">{activeDataPoint.time}</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-[10px] font-mono text-neutral-400">ACTUAL EPA OBSERVATION</span>
+          <span className="text-[10px] font-mono text-slate-400">ACTUAL EPA OBSERVATION</span>
           <span className="text-sm font-mono font-semibold text-[#090A0F] mt-0.5">{actualVal} AQI</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-[10px] font-mono text-neutral-400">{currentMeta.name.toUpperCase()}</span>
+          <span className="text-[10px] font-mono text-slate-400">{currentMeta.name.toUpperCase()}</span>
           <span className="text-sm font-mono font-semibold text-[#0066FF] mt-0.5">{predVal} AQI</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-[10px] font-mono text-neutral-400">OUT-OF-SAMPLE RESIDUAL</span>
+          <span className="text-[10px] font-mono text-slate-400">OUT-OF-SAMPLE RESIDUAL</span>
           <span
             className={`text-sm font-mono font-semibold mt-0.5 ${
               Math.abs(residual) <= 8 ? 'text-emerald-700' : Math.abs(residual) <= 15 ? 'text-amber-700' : 'text-rose-700'
@@ -158,7 +158,7 @@ export default function ActualVsPredictedGraph() {
       </div>
 
       {/* Interactive Chart Canvas */}
-      <div className="p-6 rounded-md border border-neutral-200/60 bg-white relative min-h-[280px] flex flex-col justify-between overflow-hidden">
+      <div className="p-6 rounded-md border border-slate-700/50 bg-slate-800 relative min-h-[280px] flex flex-col justify-between overflow-hidden">
         {viewMode === 'timeseries' ? (
           <div className="relative w-full h-[240px]">
             {/* Danger Threshold Horizontal Line */}
@@ -166,7 +166,7 @@ export default function ActualVsPredictedGraph() {
               style={{ top: `${((maxVal - 150) / maxVal) * 100}%` }}
               className="absolute left-0 right-0 border-b border-dashed border-rose-400/40 pointer-events-none flex justify-end pr-3"
             >
-              <span className="text-[10px] font-mono font-medium text-rose-700 bg-white px-1.5 py-0.5 rounded border border-rose-200 -mt-2.5">
+              <span className="text-[10px] font-mono font-medium text-rose-700 bg-slate-800 px-1.5 py-0.5 rounded border border-rose-200 -mt-2.5">
                 DANGER THRESHOLD (150)
               </span>
             </div>
@@ -311,7 +311,7 @@ export default function ActualVsPredictedGraph() {
         )}
 
         {viewMode === 'timeseries' && (
-          <div className="flex items-center justify-between pt-4 border-t border-neutral-100 text-[11px] font-mono text-neutral-400 px-1">
+          <div className="flex items-center justify-between pt-4 border-t border-neutral-100 text-[11px] font-mono text-slate-400 px-1">
             {EMPIRICAL_DATA.map((d, i) => (
               <span
                 key={d.time}
@@ -328,7 +328,7 @@ export default function ActualVsPredictedGraph() {
       </div>
 
       {/* Footer Summary */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-neutral-200/60 text-xs font-mono text-neutral-500">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-700/50 text-xs font-mono text-slate-400">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#090A0F]" />

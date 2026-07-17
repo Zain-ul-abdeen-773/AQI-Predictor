@@ -16,7 +16,7 @@ export default function LiquidNavigation() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-neutral-200/60 bg-[#FAFAFC]/85 backdrop-blur-md mb-10 transition-all">
+    <header className="sticky top-0 z-50 w-full border-b border-slate-700/50 bg-[#FAFAFC]/85 backdrop-blur-md mb-10 transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-6">
         {/* Brand Architecture Identity */}
         <div className="flex items-center gap-6">
@@ -28,7 +28,7 @@ export default function LiquidNavigation() {
               <span className="text-sm font-semibold tracking-tight text-[#090A0F]">
                 Pearls AQI
               </span>
-              <span className="text-[11px] font-mono font-medium text-neutral-400 hidden sm:inline-block">
+              <span className="text-[11px] font-mono font-medium text-slate-400 hidden sm:inline-block">
                 SARGODHA BASIN
               </span>
             </div>
@@ -48,7 +48,7 @@ export default function LiquidNavigation() {
                   className={`relative px-3.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                     isActive
                       ? 'text-[#0066FF] font-semibold'
-                      : 'text-neutral-500 hover:text-[#090A0F] hover:bg-neutral-100/60'
+                      : 'text-slate-400 hover:text-[#090A0F] hover:bg-neutral-100/60'
                   }`}
                 >
                   {item.label}
@@ -67,7 +67,7 @@ export default function LiquidNavigation() {
 
         {/* Right Status Indicator & System Telemetry */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-md border border-neutral-200/60 bg-white/50 text-[11px] font-mono text-neutral-600">
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-md border border-slate-700/50 bg-slate-800/50 text-[11px] font-mono text-slate-300">
             <span className="relative flex h-1.5 w-1.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />

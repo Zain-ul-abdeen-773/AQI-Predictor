@@ -140,15 +140,13 @@ class ModelRegistryManager:
             # Find task with champion tag
             tasks = Task.get_tasks(
                 project_name=self.settings.clearml_project_name,
-                tags=["champion", model_id],
-                order_by=["-created"]
+                tags=["champion", model_id]
             )
             
             if not tasks:
                 tasks = Task.get_tasks(
                     project_name=self.settings.clearml_project_name,
-                    tags=[model_id],
-                    order_by=["-created"]
+                    tags=[model_id]
                 )
             
             if not tasks:

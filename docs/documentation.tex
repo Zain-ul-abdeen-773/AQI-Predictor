@@ -35,6 +35,9 @@
 \usepackage{tcolorbox}
 \tcbuselibrary{listingsutf8, skins, breakable}
 
+% ── Graphics Path ─────────────────────────────────────────────────────────────
+\graphicspath{{../eda/plots/}}
+
 % ── Colors ────────────────────────────────────────────────────────────────────
 \definecolor{primaryblue}{RGB}{41, 128, 185}
 \definecolor{darkblue}{RGB}{23, 37, 84}
@@ -117,65 +120,91 @@
 \begin{titlepage}
 \begin{center}
 
-\vspace*{1cm}
+\vspace*{-1cm}
 
-% Decorative top rule
-\noindent\textcolor{primaryblue}{\rule{\textwidth}{3pt}}
+% Top decorative band
+\noindent\begin{tikzpicture}[remember picture, overlay]
+    \fill[darkblue] (current page.north west) rectangle ([yshift=-4cm]current page.north east);
+    \fill[primaryblue] ([yshift=-4cm]current page.north west) rectangle ([yshift=-4.15cm]current page.north east);
+    \fill[accentgreen] ([yshift=-4.15cm]current page.north west) rectangle ([yshift=-4.25cm]current page.north east);
+\end{tikzpicture}
 
-\vspace{1.5cm}
+\vspace{2cm}
 
-{\Huge\bfseries\textcolor{darkblue}{Pearls AQI Predictor}}
-
-\vspace{0.5cm}
-
-{\LARGE\textcolor{primaryblue}{Technical Documentation}}
+{\color{white}\Huge\bfseries Pearls AQI Predictor}
 
 \vspace{0.3cm}
 
-{\large\textcolor{gray}{End-to-End Air Quality Index Forecasting System}}
+{\color{white}\Large End-to-End Air Quality Forecasting System}
 
-\vspace{1.5cm}
+\vspace{3.5cm}
 
-% Decorative element
+% Central decorative element
 \begin{tikzpicture}
-    \draw[primaryblue, very thick] (0,0) circle (2.5cm);
-    \draw[accentgreen, thick] (0,0) circle (2cm);
-    \draw[warnorange, thick] (0,0) circle (1.5cm);
-    \draw[dangerred, thick] (0,0) circle (1cm);
-    \node[font=\Large\bfseries, text=darkblue] at (0,0) {AQI};
-    \node[font=\small, text=gray] at (0,-3.2) {72-Hour Forecast $\bullet$ 9 ML Models $\bullet$ Serverless};
+    % Outer glow rings
+    \foreach \r/\c/\o in {3.5/primaryblue/10, 3.2/primaryblue/20, 2.9/accentgreen/25, 2.6/accentgreen/30} {
+        \draw[\c, opacity=\o/100, line width=2pt] (0,0) circle (\r cm);
+    }
+    % Main rings representing AQI levels
+    \draw[green!70!black, very thick] (0,0) circle (2.3cm);
+    \draw[yellow!80!black, very thick] (0,0) circle (1.9cm);
+    \draw[warnorange, very thick] (0,0) circle (1.5cm);
+    \draw[dangerred, very thick] (0,0) circle (1.1cm);
+    \draw[purple!70!black, very thick] (0,0) circle (0.7cm);
+    % Center
+    \fill[darkblue] (0,0) circle (0.5cm);
+    \node[font=\large\bfseries, text=white] at (0,0) {AQI};
+    % Labels around
+    \node[font=\tiny, text=green!70!black] at (0, 2.55) {Good};
+    \node[font=\tiny, text=yellow!80!black] at (0, 2.15) {Moderate};
+    \node[font=\tiny, text=warnorange] at (0, 1.75) {Unhealthy SG};
+    \node[font=\tiny, text=dangerred] at (0, 1.35) {Unhealthy};
+    % Data points scattered
+    \foreach \a/\r in {15/2.7, 45/3.1, 80/2.5, 110/3.3, 150/2.9, 200/3.4, 240/2.6, 280/3.0, 320/3.2, 350/2.8} {
+        \fill[primaryblue, opacity=0.4] (\a:\r cm) circle (2pt);
+    }
 \end{tikzpicture}
 
 \vspace{1.5cm}
 
+% Project details box
+\begin{tcolorbox}[
+    colback=primaryblue!3,
+    colframe=primaryblue!50,
+    width=12cm,
+    arc=4mm,
+    boxrule=0.5pt,
+]
+\centering
 \begin{tabular}{rl}
-    \textbf{Target City:} & Sargodha, Pakistan (32.08\textdegree N, 72.67\textdegree E) \\[4pt]
-    \textbf{Forecast Horizon:} & 72 Hours (3 Days) \\[4pt]
-    \textbf{Models:} & 9 (Linear, Ensemble, GBDT, Deep Learning) \\[4pt]
-    \textbf{Feature Store:} & ClearML Dataset API \\[4pt]
-    \textbf{Deployment:} & AWS Serverless (Terraform) \\
+    \textcolor{primaryblue}{\textbf{Target:}} & Sargodha, Pakistan (32.08\textdegree N, 72.67\textdegree E) \\[3pt]
+    \textcolor{primaryblue}{\textbf{Horizon:}} & 72-Hour (3-Day) AQI Forecast \\[3pt]
+    \textcolor{primaryblue}{\textbf{Models:}} & 9 ML Models (Linear $\rightarrow$ Deep Learning) \\[3pt]
+    \textcolor{primaryblue}{\textbf{Pipeline:}} & Hourly Ingestion + Daily Training (GitHub Actions) \\[3pt]
+    \textcolor{primaryblue}{\textbf{Stack:}} & Python, Flask, Streamlit, PyTorch, ClearML \\[3pt]
+    \textcolor{primaryblue}{\textbf{Deployment:}} & HuggingFace Spaces (Docker SDK) \\[3pt]
+    \textcolor{primaryblue}{\textbf{Explainability:}} & SHAP + LIME + Temporal Grad-CAM \\
 \end{tabular}
+\end{tcolorbox}
 
 \vfill
 
 % Bottom section
-\noindent\textcolor{primaryblue}{\rule{\textwidth}{1pt}}
+\begin{tikzpicture}[remember picture, overlay]
+    \fill[darkblue] (current page.south west) rectangle ([yshift=2.5cm]current page.south east);
+    \fill[primaryblue] ([yshift=2.5cm]current page.south west) rectangle ([yshift=2.65cm]current page.south east);
+    \fill[accentgreen] ([yshift=2.65cm]current page.south west) rectangle ([yshift=2.75cm]current page.south east);
+\end{tikzpicture}
 
 \vspace{0.5cm}
 
-{\large\textbf{Author:} Zain ul Abdeen}
+{\color{white}\large\textbf{Zain ul Abdeen}}
 
-\vspace{0.2cm}
+\vspace{0.15cm}
 
-{\normalsize Pearls Engineering Program}
+{\color{white}\normalsize Pearls Engineering Program | July 2026 | v1.0.0}
 
-\vspace{0.2cm}
-
-{\normalsize July 2026 $\bullet$ Version 1.0.0}
-
-\vspace{0.5cm}
-
-\noindent\textcolor{primaryblue}{\rule{\textwidth}{3pt}}
+\vspace{1cm}
 
 \end{center}
 \end{titlepage}
@@ -425,13 +454,38 @@ Hazardous Hours (AQI $>$ 150) & 16,085 (36.72\%) \\
 \end{tabular}
 \end{table}
 
-\section{Distribution Analysis}
+\section{AQI Category Distribution}
 
-All pollutant distributions exhibit non-Gaussian behavior with heavy right tails. D'Agostino-Pearson normality tests reject normality ($p < 0.001$) for all variables, justifying the use of ensemble and non-parametric models over linear assumptions.
+Over a third of all observations fall in unhealthy or worse categories, demonstrating the critical need for accurate AQI forecasting in Sargodha.
 
-\section{Correlation Structure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{aqi_category_distribution.png}
+\caption{AQI Category Distribution (EPA Standards)}
+\label{fig:aqi_categories}
+\end{figure}
 
-Strong linear relationships exist between AQI and gaseous pollutants:
+\section{Pollutant Distributions}
+
+All pollutant distributions exhibit non-Gaussian behavior with heavy right tails. D'Agostino-Pearson normality tests reject normality ($p < 0.001$) for all variables.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{pollutant_distributions.png}
+\caption{Distribution of Key Pollutants with KDE Overlays and Normality Tests}
+\label{fig:pollutant_dist}
+\end{figure}
+
+\section{Correlation Analysis}
+
+Strong linear relationships exist between AQI and gaseous pollutants (Table~\ref{tab:correlations}).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{correlation_heatmap.png}
+\caption{Pearson Correlation Matrix: Pollutants and Weather Features}
+\label{fig:correlation}
+\end{figure}
 
 \begin{table}[H]
 \centering
@@ -450,17 +504,48 @@ O\textsubscript{3} (Ozone) & $-0.947$ \\
 \end{tabular}
 \end{table}
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{aqi_scatter_top_features.png}
+\caption{AQI vs Top Correlated Features with Regression Lines}
+\label{fig:scatter}
+\end{figure}
+
 \section{Temporal Patterns}
 
-Key temporal findings:
-\begin{itemize}
-    \item \textbf{Diurnal:} AQI peaks overnight (boundary layer collapse) and improves midday (convective mixing)
-    \item \textbf{Weekly:} Slight weekday/weekend variation from traffic patterns
-    \item \textbf{Seasonal:} Strong winter peaks from thermal inversions and biomass burning
-    \item \textbf{Yearly:} Slight upward trend over the 5-year period
-\end{itemize}
+Clear diurnal, weekly, and seasonal cycles are observed in the AQI time series.
 
-\section{Stationarity Analysis}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{temporal_patterns.png}
+\caption{Temporal AQI Patterns: Diurnal, Weekly, Monthly, and Yearly}
+\label{fig:temporal}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{hour_month_heatmap.png}
+\caption{AQI Heatmap: Hour of Day vs Month (Winter Nights are Worst)}
+\label{fig:heatmap}
+\end{figure}
+
+\section{Time Series Analysis}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{monthly_aqi_timeseries.png}
+\caption{Monthly Average AQI Time Series (5 Years)}
+\label{fig:monthly_ts}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{seasonal_decomposition.png}
+\caption{Additive Seasonal Decomposition (Period = 365 Days)}
+\label{fig:decomp}
+\end{figure}
+
+\subsection{Stationarity Test}
 
 Augmented Dickey-Fuller test on daily-averaged AQI:
 \begin{itemize}
@@ -469,26 +554,127 @@ Augmented Dickey-Fuller test on daily-averaged AQI:
     \item \textbf{Conclusion:} Series is non-stationary $\Rightarrow$ lag features and differencing are essential
 \end{itemize}
 
-\section{Granger Causality}
+\section{Autocorrelation Analysis}
 
-Weather variables tested for Granger-causality with AQI (7-day lag):
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{acf_pacf_analysis.png}
+\caption{ACF and PACF of Daily AQI (60-Day Lags)}
+\label{fig:acf_pacf}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{hourly_acf_168h.png}
+\caption{Hourly Autocorrelation Showing Strong 24-Hour Periodicity}
+\label{fig:hourly_acf}
+\end{figure}
+
+\section{Rolling Volatility}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{rolling_volatility.png}
+\caption{AQI Volatility: 7-Day and 30-Day Rolling Standard Deviation}
+\label{fig:volatility}
+\end{figure}
+
+\section{Weather-Pollutant Relationships}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{weather_pollutant_relationships.png}
+\caption{Weather Impact on Air Quality (Temperature, Wind, Humidity, Pressure)}
+\label{fig:weather}
+\end{figure}
+
+\textbf{Hazardous conditions profile} (AQI $>$ 150):
 \begin{itemize}
-    \item Temperature: \textbf{Significant} (Granger-causes AQI)
-    \item Wind Speed: \textbf{Significant} (Granger-causes AQI)
-    \item Pressure: \textbf{Significant} (Granger-causes AQI)
-    \item Humidity: Not significant
+    \item Average temperature: 15.3\textdegree C (cooler months, thermal inversions)
+    \item Average humidity: 57.8\%
+    \item Average wind speed: 0.8 m/s (near-calm, poor dispersion)
 \end{itemize}
 
-\section{EDA Artifacts}
+\section{Pollution Wind Rose}
 
-The complete EDA generates:
-\begin{itemize}
-    \item \textbf{20 PNG visualizations} (distributions, correlations, temporal patterns, decomposition, wind rose, pair plots, heatmaps, volatility, ECDF)
-    \item \textbf{26 CSV/JSON reports} (statistics, hypothesis tests, Granger causality, percentiles)
-    \item \textbf{1 Jupyter notebook} (\texttt{eda/EDA\_Analysis.ipynb}) for interactive exploration
-\end{itemize}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{pollution_wind_rose.png}
+\caption{Pollution by Wind Direction (16-Sector Analysis)}
+\label{fig:windrose}
+\end{figure}
 
-Reproducible via: \texttt{python -m eda.run\_eda \&\& python -m eda.advanced\_eda}
+\section{Granger Causality and Hypothesis Testing}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{granger_causality.png}
+\caption{Granger Causality: Weather Variables Predicting AQI}
+\label{fig:granger}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{hypothesis_tests.png}
+\caption{Statistical Hypothesis Tests (Weekend/Seasonal/Day-Night/Temperature)}
+\label{fig:hypothesis}
+\end{figure}
+
+\section{Feature Importance}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{feature_importance_mutual_info.png}
+\caption{Top 20 Features by Mutual Information with AQI}
+\label{fig:feature_importance}
+\end{figure}
+
+\section{Pair Plot and Outlier Analysis}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{pair_plot_by_aqi_level.png}
+\caption{Pair Plot of Key Variables Colored by AQI Severity}
+\label{fig:pairplot}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{outlier_boxplots.png}
+\caption{Outlier Analysis: Box Plots of Key Variables}
+\label{fig:outliers}
+\end{figure}
+
+\section{Cumulative Distribution}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{aqi_ecdf.png}
+\caption{Empirical CDF of AQI with EPA Category Thresholds}
+\label{fig:ecdf}
+\end{figure}
+
+\section{Key EDA Insights}
+
+\begin{table}[H]
+\centering
+\caption{EDA Findings and Modeling Implications}
+\label{tab:eda_insights}
+\begin{tabularx}{\textwidth}{X X}
+\toprule
+\textbf{Finding} & \textbf{Modeling Implication} \\
+\midrule
+Non-Gaussian distributions & Ensemble/tree-based models preferred \\
+Strong multicollinearity ($r > 0.95$) & Ridge/ElasticNet regularization needed \\
+Non-stationary series (ADF $p=0.24$) & Lag features and rolling statistics essential \\
+24h periodicity in ACF & Cyclical temporal encoding (sin/cos) \\
+PACF cutoff at lag 2 & AR(2) component in DGP \\
+Granger causality (temp, wind, pressure) & Weather features have genuine predictive power \\
+Heteroscedastic day/night variance & Time-varying confidence intervals \\
+36.7\% hazardous hours & Critical need for alerts \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 % ═══════════════════════════════════════════════════════════════════════════════
 \chapter{Model Development}
@@ -667,14 +853,56 @@ A multi-agent system gates infrastructure changes before deployment:
 \end{enumerate}
 
 % ═══════════════════════════════════════════════════════════════════════════════
-\chapter{Infrastructure}
+\chapter{Deployment}
 % ═══════════════════════════════════════════════════════════════════════════════
 
-\section{AWS Serverless Architecture}
+\section{Production Deployment}
+
+The application is deployed on \textbf{HuggingFace Spaces} using the Docker SDK, providing a publicly accessible endpoint with automatic scaling.
 
 \begin{table}[H]
 \centering
-\caption{AWS Resources (Terraform-managed)}
+\caption{Deployment Configuration}
+\label{tab:deployment}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Property} & \textbf{Value} \\
+\midrule
+Platform & HuggingFace Spaces \\
+SDK & Docker \\
+URL & \url{https://huggingface.co/spaces/Zain-773/AQI-Predictor} \\
+Container & Python 3.11-slim, Gunicorn (2 workers) \\
+Port & 8000 \\
+Health Check & \texttt{/health} endpoint (30s interval) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Docker Configuration}
+
+Multi-stage Dockerfile optimized for minimal image size:
+\begin{itemize}
+    \item \textbf{Builder stage:} Python 3.11, compiles native dependencies (cmake, gcc)
+    \item \textbf{Runtime stage:} Slim image, non-root user (\texttt{appuser}), production Gunicorn server
+    \item Health check via HTTP probe to \texttt{/health}
+    \item Volumes mounted for \texttt{/app/data} and \texttt{/app/models}
+\end{itemize}
+
+\begin{lstlisting}[language=bash, caption={Docker deployment}]
+# Build and run locally
+docker-compose up --build
+
+# Push to HuggingFace Spaces (auto-deploys on git push)
+git push hf main
+\end{lstlisting}
+
+\section{Infrastructure as Code (Terraform)}
+
+For enterprise deployment, Terraform configurations provision AWS serverless resources:
+
+\begin{table}[H]
+\centering
+\caption{AWS Resources (Terraform-managed, Optional)}
 \label{tab:aws}
 \begin{tabularx}{\textwidth}{l l X}
 \toprule
@@ -683,23 +911,17 @@ A multi-agent system gates infrastructure changes before deployment:
 Lambda & Feature pipeline (hourly) & EventBridge cron \\
 Lambda & API service (Function URL) & HTTP requests \\
 ECS Fargate & Training pipeline (daily) & EventBridge schedule \\
-ECR & Container registry (10 images max) & CodeBuild push \\
+ECR & Container registry & CodeBuild push \\
 SSM Parameter Store & Encrypted API keys & Runtime access \\
 CloudWatch & Log aggregation (30-day) & All services \\
-CodePipeline & Build + deploy automation & GitHub webhook \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section{Docker Configuration}
-
-Multi-stage Dockerfile with:
-\begin{itemize}
-    \item Builder stage: Python 3.11, compile dependencies
-    \item Runtime stage: Slim image, non-root user (\texttt{appuser})
-    \item Production server: Gunicorn with 2 workers
-    \item Health check: HTTP probe to \texttt{/health} endpoint
-\end{itemize}
+\begin{lstlisting}[language=bash, caption={Terraform provisioning (optional)}]
+cd infrastructure/terraform
+terraform init && terraform plan && terraform apply
+\end{lstlisting}
 
 % ═══════════════════════════════════════════════════════════════════════════════
 \chapter{API Reference}
@@ -773,10 +995,10 @@ The \texttt{/predict} endpoint returns:
 Run tests: \texttt{pytest tests/ -v --cov=. --cov-report=term-missing}
 
 % ═══════════════════════════════════════════════════════════════════════════════
-\chapter{Deployment Guide}
+\chapter{Local Development Guide}
 % ═══════════════════════════════════════════════════════════════════════════════
 
-\section{Local Development}
+\section{Setup}
 
 \begin{lstlisting}[language=bash, caption={Local setup}]
 # Clone and install
@@ -788,14 +1010,16 @@ pip install -r requirements.txt
 # Configure environment
 cp .env.example .env  # Edit with API keys
 
-# Generate training data (real historical)
+# Generate training data (real historical from Open-Meteo)
 python -m data_pipeline.backfill --start-date 2022-07-28
 
 # Train models
 python -m training_pipeline.train
 
-# Launch
+# Launch API
 flask --app deployment.api.main:app run --port 8000
+
+# Launch Dashboard (separate terminal)
 streamlit run deployment/streamlit_app/app.py
 \end{lstlisting}
 
@@ -804,15 +1028,6 @@ streamlit run deployment/streamlit_app/app.py
 \begin{lstlisting}[language=bash, caption={Docker deployment}]
 docker-compose up --build
 # API available at http://localhost:8000
-\end{lstlisting}
-
-\section{AWS Deployment (Terraform)}
-
-\begin{lstlisting}[language=bash, caption={Terraform provisioning}]
-cd infrastructure/terraform
-terraform init
-terraform plan
-terraform apply
 \end{lstlisting}
 
 % ═══════════════════════════════════════════════════════════════════════════════
