@@ -172,22 +172,7 @@ def predict():
     )
 
     if features_df is None or features_df.empty:
-        # Generate synthetic features for demo
-        from data_pipeline.ingest import SyntheticDataGenerator
-        from data_pipeline.transformers import FeatureEngineer
-
-        generator = SyntheticDataGenerator(settings)
-        engineer = FeatureEngineer(settings)
-
-        payloads = []
-        from datetime import timedelta
-        now = datetime.now(timezone.utc)
-        for h in range(settings.lookback_window_hours):
-            dt = now - timedelta(hours=settings.lookback_window_hours - h)
-            payloads.append(generator.generate_for_timestamp(dt))
-
-        features_df = engineer.transform_batch(payloads)
-        features_df = engineer.impute_missing_lags(features_df)
+        return jsonify({"detail": "No feature data available. Please ensure data pipeline has run."}), 503
 
     # ── Prepare features for prediction ──
     from training_pipeline.train import FEATURE_COLUMNS
@@ -349,27 +334,7 @@ def get_historical():
     features_df = feature_service.get_latest_features(hours)
 
     if features_df is None or features_df.empty:
-        # Generate synthetic historical data
-        from data_pipeline.ingest import SyntheticDataGenerator
-        from datetime import timedelta
-
-        generator = SyntheticDataGenerator()
-        now = datetime.now(timezone.utc)
-
-        data = []
-        for h in range(hours):
-            dt = now - timedelta(hours=hours - h)
-            payload = generator.generate_for_timestamp(dt)
-            data.append({
-                "timestamp": dt.isoformat(),
-                "aqi": payload.aqi_value,
-                "pm25": next((p.value for p in payload.pollutants if p.name == "pm25"), 0),
-                "pm10": next((p.value for p in payload.pollutants if p.name == "pm10"), 0),
-                "temperature_c": payload.weather.temperature_c,
-                "humidity_pct": payload.weather.humidity_pct,
-            })
-
-        return jsonify({"data": data, "count": len(data), "source": "synthetic"})
+        return jsonify({"data": [], "count": 0, "source": "empty"})
 
     # Convert timestamps to string if they are not already
     df = features_df.copy()

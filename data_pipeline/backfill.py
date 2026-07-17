@@ -121,18 +121,20 @@ class BackfillPipeline:
 
     def run(
         self,
-        years: Optional[int] = None,
+        start_date: str = "2022-07-28",
+        end_date: Optional[str] = None,
         batch_size: Optional[int] = None,
         output_path: Optional[Path] = None,
-        resume: bool = True,
+        resume: bool = False,
     ) -> pd.DataFrame:
-        """Execute the full backfill pipeline.
+        """Execute the full backfill pipeline using real historical API data.
 
-        Generates synthetic historical data, applies feature engineering,
-        and saves results in batches. Supports resume from checkpoint.
+        Downloads historical data from Open-Meteo, applies feature engineering,
+        and saves results.
 
         Args:
-            years: Number of years to backfill (overrides settings).
+            start_date: Start date for historical data (default "2022-07-28")
+            end_date: End date for historical data (defaults to today)
             batch_size: Rows per batch (overrides settings).
             output_path: Path to save final CSV (defaults to data_dir).
             resume: Whether to resume from last checkpoint.
@@ -140,15 +142,24 @@ class BackfillPipeline:
         Returns:
             pd.DataFrame: Complete backfilled feature DataFrame.
         """
-        if years is not None:
-            self.settings.backfill_years = years
+        from data_pipeline.historical import RealHistoricalDataFetcher
+        fetcher = RealHistoricalDataFetcher(self.settings)
+
         if batch_size is None:
             batch_size = self.settings.backfill_batch_size
         if output_path is None:
             output_path = self.settings.data_dir / "backfill_features.csv"
+        if end_date is None:
+            end_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-        timestamps = self.generate_timestamps()
-        total = len(timestamps)
+        logger.info(
+            "Starting backfill: %s to %s, batch_size=%d",
+            start_date, end_date, batch_size
+        )
+
+        # ── Fetch real historical payloads ──
+        all_payloads = fetcher.fetch_all(start_date=start_date, end_date=end_date)
+        total = len(all_payloads)
 
         # ── Resume from checkpoint ──
         start_idx = 0
@@ -157,16 +168,11 @@ class BackfillPipeline:
             if checkpoint is not None:
                 start_idx = checkpoint
 
-        logger.info(
-            "Starting backfill: %d timestamps, batch_size=%d, starting at idx=%d",
-            total, batch_size, start_idx,
-        )
-
         all_dfs: List[pd.DataFrame] = []
 
         for batch_start in range(start_idx, total, batch_size):
             batch_end = min(batch_start + batch_size, total)
-            batch_timestamps = timestamps[batch_start:batch_end]
+            batch_payloads = all_payloads[batch_start:batch_end]
 
             logger.info(
                 "Processing batch %d-%d / %d (%.1f%%)",
@@ -174,14 +180,8 @@ class BackfillPipeline:
                 100 * batch_end / total,
             )
 
-            # ── Generate synthetic payloads ──
-            payloads: List[RawDataPayload] = []
-            for ts in batch_timestamps:
-                payload = self.generator.generate_for_timestamp(ts)
-                payloads.append(payload)
-
             # ── Apply feature engineering ──
-            batch_df = self.engineer.transform_batch(payloads)
+            batch_df = self.engineer.transform_batch(batch_payloads)
             batch_df = self.engineer.impute_missing_lags(batch_df)
             all_dfs.append(batch_df)
 
@@ -270,7 +270,8 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="AQI Data Backfill Pipeline")
-    parser.add_argument("--years", type=int, default=None, help="Years to backfill")
+    parser.add_argument("--start-date", type=str, default="2022-07-28", help="Start date (YYYY-MM-DD)")
+    parser.add_argument("--end-date", type=str, default=None, help="End date (YYYY-MM-DD)")
     parser.add_argument("--batch-size", type=int, default=None, help="Batch size")
     parser.add_argument("--output", type=str, default=None, help="Output CSV path")
     parser.add_argument("--no-resume", action="store_true", help="Start fresh")
@@ -280,7 +281,8 @@ def main() -> None:
 
     pipeline = BackfillPipeline()
     df = pipeline.run(
-        years=args.years,
+        start_date=args.start_date,
+        end_date=args.end_date,
         batch_size=args.batch_size,
         output_path=output,
         resume=not args.no_resume,

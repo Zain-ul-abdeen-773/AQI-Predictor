@@ -111,18 +111,16 @@ class ModelService:
             )
             from training_pipeline.models.tree_ensemble import LightGBMOptimized
             from training_pipeline.models.deep_learning import BiLSTMAttention
-            from data_pipeline.ingest import SyntheticDataGenerator
-            from data_pipeline.transformers import FeatureEngineer
-            from datetime import datetime, timezone, timedelta
+            from feature_pipeline.register import FeatureStoreManager
             from training_pipeline.train import FEATURE_COLUMNS, TARGET_COLUMN
             import numpy as np
 
-            generator = SyntheticDataGenerator(settings)
-            engineer = FeatureEngineer(settings)
-            now = datetime.now(timezone.utc)
-            payloads = [generator.generate_for_timestamp(now - timedelta(hours=100 - h)) for h in range(100)]
-            df = engineer.transform_batch(payloads)
-            df = engineer.impute_missing_lags(df)
+            manager = FeatureStoreManager(settings)
+            df = manager.get_latest_features(100)
+            
+            if df is None or df.empty:
+                logger.warning("No real data available to initialize model zoo.")
+                return
 
             available_cols = [c for c in FEATURE_COLUMNS if c in df.columns]
             X = df[available_cols].fillna(0.0).values.astype(np.float32)
