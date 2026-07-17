@@ -1,0 +1,62 @@
+{
+  "temperature_c": {
+    "best_lag_days": 1,
+    "min_p_value": 0.00045,
+    "significant": true,
+    "all_p_values": {
+      "lag_1": 0.0005,
+      "lag_2": 0.0072,
+      "lag_3": 0.0133,
+      "lag_4": 0.0311,
+      "lag_5": 0.0352,
+      "lag_6": 0.049,
+      "lag_7": 0.0681
+    },
+    "interpretation": "temperature_c Granger-causes AQI at lag 1"
+  },
+  "humidity_pct": {
+    "best_lag_days": 3,
+    "min_p_value": 0.133916,
+    "significant": false,
+    "all_p_values": {
+      "lag_1": 0.4148,
+      "lag_2": 0.145,
+      "lag_3": 0.1339,
+      "lag_4": 0.3077,
+      "lag_5": 0.4114,
+      "lag_6": 0.3467,
+      "lag_7": 0.4082
+    },
+    "interpretation": "humidity_pct does NOT Granger-cause AQI"
+  },
+  "wind_speed_ms": {
+    "best_lag_days": 1,
+    "min_p_value": 0.0,
+    "significant": true,
+    "all_p_values": {
+      "lag_1": 0.0,
+      "lag_2": 0.0,
+      "lag_3": 0.0,
+      "lag_4": 0.0,
+      "lag_5": 0.0,
+      "lag_6": 0.0,
+      "lag_7": 0.0
+    },
+    "interpretation": "wind_speed_ms Granger-causes AQI at lag 1"
+  },
+  "pressure_hpa": {
+    "best_lag_days": 3,
+    "min_p_value": 0.019606,
+    "significant": true,
+    "all_p_values": {
+      "lag_1": 0.2485,
+      "lag_2": 0.6403,
+      "lag_3": 0.0196,
+      "lag_4": 0.032,
+      "lag_5": 0.0662,
+      "lag_6": 0.0958,
+      "lag_7": 0.1465
+    },
+    "interpretation": "pressure_hpa Granger-causes AQI at lag 3"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "weekend_vs_weekday": {
+    "test": "Mann-Whitney U",
+    "statistic": 123797209.5,
+    "p_value": 0.856091,
+    "weekend_median": 147.0,
+    "weekday_median": 144.0,
+    "significant": false,
+    "interpretation": "No significant difference"
+  },
+  "winter_vs_summer": {
+    "test": "Mann-Whitney U (one-sided: winter > summer)",
+    "statistic": 116161408.0,
+    "p_value": 0.0,
+    "winter_median": 177.0,
+    "summer_median": 127.0,
+    "significant": true,
+    "effect_size_r": 0.8699,
+    "interpretation": "Winter AQI significantly higher"
+  },
+  "seasonal_kruskal_wallis": {
+    "test": "Kruskal-Wallis H",
+    "statistic": 12711.57,
+    "p_value": 0.0,
+    "seasonal_medians": {
+      "Winter": 179.0,
+      "Spring": 110.0,
+      "Summer": 129.0,
+      "Autumn": 152.0
+    },
+    "significant": true,
+    "interpretation": "Significant seasonal differences exist"
+  },
+  "temperature_aqi_spearman": {
+    "test": "Spearman rank correlation",
+    "rho": -0.3799,
+    "p_value": 0.0,
+    "significant": true,
+    "interpretation": "Negative monotonic relationship (rho=-0.380)"
+  },
+  "day_night_variance": {
+    "test": "Levene's test (variance homogeneity)",
+    "statistic": 23.17,
+    "p_value": 1e-06,
+    "night_std": 46.79,
+    "day_std": 45.81,
+    "significant": true,
+    "interpretation": "Unequal variance (heteroscedastic)"
+  }
+}

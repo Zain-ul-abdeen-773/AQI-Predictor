@@ -85,28 +85,28 @@ class RealHistoricalDataFetcher:
             precip = w_data["precipitation"][i] if w_data["precipitation"][i] is not None else 0.0
 
             pollutants = [
-                PollutantReading(name="pm25", value=float(pm25), unit="µg/m³", timestamp=dt),
-                PollutantReading(name="pm10", value=float(pm10), unit="µg/m³", timestamp=dt),
-                PollutantReading(name="no2", value=float(no2), unit="µg/m³", timestamp=dt),
-                PollutantReading(name="so2", value=float(so2), unit="µg/m³", timestamp=dt),
-                PollutantReading(name="co", value=float(co), unit="µg/m³", timestamp=dt),
-                PollutantReading(name="o3", value=float(o3), unit="µg/m³", timestamp=dt),
+                PollutantReading(name="pm25", value=max(0.0, float(pm25)), unit="µg/m³", timestamp=dt),
+                PollutantReading(name="pm10", value=max(0.0, float(pm10)), unit="µg/m³", timestamp=dt),
+                PollutantReading(name="no2", value=max(0.0, float(no2)), unit="µg/m³", timestamp=dt),
+                PollutantReading(name="so2", value=max(0.0, float(so2)), unit="µg/m³", timestamp=dt),
+                PollutantReading(name="co", value=max(0.0, float(co)), unit="µg/m³", timestamp=dt),
+                PollutantReading(name="o3", value=max(0.0, float(o3)), unit="µg/m³", timestamp=dt),
             ]
 
             weather = WeatherReading(
                 temperature_c=float(temp),
-                humidity_pct=float(hum),
-                wind_speed_ms=float(ws),
-                wind_direction_deg=float(wd),
-                pressure_hpa=float(pres),
-                precipitation_mm=float(precip),
+                humidity_pct=max(0.0, float(hum)),
+                wind_speed_ms=max(0.0, float(ws)),
+                wind_direction_deg=max(0.0, float(wd)),
+                pressure_hpa=max(0.0, float(pres)),
+                precipitation_mm=max(0.0, float(precip)),
                 timestamp=dt,
             )
 
             payload = RawDataPayload(
                 pollutants=pollutants,
                 weather=weather,
-                aqi_value=float(aqi_value),
+                aqi_value=max(0.0, float(aqi_value)),
                 source=DataSource.OPENWEATHER,
                 fetch_timestamp=dt,
             )

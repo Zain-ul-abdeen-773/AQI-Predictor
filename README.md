@@ -233,9 +233,11 @@ docker-compose up --build
 │   └── schemas.py                  #   Pydantic validation schemas (467 lines)
 │
 ├── eda/                            # Exploratory Data Analysis
-│   ├── run_eda.py                  #   10-stage EDA pipeline (reproducible)
-│   ├── plots/                      #   10 PNG visualizations
-│   └── reports/                    #   18 CSV/JSON statistical reports
+│   ├── run_eda.py                  #   10-stage base EDA pipeline
+│   ├── advanced_eda.py             #   9-stage advanced statistical analysis
+│   ├── EDA_Analysis.ipynb          #   Interactive Jupyter notebook (13 sections)
+│   ├── plots/                      #   20 PNG visualizations
+│   └── reports/                    #   26 CSV/JSON statistical reports
 │
 ├── data_pipeline/                  # Data ingestion & feature engineering
 │   ├── ingest.py                   #   Async AQICN + OpenWeather client (aiohttp + tenacity)
@@ -357,7 +359,10 @@ The system engineers **37 features** from raw pollutant and weather data:
 
 ## Exploratory Data Analysis
 
-Comprehensive EDA on **43,801 hourly observations** spanning **5 years** (2021-2026). Reproduce with: `python -m eda.run_eda`
+Comprehensive 19-stage EDA on **43,801 hourly observations** spanning **5 years** (2021-2026) with **47 engineered features**. The analysis includes base statistical profiling, advanced time-series diagnostics, hypothesis testing, and causal inference.
+
+**Reproduce:** `python -m eda.run_eda && python -m eda.advanced_eda`  
+**Interactive notebook:** `eda/EDA_Analysis.ipynb`
 
 ### Dataset Summary
 
@@ -375,13 +380,19 @@ Comprehensive EDA on **43,801 hourly observations** spanning **5 years** (2021-2
 
 ![AQI Category Distribution](eda/plots/aqi_category_distribution.png)
 
-Over a third of all hours fall in unhealthy or worse categories, highlighting the need for accurate forecasting.
+Over a third of all hours fall in unhealthy or worse categories, highlighting the critical need for accurate forecasting in Sargodha.
 
 ### Pollutant Distributions
 
 ![Pollutant Distributions](eda/plots/pollutant_distributions.png)
 
 Non-Gaussian distributions with heavy right tails across all pollutants. D'Agostino-Pearson normality tests confirm non-normality (p < 0.001), justifying ensemble and non-parametric model selection.
+
+### Empirical CDF with EPA Thresholds
+
+![ECDF](eda/plots/aqi_ecdf.png)
+
+The empirical cumulative distribution shows what percentage of time falls below each EPA AQI threshold -- critical for risk assessment and alert calibration.
 
 ### Correlation Analysis
 
@@ -397,6 +408,12 @@ Non-Gaussian distributions with heavy right tails across all pollutants. D'Agost
 
 ![AQI vs Top Features](eda/plots/aqi_scatter_top_features.png)
 
+### Pair Plot by AQI Level
+
+![Pair Plot](eda/plots/pair_plot_by_aqi_level.png)
+
+Multi-variable pair plot colored by AQI severity category reveals clustering patterns and non-linear relationships between pollutants and weather.
+
 ### Temporal Patterns
 
 ![Temporal Patterns](eda/plots/temporal_patterns.png)
@@ -406,18 +423,48 @@ Non-Gaussian distributions with heavy right tails across all pollutants. D'Agost
 - **Seasonal**: Strong winter peaks from thermal inversions and biomass burning
 - **Yearly**: Slight upward trend over the 5-year period
 
+### Hour x Month AQI Heatmap
+
+![Hour Month Heatmap](eda/plots/hour_month_heatmap.png)
+
+2D heatmap identifies pollution hotspots -- winter nights (Nov-Jan, 22:00-06:00) consistently show the highest AQI values due to thermal inversions and reduced atmospheric mixing.
+
 ### Monthly Time Series
 
 ![Monthly AQI Time Series](eda/plots/monthly_aqi_timeseries.png)
 
-### Seasonal Decomposition
+### Seasonal Decomposition & Stationarity
 
 ![Seasonal Decomposition](eda/plots/seasonal_decomposition.png)
 
-**Stationarity (ADF Test):**
+**Augmented Dickey-Fuller Test:**
 - ADF Statistic: -2.12 (critical 5%: -2.86)
 - p-value: 0.237 -- series is **non-stationary**
 - Implication: Autoregressive features (lags, rolling stats) are essential
+
+### Autocorrelation Analysis (ACF/PACF)
+
+![ACF PACF](eda/plots/acf_pacf_analysis.png)
+
+- Slow ACF decay confirms non-stationarity
+- PACF cuts off after lag 1-2, suggesting AR(1) or AR(2) process
+- Periodic bumps at lag 7 and 30 indicate weekly and monthly cycles
+
+![Hourly ACF](eda/plots/hourly_acf_168h.png)
+
+Strong 24-hour periodicity visible in the hourly autocorrelation, confirming the importance of cyclical temporal encoding (sin/cos).
+
+### Rolling Volatility
+
+![Rolling Volatility](eda/plots/rolling_volatility.png)
+
+7-day and 30-day rolling standard deviation identifies unstable periods with high AQI variability -- important for confidence interval calibration.
+
+### Cross-Pollutant Lag Correlation
+
+![Lag Correlation](eda/plots/cross_pollutant_lag_correlation.png)
+
+How past pollutant values predict current AQI at different time lags. All pollutants maintain strong predictive power up to 24h, validating the use of lag features in the model.
 
 ### Weather Impact on Air Quality
 
@@ -427,6 +474,33 @@ Non-Gaussian distributions with heavy right tails across all pollutants. D'Agost
 - Average temperature: 15.3 C (cooler months, inversions)
 - Average humidity: 57.8%
 - Average wind speed: 0.8 m/s (near-calm, poor dispersion)
+
+### Pollution Wind Rose
+
+![Wind Rose](eda/plots/pollution_wind_rose.png)
+
+Directional pollution analysis reveals prevailing pollution transport patterns. AQI varies significantly by wind direction, with certain sectors consistently bringing higher pollutant loads.
+
+### Granger Causality Tests
+
+![Granger Causality](eda/plots/granger_causality.png)
+
+Statistical test for whether weather variables have predictive causal power over AQI:
+- **Temperature**: Granger-causes AQI (significant)
+- **Wind speed**: Granger-causes AQI (significant)
+- **Pressure**: Granger-causes AQI (significant)
+- **Humidity**: Does NOT Granger-cause AQI
+
+### Hypothesis Testing
+
+![Hypothesis Tests](eda/plots/hypothesis_tests.png)
+
+| Test | Result | p-value |
+|------|--------|---------|
+| Weekend vs Weekday (Mann-Whitney U) | Tested | See report |
+| Seasonal Differences (Kruskal-Wallis H) | **Significant** | < 0.001 |
+| Temperature-AQI (Spearman) | Negative correlation | < 0.001 |
+| Day vs Night Variance (Levene's) | Heteroscedastic | < 0.05 |
 
 ### Feature Importance (Mutual Information)
 
@@ -438,15 +512,21 @@ Top predictive features: `aqi_lag_1h`, `pollution_intensity`, `co`, `pm10`, `so2
 
 ![Outlier Box Plots](eda/plots/outlier_boxplots.png)
 
-### Key EDA Insights
+### Key EDA Insights & Modeling Implications
 
-1. **Non-Gaussian distributions** across all pollutants justify ensemble/tree-based models
-2. **Strong multicollinearity** (r > 0.95) handled by Ridge/ElasticNet regularization
-3. **Clear seasonality** with winter peaks from thermal inversions and low wind speeds
-4. **Non-stationary series** requires lag features and rolling statistics
-5. **36.7% hazardous hours** demonstrate the critical need for AQI forecasting in Sargodha
+| Finding | Modeling Implication |
+|---------|---------------------|
+| Non-Gaussian distributions | Use ensemble/tree-based models over linear assumptions |
+| Strong multicollinearity (r > 0.95) | Regularization (Ridge/ElasticNet) or tree-based feature selection |
+| Non-stationary series (ADF p=0.24) | Include lag features and rolling statistics |
+| 24h periodicity in ACF | Cyclical temporal encoding (sin/cos hour features) |
+| PACF cutoff at lag 2 | AR(2) component in data generating process |
+| Winter peaks (thermal inversions) | Season and temperature interaction features |
+| Granger causality (temp, wind, pressure) | Weather features have genuine predictive power |
+| Heteroscedastic day/night variance | Separate confidence intervals by time-of-day |
+| 36.7% hazardous hours | Critical need for accurate forecasting and alerts |
 
-> All EDA artifacts: `eda/plots/` (10 PNG) and `eda/reports/` (18 CSV/JSON)
+> **EDA Artifacts:** 20 PNG visualizations in `eda/plots/`, 26 CSV/JSON reports in `eda/reports/`, and interactive Jupyter notebook at `eda/EDA_Analysis.ipynb`
 
 ---
 
