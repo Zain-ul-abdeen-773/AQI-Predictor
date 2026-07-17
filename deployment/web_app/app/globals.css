@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #FAFAFC;
+    color: #090A0F;
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: rgba(0, 102, 255, 0.15);
+    color: #0066FF;
+  }
+}
+
+/* Precision Editorial Tech Utilities */
+.border-editorial {
+  border-color: rgba(226, 228, 233, 0.65);
+}
+
+.bg-editorial-subtle {
+  background-color: rgba(245, 246, 250, 0.5);
+}
+
+/* Glass architecture with zero heavy shadows */
+.editorial-glass {
+  background: rgba(250, 250, 252, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Subtle architectural hover transition */
+.transition-editorial {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Scrollbar for crisp Vercel/Linear light theme */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #FAFAFC;
+}
+::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
+}
