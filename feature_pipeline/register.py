@@ -151,8 +151,8 @@ class FeatureStoreManager:
             
             logger.info("Retrieved %d rows from ClearML dataset", len(df))
             return df
-        except ValueError:
-            logger.warning("ClearML Dataset not found.")
+        except ValueError as e:
+            logger.warning("ClearML Dataset Error: %s", e)
         except Exception as e:
             logger.error("Failed to read from ClearML dataset: %s", e)
         

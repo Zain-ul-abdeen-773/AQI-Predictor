@@ -33,6 +33,7 @@ clearml>=1.14
 
 # Explainability
 shap>=0.42
+lime>=0.2
 
 # Web Framework
 flask>=3.0

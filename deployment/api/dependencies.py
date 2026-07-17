@@ -38,7 +38,7 @@ class ModelService:
         self._loaded = False
         self.models: Dict[str, Any] = {}
         self.models_metadata: Dict[str, Dict[str, Any]] = {}
-        self.default_model_id: str = "bilstm_attention"
+        self.default_model_id: str = "ridge"
 
     def load(self) -> None:
         """Load the champion model and explainer from registry, and initialize 8-model zoo."""
@@ -131,61 +131,61 @@ class ModelService:
 
             # Define exact metadata benchmarks for the 8 models ordered by R2
             self.models_metadata = {
-                "bilstm_attention": {
-                    "id": "bilstm_attention",
-                    "name": "Bi-LSTM + Multi-Head Attention",
-                    "category": "Deep Learning",
-                    "r2": 0.945, "rmse": 5.82, "mae": 4.12, "is_default": True,
-                    "description": "Deep bidirectional recurrent neural network with multi-head attention mechanism capturing long-range atmospheric lag dependencies."
-                },
-                "lightgbm": {
-                    "id": "lightgbm",
-                    "name": "LightGBM (Optuna Tuned)",
-                    "category": "Tree Ensemble",
-                    "r2": 0.931, "rmse": 6.45, "mae": 4.88, "is_default": False,
-                    "description": "Gradient boosted decision trees optimized via Bayesian hyperparameter search using Optuna."
-                },
-                "xgboost": {
-                    "id": "xgboost",
-                    "name": "XGBoost (Optuna Tuned)",
-                    "category": "Tree Ensemble",
-                    "r2": 0.928, "rmse": 6.71, "mae": 5.02, "is_default": False,
-                    "description": "Extreme gradient boosting trees with L1/L2 regularization to prevent overfitting on outlier telemetry."
+                "ridge": {
+                    "id": "ridge",
+                    "name": "Scikit-Learn Ridge + RobustScaler",
+                    "category": "Baseline",
+                    "r2": 0.9988, "rmse": 1.54, "mae": 0.87, "is_default": True,
+                    "description": "L2 regularized linear regression pipeline with robust quantile outlier scaling."
                 },
                 "gradient_boosting": {
                     "id": "gradient_boosting",
                     "name": "Gradient Boosting Regressor",
                     "category": "Ensemble Trees",
-                    "r2": 0.912, "rmse": 7.34, "mae": 5.62, "is_default": False,
+                    "r2": 0.9986, "rmse": 1.68, "mae": 0.87, "is_default": False,
                     "description": "Sequential additive decision tree ensemble focusing on minimizing residual errors."
-                },
-                "random_forest": {
-                    "id": "random_forest",
-                    "name": "Random Forest Regressor",
-                    "category": "Ensemble Trees",
-                    "r2": 0.895, "rmse": 8.12, "mae": 6.15, "is_default": False,
-                    "description": "Bagged ensemble of randomized decision trees providing robust variance reduction."
                 },
                 "extra_trees": {
                     "id": "extra_trees",
                     "name": "Extra Trees Regressor",
                     "category": "Ensemble Trees",
-                    "r2": 0.887, "rmse": 8.45, "mae": 6.41, "is_default": False,
+                    "r2": 0.9979, "rmse": 2.05, "mae": 1.00, "is_default": False,
                     "description": "Extremely randomized decision tree forest with random split thresholds for enhanced diversity."
                 },
-                "ridge": {
-                    "id": "ridge",
-                    "name": "Scikit-Learn Ridge + RobustScaler",
-                    "category": "Baseline",
-                    "r2": 0.842, "rmse": 10.15, "mae": 7.82, "is_default": False,
-                    "description": "L2 regularized linear regression pipeline with robust quantile outlier scaling."
+                "xgboost": {
+                    "id": "xgboost",
+                    "name": "XGBoost (Optuna Tuned)",
+                    "category": "Tree Ensemble",
+                    "r2": 0.9975, "rmse": 2.25, "mae": 1.18, "is_default": False,
+                    "description": "Extreme gradient boosting trees with L1/L2 regularization to prevent overfitting on outlier telemetry."
+                },
+                "lightgbm": {
+                    "id": "lightgbm",
+                    "name": "LightGBM (Optuna Tuned)",
+                    "category": "Tree Ensemble",
+                    "r2": 0.9975, "rmse": 2.26, "mae": 1.19, "is_default": False,
+                    "description": "Gradient boosted decision trees optimized via Bayesian hyperparameter search using Optuna."
+                },
+                "random_forest": {
+                    "id": "random_forest",
+                    "name": "Random Forest Regressor",
+                    "category": "Ensemble Trees",
+                    "r2": 0.9908, "rmse": 4.33, "mae": 2.39, "is_default": False,
+                    "description": "Bagged ensemble of randomized decision trees providing robust variance reduction."
                 },
                 "svr": {
                     "id": "svr",
                     "name": "Support Vector Regressor (SVR)",
                     "category": "Kernel Methods",
-                    "r2": 0.835, "rmse": 10.42, "mae": 8.11, "is_default": False,
+                    "r2": 0.9815, "rmse": 6.13, "mae": 3.25, "is_default": False,
                     "description": "Radial Basis Function (RBF) kernel support vector machine mapping telemetry into high-dimensional space."
+                },
+                "bilstm_attention": {
+                    "id": "bilstm_attention",
+                    "name": "Bi-LSTM + Multi-Head Attention",
+                    "category": "Deep Learning",
+                    "r2": 0.5913, "rmse": 28.94, "mae": 21.19, "is_default": False,
+                    "description": "Deep bidirectional recurrent neural network with multi-head attention mechanism capturing long-range atmospheric lag dependencies."
                 }
             }
 

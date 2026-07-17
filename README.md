@@ -48,71 +48,70 @@ Built for the **Pearls Engineering Program** to demonstrate full-stack MLOps pro
 ## System Architecture
 
 ```mermaid
-graph TB
-    subgraph External["External Data Sources"]
-        AQICN["AQICN API<br/>(Real-time AQI)"]
-        OWM["OpenWeatherMap API<br/>(Weather Data)"]
+flowchart TB
+    subgraph Sources[Data Sources]
+        A1[AQICN API]
+        A2[OpenWeatherMap API]
     end
 
-    subgraph FeaturePipeline["Feature Pipeline (Hourly - GitHub Actions)"]
-        Ingest["Data Ingestion<br/>(async aiohttp + tenacity)"]
-        Transform["Feature Engineering<br/>(37 features)"]
-        Store["ClearML Feature Store<br/>(Parquet partitioned)"]
+    subgraph FP[Feature Pipeline - Hourly]
+        B1[Async Data Ingestion]
+        B2[Feature Engineering - 37 features]
+        B3[ClearML Feature Store]
     end
 
-    subgraph TrainingPipeline["Training Pipeline (Daily - GitHub Actions)"]
-        Extract["Extract Training Data"]
-        Train["Model Training<br/>(8 models + Optuna HPO)"]
-        Evaluate["Evaluation<br/>(RMSE, MAE, R2, MAPE)"]
-        SHAP["SHAP Explainability"]
-        Registry["ClearML Model Registry<br/>(Champion Promotion)"]
+    subgraph TP[Training Pipeline - Daily]
+        C1[Extract Training Data]
+        C2[Train 9 Models + Optuna HPO]
+        C3[Evaluate: RMSE, MAE, R2]
+        C4[SHAP + LIME Explainability]
+        C5[ClearML Model Registry]
     end
 
-    subgraph Serving["Serving Layer"]
-        Flask["Flask REST API<br/>(/predict, /explain, /health)"]
-        Streamlit["Streamlit Dashboard<br/>(Plotly interactive charts)"]
+    subgraph SV[Serving Layer]
+        D1[Flask REST API]
+        D2[Streamlit Dashboard]
     end
 
-    subgraph Infrastructure["AWS Serverless (Terraform)"]
-        Lambda1["Lambda<br/>(Feature Pipeline)"]
-        Lambda2["Lambda<br/>(API Service)"]
-        ECS["ECS Fargate<br/>(Training)"]
-        ECR["ECR<br/>(Container Registry)"]
-        EventBridge["EventBridge<br/>(Scheduling)"]
-        SSM["SSM Parameter Store<br/>(Secrets)"]
+    subgraph AWS[AWS Serverless - Terraform]
+        E1[Lambda - Feature Pipeline]
+        E2[Lambda - API Service]
+        E3[ECS Fargate - Training]
+        E4[EventBridge Scheduler]
+        E5[ECR + SSM + CloudWatch]
     end
 
-    subgraph Validation["Infrastructure Validation"]
-        LangGraph["LangGraph Multi-Agent"]
-        Linter["Linter Agent"]
-        Security["Security Agent (Checkov)"]
-        Policy["Policy Agent (OPA/Rego)"]
+    subgraph VA[Infra Validation - LangGraph]
+        F1[Linter Agent]
+        F2[Security Agent - Checkov]
+        F3[Policy Agent - OPA/Rego]
+        F4[Decision Agent]
     end
 
-    AQICN --> Ingest
-    OWM --> Ingest
-    Ingest --> Transform
-    Transform --> Store
+    A1 --> B1
+    A2 --> B1
+    B1 --> B2
+    B2 --> B3
 
-    Store --> Extract
-    Extract --> Train
-    Train --> Evaluate
-    Evaluate --> SHAP
-    SHAP --> Registry
+    B3 --> C1
+    C1 --> C2
+    C2 --> C3
+    C3 --> C4
+    C4 --> C5
 
-    Registry --> Flask
-    Store --> Flask
-    Flask --> Streamlit
+    C5 --> D1
+    B3 --> D1
+    D1 --> D2
 
-    Lambda1 -.-> FeaturePipeline
-    Lambda2 -.-> Flask
-    ECS -.-> TrainingPipeline
-    EventBridge -.-> Lambda1
-    EventBridge -.-> ECS
+    E4 --> E1
+    E4 --> E3
+    E1 -.- FP
+    E2 -.- D1
+    E3 -.- TP
 
-    LangGraph --> Linter
-    LangGraph --> Security
-    LangGraph --> Policy
+    F1 --> F4
+    F2 --> F4
+    F3 --> F4
 ```
 
 ---
@@ -124,7 +123,7 @@ graph TB
 | **Multi-Model Zoo** | 9 models: Ridge, ElasticNet, Random Forest, Extra Trees, Gradient Boosting, SVR, LightGBM (Optuna), XGBoost (Optuna), Bi-LSTM + Multi-Head Attention |
 | **Feature Store** | ClearML Dataset versioning with local Parquet (Hive-partitioned by year/month) |
 | **Experiment Tracking** | ClearML for model registry, metrics logging, and artifact management |
-| **Explainability** | SHAP TreeExplainer + GradientExplainer + Temporal Grad-CAM for LSTM |
+| **Explainability** | SHAP TreeExplainer + GradientExplainer, LIME TabularExplainer, Temporal Grad-CAM |
 | **Drift Detection** | Population Stability Index (PSI) monitoring across all features |
 | **Anomaly Detection** | Isolation Forest for outlier identification in incoming data |
 | **Health Advisories** | AQI-based alerts with context-aware recommendations |
@@ -143,7 +142,7 @@ graph TB
 | **ML/DL** | scikit-learn, LightGBM, XGBoost, PyTorch 2.2+, Optuna |
 | **Feature Store** | ClearML 1.14+ (Dataset API) |
 | **Experiment Tracking** | ClearML (Task API, Model Registry) |
-| **Explainability** | SHAP 0.42+, Custom Temporal Grad-CAM |
+| **Explainability** | SHAP 0.42+, LIME 0.2+, Custom Temporal Grad-CAM |
 | **Data Engineering** | Pandas, NumPy, SciPy, aiohttp, tenacity |
 | **Infrastructure** | Terraform, Docker, AWS (Lambda, ECS, ECR, EventBridge, SSM) |
 | **Validation** | LangGraph, LangChain, OPA/Rego, Checkov |
@@ -286,7 +285,7 @@ docker-compose up --build
 │
 ├── models/                         # Trained model artifacts
 │   ├── training_report.json        #   Model comparison report
-│   └── sargodha_aqi_forecast_model/
+│   └── sargodha-aqi-forecast-model/
 │       └── <timestamp>/            #   model.pkl, metadata.json, metrics.json, params.json
 │
 ├── tests/                          # pytest test suite
@@ -662,8 +661,8 @@ Multi-agent system that gates infrastructure changes:
 ```mermaid
 graph LR
     A[Terraform Plan] --> B[Linter Agent]
-    B --> C[Security Agent<br/>Checkov]
-    C --> D[Policy Agent<br/>OPA/Rego]
+    B --> C[Security Agent]
+    C --> D[Policy Agent]
     D --> E{Decision Agent}
     E -->|Pass| F[Deploy]
     E -->|Fail| G[Remediation Suggestions]

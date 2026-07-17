@@ -1,13 +1,17 @@
-"""SHAP-based model interpretability for AQI prediction models.
+"""SHAP and LIME model interpretability for AQI prediction models.
 
 Integrates SHAP (SHapley Additive exPlanations) for both tree-based
-(TreeExplainer) and deep learning (GradientExplainer) models. Provides
-feature contribution analysis for real-time prediction explanations.
+(TreeExplainer) and deep learning (GradientExplainer) models, and LIME
+(Local Interpretable Model-agnostic Explanations) for any black-box model.
+Provides feature contribution analysis for real-time prediction explanations.
 
 Example:
-    >>> from training_pipeline.explainability import SHAPExplainer
-    >>> explainer = SHAPExplainer.for_lightgbm(model, X_background)
-    >>> contributions = explainer.explain(X_input)
+    >>> from training_pipeline.explainability import SHAPExplainer, LIMEExplainer
+    >>> shap_exp = SHAPExplainer.for_lightgbm(model, X_background)
+    >>> contributions = shap_exp.explain(X_input)
+    >>>
+    >>> lime_exp = LIMEExplainer(model, X_train, feature_names)
+    >>> explanation = lime_exp.explain_instance(X_input[0])
 """
 
 from __future__ import annotations
@@ -286,4 +290,312 @@ class SHAPExplainer:
             base_value=data["base_value"],
         )
         logger.info("Loaded SHAP explainer from %s", path)
+        return instance
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# LIME Explainer
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class LIMEExplainer:
+    """LIME (Local Interpretable Model-agnostic Explanations) for AQI models.
+
+    Generates local surrogate explanations by perturbing input features and
+    fitting an interpretable linear model in the neighborhood of each prediction.
+    Works with any model that has a `predict()` method.
+
+    Attributes:
+        model: Any trained model with a predict method.
+        explainer: LIME TabularExplainer instance.
+        feature_names: List of feature names.
+        mode: Explanation mode ('regression' for AQI prediction).
+    """
+
+    def __init__(
+        self,
+        model: Any,
+        training_data: np.ndarray,
+        feature_names: Optional[List[str]] = None,
+        mode: str = "regression",
+        kernel_width: float = 0.75,
+        num_features: int = 15,
+    ) -> None:
+        """Initialize LIME explainer with training data statistics.
+
+        Args:
+            model: Trained model with predict() method.
+            training_data: Training dataset for computing statistics
+                (mean, std, quartiles) used during perturbation.
+            feature_names: List of feature names.
+            mode: 'regression' for continuous AQI prediction.
+            kernel_width: Width of the exponential kernel for weighting
+                perturbed samples (smaller = more local).
+            num_features: Default number of top features in explanations.
+        """
+        import lime.lime_tabular
+
+        self.model = model
+        self.feature_names = feature_names or [
+            f"feature_{i}" for i in range(training_data.shape[1])
+        ]
+        self.mode = mode
+        self.num_features = num_features
+
+        # Extract raw predict function
+        self._predict_fn = self._get_predict_fn(model)
+
+        # Create LIME TabularExplainer
+        self.explainer = lime.lime_tabular.LimeTabularExplainer(
+            training_data=training_data,
+            feature_names=self.feature_names,
+            mode=mode,
+            kernel_width=kernel_width,
+            verbose=False,
+            discretize_continuous=True,
+        )
+
+        logger.info(
+            "Created LIME TabularExplainer (%s mode) with %d training samples, "
+            "%d features, kernel_width=%.2f",
+            mode, len(training_data), len(self.feature_names), kernel_width,
+        )
+
+    @staticmethod
+    def _get_predict_fn(model: Any):
+        """Extract a callable predict function from various model wrappers.
+
+        Handles sklearn pipelines, custom model classes, and raw models.
+
+        Args:
+            model: Any model object.
+
+        Returns:
+            Callable that takes numpy array and returns predictions.
+        """
+        if hasattr(model, "predict"):
+            return model.predict
+        elif hasattr(model, "model") and hasattr(model.model, "predict"):
+            return model.model.predict
+        else:
+            raise ValueError(
+                f"Model of type {type(model).__name__} does not have a predict() method"
+            )
+
+    def explain_instance(
+        self,
+        instance: np.ndarray,
+        num_features: Optional[int] = None,
+        num_samples: int = 5000,
+    ) -> Dict[str, Any]:
+        """Generate LIME explanation for a single prediction.
+
+        Args:
+            instance: Single feature vector (1D array of shape [n_features]).
+            num_features: Number of top features to include. Defaults to
+                self.num_features.
+            num_samples: Number of perturbations to generate for the
+                local surrogate model.
+
+        Returns:
+            Dict containing:
+                - predicted_value: The model's prediction for this instance.
+                - intercept: Intercept of the local linear model.
+                - local_r2: R-squared of the local surrogate fit.
+                - contributions: List of dicts with feature_name, weight,
+                  feature_value, and direction.
+        """
+        n_features = num_features or self.num_features
+
+        try:
+            explanation = self.explainer.explain_instance(
+                data_row=instance,
+                predict_fn=self._predict_fn,
+                num_features=n_features,
+                num_samples=num_samples,
+            )
+        except Exception as e:
+            logger.error("LIME explanation failed: %s", e)
+            return {
+                "predicted_value": float(self._predict_fn(instance.reshape(1, -1))[0]),
+                "intercept": 0.0,
+                "local_r2": 0.0,
+                "contributions": [],
+                "error": str(e),
+            }
+
+        # Extract results
+        predicted_value = float(self._predict_fn(instance.reshape(1, -1))[0])
+        feature_contributions = explanation.as_list()
+        local_r2 = explanation.score
+
+        contributions = []
+        for feature_desc, weight in feature_contributions:
+            # Parse feature name from LIME's description (e.g., "temperature_c > 25.0")
+            feat_name = feature_desc.split(" ")[0] if " " in feature_desc else feature_desc
+
+            # Get the index and actual value
+            feat_idx = None
+            for i, name in enumerate(self.feature_names):
+                if name in feature_desc:
+                    feat_idx = i
+                    feat_name = name
+                    break
+
+            feat_value = float(instance[feat_idx]) if feat_idx is not None else 0.0
+            direction = "increase" if weight > 0.01 else ("decrease" if weight < -0.01 else "neutral")
+
+            contributions.append({
+                "feature_name": feat_name,
+                "feature_description": feature_desc,
+                "weight": round(float(weight), 4),
+                "feature_value": round(feat_value, 4),
+                "direction": direction,
+            })
+
+        result = {
+            "predicted_value": round(predicted_value, 2),
+            "intercept": round(float(explanation.intercept[0]) if hasattr(explanation.intercept, '__len__') else float(explanation.intercept), 4),
+            "local_r2": round(float(local_r2), 4),
+            "contributions": contributions,
+        }
+
+        logger.info(
+            "LIME explanation: predicted=%.1f, R2=%.3f, top_feature=%s (%.4f)",
+            predicted_value, local_r2,
+            contributions[0]["feature_name"] if contributions else "N/A",
+            contributions[0]["weight"] if contributions else 0.0,
+        )
+        return result
+
+    def explain_batch(
+        self,
+        X: np.ndarray,
+        num_features: Optional[int] = None,
+        num_samples: int = 3000,
+    ) -> List[Dict[str, Any]]:
+        """Generate LIME explanations for multiple instances.
+
+        Args:
+            X: Feature matrix (n_samples, n_features).
+            num_features: Number of top features per explanation.
+            num_samples: Perturbation samples per instance.
+
+        Returns:
+            List of explanation dicts, one per input sample.
+        """
+        explanations = []
+        for i in range(len(X)):
+            exp = self.explain_instance(
+                instance=X[i],
+                num_features=num_features,
+                num_samples=num_samples,
+            )
+            explanations.append(exp)
+
+        logger.info("Generated LIME explanations for %d instances", len(explanations))
+        return explanations
+
+    def get_global_importance(
+        self,
+        X: np.ndarray,
+        num_samples_per_instance: int = 2000,
+        max_instances: int = 100,
+    ) -> Dict[str, float]:
+        """Approximate global feature importance by averaging LIME weights.
+
+        Computes local explanations for a sample of instances and averages
+        the absolute feature weights to produce global importance scores.
+
+        Args:
+            X: Feature matrix to sample from.
+            num_samples_per_instance: Perturbations per LIME explanation.
+            max_instances: Maximum number of instances to explain.
+
+        Returns:
+            Dict mapping feature names to mean absolute LIME weights.
+        """
+        # Sample instances if dataset is large
+        n = min(max_instances, len(X))
+        indices = np.random.choice(len(X), size=n, replace=False)
+        X_sample = X[indices]
+
+        # Accumulate weights
+        weight_accumulator: Dict[str, List[float]] = {
+            name: [] for name in self.feature_names
+        }
+
+        for i in range(n):
+            exp = self.explain_instance(
+                instance=X_sample[i],
+                num_samples=num_samples_per_instance,
+            )
+            for contrib in exp.get("contributions", []):
+                feat_name = contrib["feature_name"]
+                if feat_name in weight_accumulator:
+                    weight_accumulator[feat_name].append(abs(contrib["weight"]))
+
+        # Compute mean absolute weight
+        importance = {}
+        for name, weights in weight_accumulator.items():
+            if weights:
+                importance[name] = round(float(np.mean(weights)), 4)
+
+        # Sort by importance
+        importance = dict(
+            sorted(importance.items(), key=lambda x: x[1], reverse=True)
+        )
+
+        logger.info(
+            "LIME global importance computed from %d instances. Top: %s",
+            n, list(importance.keys())[:5],
+        )
+        return importance
+
+    def save(self, path: Path) -> None:
+        """Serialize LIME explainer metadata to disk.
+
+        Note: The LIME explainer itself is lightweight (stores training stats),
+        but the model reference is NOT serialized. Reload the model separately.
+
+        Args:
+            path: File path for saving (.pkl).
+        """
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "wb") as f:
+            pickle.dump({
+                "feature_names": self.feature_names,
+                "mode": self.mode,
+                "num_features": self.num_features,
+                "explainer": self.explainer,
+            }, f)
+        logger.info("Saved LIME explainer to %s", path)
+
+    @classmethod
+    def load(
+        cls,
+        path: Path,
+        model: Any,
+    ) -> "LIMEExplainer":
+        """Load a serialized LIME explainer from disk.
+
+        Args:
+            path: Path to saved explainer file.
+            model: The trained model to attach (must have predict()).
+
+        Returns:
+            LIMEExplainer: Loaded explainer instance.
+        """
+        with open(path, "rb") as f:
+            data = pickle.load(f)
+
+        instance = cls.__new__(cls)
+        instance.model = model
+        instance.feature_names = data["feature_names"]
+        instance.mode = data["mode"]
+        instance.num_features = data["num_features"]
+        instance.explainer = data["explainer"]
+        instance._predict_fn = cls._get_predict_fn(model)
+
+        logger.info("Loaded LIME explainer from %s", path)
         return instance
