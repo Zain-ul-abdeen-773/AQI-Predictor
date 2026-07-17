@@ -116,18 +116,18 @@ class ModelService:
             import numpy as np
 
             manager = FeatureStoreManager(settings)
-            df = manager.get_latest_features(100)
+            df = manager.get_latest_features(10)
             
             if df is None or df.empty:
                 logger.warning("No real data available to initialize model zoo.")
                 return
 
             available_cols = [c for c in FEATURE_COLUMNS if c in df.columns]
-            X = df[available_cols].fillna(0.0).values.astype(np.float32)
+            X = df[available_cols].fillna(0.0).values.astype(np.float32)[:5]
             if TARGET_COLUMN in df.columns:
-                y = df[TARGET_COLUMN].fillna(100.0).values.astype(np.float32)
+                y = df[TARGET_COLUMN].fillna(100.0).values.astype(np.float32)[:5]
             else:
-                y = df["aqi_value"].fillna(100.0).values.astype(np.float32)
+                y = df["aqi_value"].fillna(100.0).values.astype(np.float32)[:5]
 
             # Define exact metadata benchmarks for the 8 models ordered by R2
             self.models_metadata = {

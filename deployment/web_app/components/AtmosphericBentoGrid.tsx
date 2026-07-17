@@ -91,7 +91,7 @@ function HorizonDayCard({ dayTitle, sublabel, hours, dayIndex }: HorizonDayCardP
       {/* Top Header & Dynamic Level Badge */}
       <div className="flex items-start justify-between gap-4 pb-4 border-b border-neutral-100">
         <div className="flex flex-col">
-          <span className="text-xs font-mono font-semibold tracking-tight text-[#090A0F]">
+          <span className="text-xs font-mono font-semibold tracking-tight text-white">
             {dayTitle.toUpperCase()}
           </span>
           <span className="text-[11px] text-slate-400 mt-0.5">{sublabel}</span>
@@ -203,9 +203,9 @@ function HorizonDayCard({ dayTitle, sublabel, hours, dayIndex }: HorizonDayCardP
         </div>
 
         <div className="mt-1 flex justify-between items-center text-[10px] font-mono text-slate-400">
-          <span>MIN: <strong className="text-[#090A0F]">{Math.round(minVal)}</strong></span>
+          <span>MIN: <strong className="text-white">{Math.round(minVal)}</strong></span>
           <span className="text-[#0066FF] font-medium">HOVER CURVE FOR HOURLY BREAKDOWN</span>
-          <span>MAX: <strong className="text-[#090A0F]">{Math.round(maxVal)}</strong></span>
+          <span>MAX: <strong className="text-white">{Math.round(maxVal)}</strong></span>
         </div>
       </div>
 
@@ -214,7 +214,7 @@ function HorizonDayCard({ dayTitle, sublabel, hours, dayIndex }: HorizonDayCardP
         {synopticMeta.map((meta) => (
           <div key={meta.label} className="flex items-center justify-between text-[11px]">
             <span className="text-slate-400">{meta.label}</span>
-            <span className="text-[#090A0F] font-semibold">{meta.value}</span>
+            <span className="text-white font-semibold">{meta.value}</span>
           </div>
         ))}
       </div>
@@ -239,7 +239,7 @@ function HorizonDayCard({ dayTitle, sublabel, hours, dayIndex }: HorizonDayCardP
               className="overflow-hidden mt-3 pt-3 border-t border-dashed border-neutral-200 font-mono text-[11px] text-slate-300 space-y-2"
             >
               <div className="p-2 rounded bg-neutral-50 border border-slate-700/50">
-                <strong className="text-[#090A0F] block mb-0.5">00:00 – 06:00 NOCTURNAL WINDOW</strong>
+                <strong className="text-white block mb-0.5">00:00 – 06:00 NOCTURNAL WINDOW</strong>
                 <span>Calm wind vectors and low inversion lid cause particulate settling (`±14%` concentration variance).</span>
               </div>
               <div className="p-2 rounded bg-neutral-50 border border-slate-700/50">
@@ -281,7 +281,7 @@ export default function AtmosphericBentoGrid({ hourlyPredictions = [] }: Atmosph
       <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-slate-700/50 pb-4 gap-4">
         <div>
           <span className="text-xs font-mono text-slate-400 block mb-1">PROSPECTIVE FORECAST MATRIX</span>
-          <h2 className="text-2xl font-semibold tracking-tight text-[#090A0F]">
+          <h2 className="text-2xl font-semibold tracking-tight text-white">
             72-Hour Diurnal Progression & Waveform Telemetry
           </h2>
         </div>

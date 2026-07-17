@@ -16,16 +16,16 @@ export default function LiquidNavigation() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-700/50 bg-[#FAFAFC]/85 backdrop-blur-md mb-10 transition-all">
+    <header className="sticky top-0 z-50 w-full border-b border-slate-700/50 bg-slate-900/85 backdrop-blur-md mb-10 transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-6">
         {/* Brand Architecture Identity */}
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex items-center justify-center w-7 h-7 rounded-md bg-neutral-900 text-white transition-transform duration-200 group-hover:scale-105">
-              <Wind className="w-4 h-4 text-[#0066FF]" />
+            <div className="flex items-center justify-center w-7 h-7 rounded-md bg-slate-800 border border-slate-600 text-white transition-transform duration-200 group-hover:scale-105">
+              <Wind className="w-4 h-4 text-[#3388FF]" />
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-sm font-semibold tracking-tight text-[#090A0F]">
+              <span className="text-sm font-semibold tracking-tight text-white">
                 Pearls AQI
               </span>
               <span className="text-[11px] font-mono font-medium text-slate-400 hidden sm:inline-block">
@@ -35,7 +35,7 @@ export default function LiquidNavigation() {
           </Link>
 
           {/* Architectural Top Divider */}
-          <span className="h-4 w-px bg-neutral-200/60 hidden md:block" />
+          <span className="h-4 w-px bg-slate-700 hidden md:block" />
 
           {/* Clean Editorial Navigation Links */}
           <nav className="flex items-center gap-1">
@@ -47,15 +47,15 @@ export default function LiquidNavigation() {
                   href={item.route}
                   className={`relative px-3.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                     isActive
-                      ? 'text-[#0066FF] font-semibold'
-                      : 'text-slate-400 hover:text-[#090A0F] hover:bg-neutral-100/60'
+                      ? 'text-white font-semibold'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                   }`}
                 >
                   {item.label}
                   {isActive && (
                     <motion.div
                       layoutId="editorial-nav-indicator"
-                      className="absolute bottom-0 left-3.5 right-3.5 h-[2px] bg-[#0066FF] rounded-full"
+                      className="absolute bottom-0 left-3.5 right-3.5 h-[2px] bg-[#3388FF] rounded-full"
                       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                     />
                   )}

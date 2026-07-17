@@ -39,7 +39,7 @@ export default function VignetteAlert({ currentAqi = 0, isTriggered = false }: V
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             className="absolute top-16 left-1/2 -translate-x-1/2 pointer-events-auto max-w-xl w-full px-4"
           >
-            <div className="flex items-start gap-4 p-4 rounded-md bg-slate-800/80 border border-amber-300/80 shadow-2xs backdrop-blur-md text-[#090A0F]">
+            <div className="flex items-start gap-4 p-4 rounded-md bg-slate-800/80 border border-amber-300/80 shadow-2xs backdrop-blur-md text-white">
               <div className="p-2 rounded bg-amber-50 text-amber-700 border border-amber-200">
                 <AlertTriangle className="w-4 h-4" />
               </div>
