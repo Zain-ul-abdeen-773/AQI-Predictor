@@ -1,6 +1,26 @@
 {
   "ImageRepository": {
-    "ImageIdentifier": "public.ecr.aws/aws-containers/hello-app-runner:latest",
-    "ImageRepositoryType": "ECR_PUBLIC"
+    "ImageIdentifier": "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/pearls-aqi-predictor:latest",
+    "ImageRepositoryType": "ECR",
+    "ImageConfiguration": {
+      "Port": "8000",
+      "RuntimeEnvironmentVariables": {
+        "LOG_LEVEL": "INFO",
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  },
+  "AutoScalingConfiguration": {
+    "MaxConcurrency": 100,
+    "MaxSize": 3,
+    "MinSize": 1
+  },
+  "HealthCheckConfiguration": {
+    "Path": "/health",
+    "Protocol": "HTTP",
+    "Interval": 10,
+    "Timeout": 5,
+    "HealthyThreshold": 1,
+    "UnhealthyThreshold": 3
   }
 }

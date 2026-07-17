@@ -11,7 +11,8 @@ services:
     environment:
       - AQICN_API_KEY=${AQICN_API_KEY:-demo}
       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-}
-      - HOPSWORKS_API_KEY=${HOPSWORKS_API_KEY:-}
+      - CLEARML_API_ACCESS_KEY=${CLEARML_API_ACCESS_KEY:-}
+      - CLEARML_API_SECRET_KEY=${CLEARML_API_SECRET_KEY:-}
       - LOG_LEVEL=INFO
     volumes:
       - ./data:/app/data
@@ -23,5 +24,3 @@ services:
       retries: 3
       start_period: 15s
     restart: unless-stopped
-
-

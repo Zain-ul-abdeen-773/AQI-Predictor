@@ -201,7 +201,7 @@ def predict():
                 for _ in range(settings.forecast_horizon_hours)
             ])
         else:
-            # TF model — sequence prediction
+            # Sequence model (Bi-LSTM) — multi-step prediction
             X_seq = X[-settings.lookback_window_hours:].reshape(1, -1, X.shape[1])
             if hasattr(model, "predict_with_attention"):
                 predictions, _ = model.predict_with_attention(X_seq)
@@ -241,7 +241,7 @@ def predict():
     alert = any(p.aqi_predicted > settings.aqi_alert_threshold for p in hourly_predictions)
 
     try:
-        model_type = ModelType(selected_meta.get("id", "bilstm_attention_tf"))
+        model_type = ModelType(selected_meta.get("id", "bilstm_attention"))
     except ValueError:
         model_type = ModelType.BILSTM_ATTENTION
         if hasattr(model, "model_type"):

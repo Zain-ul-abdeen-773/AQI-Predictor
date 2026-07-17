@@ -1,6 +1,6 @@
-"""FastAPI dependency injection for model loading and feature store access.
+"""Dependency injection for model loading and feature store access.
 
-Provides cached singleton dependencies for the prediction service
+Provides cached singleton dependencies for the Flask prediction service
 including model loading, feature store connection, and SHAP explainer.
 """
 

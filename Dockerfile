@@ -64,11 +64,11 @@ USER appuser
 # Expose API port
 EXPOSE 8000
 
-# Default command: Run FastAPI with Uvicorn
-CMD ["uvicorn", "deployment.api.main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
+# Default command: Run Flask with Gunicorn (production WSGI server)
+CMD ["gunicorn", "deployment.api.main:app", \
+     "--bind", "0.0.0.0:8000", \
      "--workers", "2", \
-     "--loop", "uvloop", \
-     "--http", "httptools", \
+     "--timeout", "120", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-", \
      "--log-level", "info"]

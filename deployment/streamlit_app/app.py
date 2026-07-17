@@ -28,7 +28,7 @@ try:
         models_data = models_resp.json()
         model_list = models_data.get("models", [])
         model_names = {m["id"]: m["name"] for m in model_list}
-        default_model = models_data.get("default_model_id", "bilstm_attention_tf")
+        default_model = models_data.get("default_model_id", "bilstm_attention")
         
         selected_model_id = st.sidebar.selectbox(
             "Select Model",
@@ -38,10 +38,10 @@ try:
         )
     else:
         st.sidebar.error("Failed to load models from API.")
-        selected_model_id = "bilstm_attention_tf"
+        selected_model_id = "bilstm_attention"
 except Exception as e:
     st.sidebar.warning(f"API not available: {e}")
-    selected_model_id = "bilstm_attention_tf"
+    selected_model_id = "bilstm_attention"
 
 if st.sidebar.button("Generate Forecast"):
     with st.spinner("Generating prediction..."):

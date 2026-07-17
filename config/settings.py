@@ -62,16 +62,14 @@ class Settings(BaseSettings):
     Attributes:
         aqicn_api_key: API token for AQICN (https://aqicn.org/data-platform/token/).
         openweather_api_key: API key for OpenWeatherMap APIs.
-        aws_region: AWS region for SageMaker and other services.
-        sagemaker_role_arn: IAM role ARN for SageMaker operations.
-        s3_feature_store_bucket: S3 bucket for feature store offline storage.
+        aws_region: AWS region for deployment services.
         target_city: The city being monitored.
         target_latitude: Latitude of the target location.
         target_longitude: Longitude of the target location.
         target_timezone: IANA timezone string for the target city.
-        feature_group_name: SageMaker Feature Group name.
+        feature_group_name: Feature group name in feature store.
         feature_group_version: Feature group version.
-        model_registry_name: SageMaker Model Package Group name.
+        model_registry_name: Model registry name for versioned artifacts.
         backfill_years: Number of years of historical data to backfill.
         backfill_batch_size: Rows per batch during backfill writes.
         api_retry_max_attempts: Maximum retry attempts for API calls.
@@ -90,8 +88,8 @@ class Settings(BaseSettings):
         cv_n_splits: Number of TimeSeriesSplit folds.
         cache_ttl_seconds: TTL for API response caching.
         log_level: Application log level.
-        fastapi_host: FastAPI server host.
-        fastapi_port: FastAPI server port.
+        server_host: API server bind host.
+        server_port: API server port.
         news_rss_feeds: RSS feed URLs for regional news.
         news_keywords: Keywords for filtering relevant news.
     """
@@ -117,7 +115,7 @@ class Settings(BaseSettings):
     target_longitude: float = Field(default=72.6711, description="Target longitude")
     target_timezone: str = Field(default="Asia/Karachi", description="IANA timezone")
 
-    # ── SageMaker Feature Store & Model Registry ────────────────────────
+    # ── Feature Store & Model Registry ─────────────────────────────────
     feature_group_name: str = Field(default="sargodha_aqi_features")
     feature_group_version: int = Field(default=1, ge=1)
     model_registry_name: str = Field(default="sargodha-aqi-forecast-model")
@@ -161,9 +159,9 @@ class Settings(BaseSettings):
     # ── Logging ───────────────────────────────────────────────────────────
     log_level: str = Field(default="INFO")
 
-    # ── FastAPI ───────────────────────────────────────────────────────────
-    fastapi_host: str = Field(default="0.0.0.0")
-    fastapi_port: int = Field(default=8000, ge=1024, le=65535)
+    # ── Server ────────────────────────────────────────────────────────────
+    server_host: str = Field(default="0.0.0.0", description="API server bind host")
+    server_port: int = Field(default=8000, ge=1024, le=65535, description="API server port")
 
     # ── News Pipeline ─────────────────────────────────────────────────────
     news_rss_feeds: List[str] = Field(
