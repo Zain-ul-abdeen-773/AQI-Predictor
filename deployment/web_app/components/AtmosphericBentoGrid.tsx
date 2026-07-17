@@ -86,10 +86,10 @@ function HorizonDayCard({ dayTitle, sublabel, hours, dayIndex }: HorizonDayCardP
         transformStyle: 'preserve-3d',
         transform: `perspective(1000px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
       }}
-      className="group relative rounded-md border border-slate-700/50 bg-slate-800/40 backdrop-blur-md p-6 flex flex-col justify-between transition-all hover:border-[#0066FF]/50 shadow-2xs hover:shadow-lg"
+      className="group relative rounded-md border border-slate-700/50 bg-slate-800/40 backdrop-blur-md p-6 flex flex-col justify-between transition-all hover:border-blue-500/40 shadow-md hover:shadow-lg hover:shadow-blue-500/5"
     >
       {/* Top Header & Dynamic Level Badge */}
-      <div className="flex items-start justify-between gap-4 pb-4 border-b border-neutral-100">
+      <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-700/40">
         <div className="flex flex-col">
           <span className="text-xs font-mono font-semibold tracking-tight text-white">
             {dayTitle.toUpperCase()}
@@ -117,7 +117,7 @@ function HorizonDayCard({ dayTitle, sublabel, hours, dayIndex }: HorizonDayCardP
           </motion.span>
           <div className="flex flex-col">
             <span className="text-[10px] font-mono text-slate-400">COMPOSITE AQI</span>
-            <span className="text-[11px] font-mono font-semibold text-[#3388FF]">
+            <span className="text-[11px] font-mono font-semibold text-blue-400">
               {hoveredIdx !== null ? `HOUR ${hoveredIdx}:00` : 'DIURNAL MEAN'}
             </span>
           </div>
@@ -156,7 +156,7 @@ function HorizonDayCard({ dayTitle, sublabel, hours, dayIndex }: HorizonDayCardP
                     return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
                   }).join(' ') + ` L ${chartWidth} ${chartHeight} L 0 ${chartHeight} Z`
                 }
-                fill="rgba(0, 102, 255, 0.08)"
+                fill="rgba(59, 130, 246, 0.08)"
               />
             )}
 
@@ -169,7 +169,7 @@ function HorizonDayCard({ dayTitle, sublabel, hours, dayIndex }: HorizonDayCardP
                   return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
                 }).join(' ')}
                 fill="none"
-                stroke="#0066FF"
+                stroke="#3B82F6"
                 strokeWidth="2.2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -186,13 +186,13 @@ function HorizonDayCard({ dayTitle, sublabel, hours, dayIndex }: HorizonDayCardP
                 <g key={i} className="cursor-pointer" onMouseEnter={() => setHoveredIdx(i)}>
                   <rect x={x - 10} y="0" width="20" height={chartHeight} fill="transparent" />
                   {isHovered && (
-                    <line x1={x} y1="0" x2={x} y2={chartHeight} stroke="#0066FF" strokeWidth="1" strokeDasharray="2 2" />
+                    <line x1={x} y1="0" x2={x} y2={chartHeight} stroke="#3B82F6" strokeWidth="1" strokeDasharray="2 2" />
                   )}
                   <circle
                     cx={x}
                     cy={y}
                     r={isHovered ? 5.5 : 2.5}
-                    fill={isHovered ? '#090A0F' : '#0066FF'}
+                    fill={isHovered ? '#0B0F19' : '#3B82F6'}
                     stroke="#FFFFFF"
                     strokeWidth="1.5"
                   />
@@ -204,13 +204,13 @@ function HorizonDayCard({ dayTitle, sublabel, hours, dayIndex }: HorizonDayCardP
 
         <div className="mt-1 flex justify-between items-center text-[10px] font-mono text-slate-400">
           <span>MIN: <strong className="text-white">{Math.round(minVal)}</strong></span>
-          <span className="text-[#0066FF] font-medium">HOVER CURVE FOR HOURLY BREAKDOWN</span>
+          <span className="text-blue-400 font-medium">HOVER CURVE FOR HOURLY BREAKDOWN</span>
           <span>MAX: <strong className="text-white">{Math.round(maxVal)}</strong></span>
         </div>
       </div>
 
       {/* Dense Architectural Telemetry Breakdown */}
-      <div className="pt-3 border-t border-neutral-100 flex flex-col gap-2 font-mono text-xs">
+      <div className="pt-3 border-t border-slate-700/40 flex flex-col gap-2 font-mono text-xs">
         {synopticMeta.map((meta) => (
           <div key={meta.label} className="flex items-center justify-between text-[11px]">
             <span className="text-slate-400">{meta.label}</span>
@@ -220,10 +220,10 @@ function HorizonDayCard({ dayTitle, sublabel, hours, dayIndex }: HorizonDayCardP
       </div>
 
       {/* Synoptic Expansion Trigger */}
-      <div className="mt-4 pt-3 border-t border-neutral-100">
+      <div className="mt-4 pt-3 border-t border-slate-700/40">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full py-1.5 px-3 rounded text-[11px] font-mono font-semibold tracking-wide border border-slate-700/80 bg-neutral-50/80 hover:bg-[#0066FF]/10 hover:text-[#0066FF] hover:border-[#0066FF]/30 transition-all flex items-center justify-between"
+          className="w-full py-1.5 px-3 rounded text-[11px] font-mono font-semibold tracking-wide border border-slate-700/80 bg-slate-800/60 text-slate-300 hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/30 transition-all flex items-center justify-between"
         >
           <span>{isExpanded ? '[ − COLLAPSE SYNOPTIC SIMULATION ]' : '[ + VIEW SYNOPTIC MECHANICS ]'}</span>
           <span>{isExpanded ? '▲' : '▼'}</span>
@@ -236,17 +236,17 @@ function HorizonDayCard({ dayTitle, sublabel, hours, dayIndex }: HorizonDayCardP
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="overflow-hidden mt-3 pt-3 border-t border-dashed border-neutral-200 font-mono text-[11px] text-slate-300 space-y-2"
+              className="overflow-hidden mt-3 pt-3 border-t border-dashed border-slate-700/50 font-mono text-[11px] text-slate-300 space-y-2"
             >
-              <div className="p-2 rounded bg-neutral-50 border border-slate-700/50">
+              <div className="p-2 rounded bg-slate-800/60 border border-slate-700/50">
                 <strong className="text-white block mb-0.5">00:00 – 06:00 NOCTURNAL WINDOW</strong>
                 <span>Calm wind vectors and low inversion lid cause particulate settling (`±14%` concentration variance).</span>
               </div>
-              <div className="p-2 rounded bg-neutral-50 border border-slate-700/50">
-                <strong className="text-[#0066FF] block mb-0.5">06:00 – 14:00 SOLAR CONVECTIVE LIFT</strong>
+              <div className="p-2 rounded bg-slate-800/60 border border-slate-700/50">
+                <strong className="text-blue-400 block mb-0.5">06:00 – 14:00 SOLAR CONVECTIVE LIFT</strong>
                 <span>Solar radiation heats surface boundary layer, triggering vertical turbulence and diluting urban PM2.5.</span>
               </div>
-              <div className="p-2 rounded bg-neutral-50 border border-slate-700/50">
+              <div className="p-2 rounded bg-slate-800/60 border border-slate-700/50">
                 <strong className="text-rose-700 block mb-0.5">18:00 – 24:00 RUSH HOUR ACCUMULATION</strong>
                 <span>Traffic rush and evening thermal cooling trap diesel/kiln aerosols prior to nocturnal dispersion.</span>
               </div>
@@ -285,7 +285,7 @@ export default function AtmosphericBentoGrid({ hourlyPredictions = [] }: Atmosph
             72-Hour Diurnal Progression & Waveform Telemetry
           </h2>
         </div>
-        <span className="text-xs font-mono text-[#0066FF] font-medium bg-[#0066FF]/10 px-3 py-1 rounded border border-[#0066FF]/20">
+        <span className="text-xs font-mono text-blue-400 font-medium bg-blue-500/10 px-3 py-1 rounded border border-blue-500/20">
           HOVER CHARTS TO SCRUB EXACT HOURLY PREDICTIONS
         </span>
       </div>

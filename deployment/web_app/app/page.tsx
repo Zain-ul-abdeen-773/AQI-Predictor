@@ -195,7 +195,7 @@ export default function EditorialHomePage() {
           <div className="flex flex-wrap items-center gap-6 mt-12 pt-6 border-t border-slate-700/60 text-xs font-mono text-slate-400">
             <span>SYNC TIMESTAMP: <strong className="text-white">{lastSync}</strong></span>
             <span>•</span>
-            <span>MODEL GENERALIZATION: <strong className="text-[#0066FF]">5-FOLD TimeSeriesSplit</strong></span>
+            <span>MODEL GENERALIZATION: <strong className="text-blue-400">5-FOLD TimeSeriesSplit</strong></span>
             <span>•</span>
             <span>BENCHMARK LEADER R²: <strong className="text-white">0.9988</strong></span>
           </div>
@@ -225,11 +225,11 @@ export default function EditorialHomePage() {
             </span>
           </div>
 
-          <div className="pt-4 border-t border-neutral-100 flex flex-col gap-3">
+          <div className="pt-4 border-t border-slate-700/50 flex flex-col gap-3">
             <button
               onClick={() => syncData(activeModel)}
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-md bg-[#0066FF] hover:bg-[#0052CC] text-white text-xs font-semibold tracking-wide transition-colors flex items-center justify-center gap-2 shadow-2xs active:scale-[0.99]"
+              className="w-full py-2.5 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold tracking-wide transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 active:scale-[0.98]"
             >
               <span>{loading ? 'CALIBRATING TELEMETRY...' : 'REFRESH STATION DATA'}</span>
             </button>
@@ -259,7 +259,7 @@ export default function EditorialHomePage() {
             Dive deeper into the local decision boundaries. Our LIME explainer isolates and ranks the most influential real-time atmospheric features driving the current forecast.
           </p>
         </div>
-        <a href="/explainability" className="mt-4 md:mt-0 px-6 py-2.5 rounded-lg bg-slate-900 border border-slate-700/80 text-sm font-semibold text-[#3388FF] hover:bg-slate-800 hover:text-white transition-colors shadow-2xs whitespace-nowrap">
+        <a href="/explainability" className="mt-4 md:mt-0 px-6 py-2.5 rounded-lg bg-blue-600/10 border border-blue-500/30 text-sm font-semibold text-blue-400 hover:bg-blue-600/20 hover:text-blue-300 transition-colors shadow-sm whitespace-nowrap">
           View LIME Analysis
         </a>
       </motion.div>

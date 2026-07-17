@@ -22,7 +22,7 @@ export default function LiquidNavigation() {
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="flex items-center justify-center w-7 h-7 rounded-md bg-slate-800 border border-slate-600 text-white transition-transform duration-200 group-hover:scale-105">
-              <Wind className="w-4 h-4 text-[#3388FF]" />
+              <Wind className="w-4 h-4 text-blue-400" />
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-sm font-semibold tracking-tight text-white">
@@ -55,7 +55,7 @@ export default function LiquidNavigation() {
                   {isActive && (
                     <motion.div
                       layoutId="editorial-nav-indicator"
-                      className="absolute bottom-0 left-3.5 right-3.5 h-[2px] bg-[#3388FF] rounded-full"
+                      className="absolute bottom-0 left-3.5 right-3.5 h-[2px] bg-blue-500 rounded-full"
                       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                     />
                   )}

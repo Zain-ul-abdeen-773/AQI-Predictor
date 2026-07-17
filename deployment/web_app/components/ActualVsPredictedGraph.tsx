@@ -76,7 +76,7 @@ export default function ActualVsPredictedGraph() {
               onClick={() => setViewMode('timeseries')}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
                 viewMode === 'timeseries'
-                  ? 'bg-slate-800 text-[#0066FF] font-semibold shadow-2xs'
+                  ? 'bg-slate-800 text-blue-400 font-semibold shadow-2xs'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -86,7 +86,7 @@ export default function ActualVsPredictedGraph() {
               onClick={() => setViewMode('scatter')}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
                 viewMode === 'scatter'
-                  ? 'bg-slate-800 text-[#0066FF] font-semibold shadow-2xs'
+                  ? 'bg-slate-800 text-blue-400 font-semibold shadow-2xs'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -97,7 +97,7 @@ export default function ActualVsPredictedGraph() {
           <select
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value as any)}
-            className="bg-slate-800 border border-slate-700/80 rounded-md px-3.5 py-2 text-xs font-medium text-white focus:outline-none focus:border-[#0066FF] cursor-pointer shadow-2xs"
+            className="bg-slate-800 border border-slate-700/80 rounded-md px-3.5 py-2 text-xs font-medium text-white focus:outline-none focus:border-blue-500 cursor-pointer shadow-2xs"
           >
             <option value="bilstm">Bi-LSTM + Attention (★ R² 0.945)</option>
             <option value="lightgbm">LightGBM Optuna (R² 0.931)</option>
@@ -143,7 +143,7 @@ export default function ActualVsPredictedGraph() {
         </div>
         <div className="flex flex-col">
           <span className="text-[10px] font-mono text-slate-400">{currentMeta.name.toUpperCase()}</span>
-          <span className="text-sm font-mono font-semibold text-[#0066FF] mt-0.5">{predVal} AQI</span>
+          <span className="text-sm font-mono font-semibold text-blue-400 mt-0.5">{predVal} AQI</span>
         </div>
         <div className="flex flex-col">
           <span className="text-[10px] font-mono text-slate-400">OUT-OF-SAMPLE RESIDUAL</span>
@@ -311,13 +311,13 @@ export default function ActualVsPredictedGraph() {
         )}
 
         {viewMode === 'timeseries' && (
-          <div className="flex items-center justify-between pt-4 border-t border-neutral-100 text-[11px] font-mono text-slate-400 px-1">
+          <div className="flex items-center justify-between pt-4 border-t border-slate-700/40 text-[11px] font-mono text-slate-400 px-1">
             {EMPIRICAL_DATA.map((d, i) => (
               <span
                 key={d.time}
                 onMouseEnter={() => setHoveredIdx(i)}
                 className={`cursor-pointer transition-colors ${
-                  hoveredIdx === i ? 'text-[#0066FF] font-semibold underline' : 'hover:text-white'
+                  hoveredIdx === i ? 'text-blue-400 font-semibold underline' : 'hover:text-white'
                 }`}
               >
                 {d.time}
@@ -336,11 +336,11 @@ export default function ActualVsPredictedGraph() {
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#0066FF]" />
-            <span className="text-[#0066FF] font-medium">Predicted Trajectory (`{currentMeta.name}`)</span>
+            <span className="text-blue-400 font-medium">Predicted Trajectory (`{currentMeta.name}`)</span>
           </div>
         </div>
         <div>
-          <span>GENERALIZATION R²: <strong className="text-[#0066FF] font-semibold">{currentMeta.r2.toFixed(3)}</strong> (`5-Fold TimeSeriesSplit`)</span>
+          <span>GENERALIZATION R²: <strong className="text-blue-400 font-semibold">{currentMeta.r2.toFixed(3)}</strong> (`5-Fold TimeSeriesSplit`)</span>
         </div>
       </div>
     </motion.section>

@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} font-sans bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0A0F1A] to-black text-slate-200 min-h-screen antialiased overflow-x-hidden selection:bg-[#0066FF]/30 selection:text-[#0066FF]`}
+        className={`${inter.variable} font-sans bg-[#0B0F19] text-slate-100 min-h-screen antialiased overflow-x-hidden`}
       >
         <LiquidNavigation />
         <main className="w-full mx-auto px-4 sm:px-6 lg:px-12 pb-24 relative z-10">

@@ -61,14 +61,14 @@ export default function ParticleWindEngine({ aqiValue = 88 }: ParticleWindEngine
     const baseSpeed = isHazardous ? 2.8 : isUSG ? 1.8 : isModerate ? 1.1 : 0.75;
     const rayDiffusion = isHazardous ? 50 : 25;
 
-    // Color tones tailored for Vercel/Linear Editorial (#FAFAFC base)
+    // Color tones tailored for dark theme background
     const baseTint = isHazardous
-      ? 'rgba(254, 242, 242, 0.45)'
+      ? 'rgba(127, 29, 29, 0.12)'
       : isUSG
-      ? 'rgba(255, 251, 235, 0.35)'
+      ? 'rgba(120, 53, 15, 0.10)'
       : isModerate
-      ? 'rgba(250, 250, 252, 0.3)'
-      : 'rgba(239, 246, 255, 0.45)';
+      ? 'rgba(15, 23, 42, 0.15)'
+      : 'rgba(15, 23, 42, 0.10)';
 
     const particleColors = isHazardous
       ? ['#E11D48', '#BE123C', '#F43F5E', '#FB7185']
@@ -115,11 +115,11 @@ export default function ParticleWindEngine({ aqiValue = 88 }: ParticleWindEngine
         if (isHazardous) {
           rayGrad.addColorStop(0, 'rgba(244, 63, 94, 0.15)');
           rayGrad.addColorStop(0.5, 'rgba(225, 29, 72, 0.05)');
-          rayGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          rayGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         } else {
-          rayGrad.addColorStop(0, 'rgba(0, 102, 255, 0.12)');
-          rayGrad.addColorStop(0.4, 'rgba(0, 102, 255, 0.04)');
-          rayGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          rayGrad.addColorStop(0, 'rgba(59, 130, 246, 0.12)');
+          rayGrad.addColorStop(0.4, 'rgba(59, 130, 246, 0.04)');
+          rayGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         }
 
         ctx.beginPath();

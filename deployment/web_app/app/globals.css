@@ -1,9 +1,39 @@
 @import "tailwindcss";
 
+:root {
+  /* Core palette */
+  --bg-primary: #0B0F19;
+  --bg-secondary: #111827;
+  --bg-card: rgba(17, 24, 39, 0.6);
+  --bg-elevated: rgba(30, 41, 59, 0.5);
+
+  /* Accent */
+  --accent-blue: #3B82F6;
+  --accent-blue-hover: #2563EB;
+  --accent-blue-glow: rgba(59, 130, 246, 0.15);
+
+  /* Text hierarchy */
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+
+  /* Borders */
+  --border-subtle: rgba(51, 65, 85, 0.6);
+  --border-hover: rgba(59, 130, 246, 0.4);
+
+  /* AQI Level Colors */
+  --aqi-good: #22C55E;
+  --aqi-moderate: #EAB308;
+  --aqi-unhealthy-sg: #F97316;
+  --aqi-unhealthy: #EF4444;
+  --aqi-very-unhealthy: #A855F7;
+  --aqi-hazardous: #881337;
+}
+
 @layer base {
   body {
-    background-color: #0A0F1A;
-    color: #0A0F1A;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -11,44 +41,46 @@
   }
 
   ::selection {
-    background-color: rgba(0, 102, 255, 0.3);
+    background-color: rgba(59, 130, 246, 0.35);
     color: #FFFFFF;
   }
 }
 
-/* Precision Editorial Tech Utilities */
-.border-editorial {
-  border-color: rgba(226, 228, 233, 0.65);
-}
-
-.bg-editorial-subtle {
-  background-color: rgba(245, 246, 250, 0.5);
-}
-
-/* Glass architecture with zero heavy shadows */
+/* Card glass effect - dark mode optimized */
 .editorial-glass {
-  background: rgba(250, 250, 252, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--bg-card);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid var(--border-subtle);
 }
 
-/* Subtle architectural hover transition */
+/* Smooth transitions */
 .transition-editorial {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Scrollbar for crisp Vercel/Linear light theme */
+/* Scrollbar - dark theme */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0A0F1A;
+  background: var(--bg-primary);
 }
 ::-webkit-scrollbar-thumb {
-  background: #D1D5DB;
+  background: #334155;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #9CA3AF;
+  background: #475569;
+}
+
+/* Glow effects for accent elements */
+.glow-blue {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.15), 0 0 60px rgba(59, 130, 246, 0.05);
+}
+
+/* AQI number display glow */
+.aqi-glow {
+  text-shadow: 0 0 40px rgba(255, 255, 255, 0.1);
 }

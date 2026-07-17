@@ -100,7 +100,7 @@ function AttributionBar({ value, maxVal, i, label, description, context, positiv
         {/* Value badge */}
         <div className="w-full md:w-[15%] flex justify-end">
           <span className={`font-mono font-semibold text-xs px-2.5 py-1 rounded border ${
-            positive ? 'bg-rose-900/40 border-rose-500/30 text-rose-300' : 'bg-[#0066FF]/10 border-[#0066FF]/30 text-[#3388FF]'
+            positive ? 'bg-rose-900/40 border-rose-500/30 text-rose-300' : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
           }`}>
             {positive ? '+' : ''}{value.toFixed(1)}
           </span>
@@ -228,7 +228,7 @@ export default function EditorialExplainabilityPage() {
             {activeTab === tab && (
               <motion.div
                 layoutId="explain-tab-bg"
-                className="absolute inset-0 rounded-lg bg-[#0066FF]/30 border border-[#0066FF]/50"
+                className="absolute inset-0 rounded-lg bg-blue-500/30 border border-blue-500/50"
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               />
             )}
@@ -262,7 +262,7 @@ export default function EditorialExplainabilityPage() {
                   type="range" min="0.5" max="1.8" step="0.1"
                   value={sensitivity}
                   onChange={e => setSensitivity(parseFloat(e.target.value))}
-                  className="w-full accent-[#0066FF] cursor-pointer h-1.5 rounded"
+                  className="w-full accent-blue-500 cursor-pointer h-1.5 rounded"
                 />
                 <span className="text-xs font-mono font-semibold text-[#3388FF] min-w-[36px] text-right">{sensitivity.toFixed(1)}×</span>
               </div>

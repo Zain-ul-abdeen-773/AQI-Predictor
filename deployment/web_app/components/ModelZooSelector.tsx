@@ -37,7 +37,7 @@ export default function ModelZooSelector({
             ENGINE ARCHITECTURE
           </span>
           {currentModel?.is_default && (
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#0066FF]/20 text-[#3388FF] border border-[#0066FF]/30">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">
               BENCHMARK LEADER
             </span>
           )}
@@ -56,7 +56,7 @@ export default function ModelZooSelector({
         <div className="flex items-center gap-6 px-4 py-2 rounded-xl border border-slate-700/50 bg-slate-900/50 text-xs shadow-inner">
           <div className="flex flex-col">
             <span className="text-[10px] font-mono text-slate-500">R² ACCURACY</span>
-            <span className="font-mono font-semibold text-[#3388FF] text-sm">
+            <span className="font-mono font-semibold text-blue-400 text-sm">
               {currentModel?.r2?.toFixed(4) || '—'}
             </span>
           </div>
@@ -82,7 +82,7 @@ export default function ModelZooSelector({
             value={activeModelId}
             onChange={(e) => onModelChange(e.target.value)}
             disabled={isFetching}
-            className="appearance-none bg-slate-900/80 border border-slate-700/80 text-white font-medium text-sm rounded-xl px-5 py-2.5 pr-10 focus:outline-none focus:ring-2 focus:ring-[#3388FF] cursor-pointer disabled:opacity-50 hover:bg-slate-800 transition-colors"
+            className="appearance-none bg-slate-900/80 border border-slate-700/80 text-white font-medium text-sm rounded-xl px-5 py-2.5 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer disabled:opacity-50 hover:bg-slate-800 transition-colors"
           >
             {modelList.map((m) => (
               <option key={m.id} value={m.id}>

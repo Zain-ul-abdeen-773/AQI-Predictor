@@ -10,8 +10,8 @@ const LEADERBOARD_ZOO = [
   { rank: 2, name: 'LightGBM (Optuna Tuned)', r2: 0.931, rmse: 6.45, mae: 4.88, color: 'from-[#0284C7] to-[#0066FF]' },
   { rank: 3, name: 'XGBoost (Optuna Tuned)', r2: 0.928, rmse: 6.71, mae: 5.02, color: 'from-[#0369A1] to-[#0284C7]' },
   { rank: 4, name: 'Gradient Boosting Regressor', r2: 0.912, rmse: 7.34, mae: 5.62, color: 'from-[#075985] to-[#0369A1]' },
-  { rank: 5, name: 'Random Forest Ensemble', r2: 0.895, rmse: 8.12, mae: 6.15, color: 'from-neutral-600 to-neutral-400' },
-  { rank: 6, name: 'Extra Trees Ensemble', r2: 0.887, rmse: 8.45, mae: 6.41, color: 'from-neutral-500 to-neutral-300' },
+  { rank: 5, name: 'Random Forest Ensemble', r2: 0.895, rmse: 8.12, mae: 6.15, color: 'from-slate-500 to-slate-400' },
+  { rank: 6, name: 'Extra Trees Ensemble', r2: 0.887, rmse: 8.45, mae: 6.41, color: 'from-slate-600 to-slate-500' },
   { rank: 7, name: 'Ridge Linear Regression', r2: 0.842, rmse: 10.15, mae: 7.82, color: 'from-amber-600 to-amber-400' },
   { rank: 8, name: 'Support Vector Regression (RBF)', r2: 0.835, rmse: 10.42, mae: 8.11, color: 'from-rose-600 to-rose-400' },
 ];
@@ -54,7 +54,7 @@ export default function EditorialAnalyticsPage() {
         </div>
 
         <div className="flex flex-col items-start md:items-end p-4 rounded-md border border-slate-700/50 bg-slate-800/40 text-xs font-mono text-slate-300">
-          <span className="text-[#0066FF] font-semibold text-sm">
+          <span className="text-blue-400 font-semibold text-sm">
             BENCHMARK LEADER: R² 0.945
           </span>
           <span className="mt-0.5 text-slate-400">5-Fold TimeSeriesSplit Rigor</span>
@@ -88,7 +88,7 @@ export default function EditorialAnalyticsPage() {
                   className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-md border transition-all ${
                     m.best
                       ? 'bg-[#0066FF]/5 border-[#0066FF]/40'
-                      : 'bg-slate-800 border-slate-700/50 hover:border-neutral-300'
+                      : 'bg-slate-800 border-slate-700/50 hover:border-slate-500'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -112,7 +112,7 @@ export default function EditorialAnalyticsPage() {
                     </div>
                     <span
                       className={`font-mono font-semibold text-xs min-w-[44px] text-right ${
-                        m.best ? 'text-[#0066FF]' : 'text-white'
+                        m.best ? 'text-blue-400' : 'text-white'
                       }`}
                     >
                       {m.r2.toFixed(3)}
@@ -161,7 +161,7 @@ export default function EditorialAnalyticsPage() {
                   onMouseLeave={() => setSelectedCycleIdx(null)}
                   className="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer"
                 >
-                  <span className="text-[10px] font-mono font-medium text-slate-400 group-hover:text-[#0066FF] transition-colors">
+                  <span className="text-[10px] font-mono font-medium text-slate-400 group-hover:text-blue-400 transition-colors">
                     {d.aqi}
                   </span>
                   <div
@@ -187,7 +187,7 @@ export default function EditorialAnalyticsPage() {
           <div className="mt-5 p-3.5 rounded-md border border-slate-700/50 bg-slate-900/50 min-h-[48px] flex items-center justify-between text-xs">
             {selectedCycleIdx !== null ? (
               <div className="flex items-center gap-2 text-white">
-                <span className="font-mono font-semibold text-[#0066FF]">{DIURNAL_CYCLE[selectedCycleIdx].hour}:</span>
+                <span className="font-mono font-semibold text-blue-400">{DIURNAL_CYCLE[selectedCycleIdx].hour}:</span>
                 <span className="text-slate-300">{DIURNAL_CYCLE[selectedCycleIdx].desc}</span>
               </div>
             ) : (
