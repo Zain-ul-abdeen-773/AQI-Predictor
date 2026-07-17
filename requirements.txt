@@ -17,36 +17,33 @@ aiohttp>=3.8
 tenacity>=8.2
 requests>=2.28
 
-# AWS SDK & SageMaker
-boto3>=1.28
-sagemaker>=2.170
-
 # Machine Learning
 scikit-learn>=1.3
 lightgbm>=4.0
+xgboost>=2.0
 optuna>=3.3
 
 # Deep Learning
-torch>=2.0
-torchvision>=0.15
+torch>=2.2
+torchvision>=0.17
+torchaudio>=2.2
+
+# Feature Store & Registry
+clearml>=1.14
 
 # Explainability
 shap>=0.42
 
 # Web Framework
-fastapi>=0.100
-uvicorn[standard]>=0.23
-uvloop>=0.17;platform_system!="Windows"
-httptools>=0.5
+flask>=3.0
+flask-cors>=4.0
 
 # Dashboard
+streamlit>=1.30
 plotly>=5.15
 
 # News Feed
 feedparser>=6.0
-
-# Monitoring & Drift
-# evidently>=0.4
 
 # Visualization
 matplotlib>=3.7
@@ -56,19 +53,8 @@ pytest>=7.4
 pytest-asyncio>=0.21
 httpx>=0.23.0
 
-# LangGraph (Optional - for infrastructure validation)
-langgraph>=0.0.20
-langchain>=0.1
-
-# Infrastructure Validation (Optional)
-# checkov>=3.0
-
 # Configuration
 pyproject-toml>=0.0.10
 
 # Typing
 typing-extensions>=4.6
-
-# Serverless
-mangum>=0.17
-awslambdaric

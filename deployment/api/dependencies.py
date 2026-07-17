@@ -51,32 +51,32 @@ class ModelService:
             from training_pipeline.registry import ModelRegistryManager
 
             registry = ModelRegistryManager(settings)
-            champion = registry.get_champion()
+            champion_tuple = registry.get_champion_model()
 
-            if champion:
-                self.model_metadata = champion
-                artifacts_dir = Path(champion["artifacts_dir"])
+            if champion_tuple:
+                model_path, metadata = champion_tuple
+                self.model_metadata = metadata
+                artifacts_dir = model_path.parent
 
                 # Load model
                 import pickle
                 import torch
-                model_path = artifacts_dir / "model.pkl"
-                if model_path.exists():
-                    try:
-                        with open(model_path, "rb") as f:
-                            data = pickle.load(f)
-                    except Exception:
-                        data = torch.load(model_path, map_location="cpu", weights_only=False)
-                        
-                    if "pipeline" in data:
-                        from training_pipeline.models.baseline import BaselineRegressor
-                        self.model = BaselineRegressor.load(model_path)
-                    elif "model_state" in data:
-                        from training_pipeline.models.deep_learning import BiLSTMRegressor
-                        self.model = BiLSTMRegressor.load(model_path)
-                    else:
-                        from training_pipeline.models.tree_ensemble import TreeEnsembleRegressor
-                        self.model = TreeEnsembleRegressor.load(model_path)
+                
+                try:
+                    with open(model_path, "rb") as f:
+                        data = pickle.load(f)
+                except Exception:
+                    data = torch.load(model_path, map_location="cpu", weights_only=False)
+                    
+                if "pipeline" in data:
+                    from training_pipeline.models.baseline import BaselineRegressor
+                    self.model = BaselineRegressor.load(model_path)
+                elif "model_state_dict" in data:  # PyTorch specific dict key
+                    from training_pipeline.models.deep_learning import BiLSTMRegressor
+                    self.model = BiLSTMRegressor.load(model_path)
+                else:
+                    from training_pipeline.models.tree_ensemble import TreeEnsembleRegressor
+                    self.model = TreeEnsembleRegressor.load(model_path)
                         
                     logger.info("Loaded champion model from %s", model_path)
 

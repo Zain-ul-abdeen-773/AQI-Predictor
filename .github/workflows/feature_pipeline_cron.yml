@@ -7,13 +7,10 @@ on:
 
 env:
   PYTHON_VERSION: '3.11'
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  SAGEMAKER_ROLE_ARN: ${{ secrets.SAGEMAKER_ROLE_ARN }}
-  S3_FEATURE_STORE_BUCKET: ${{ secrets.S3_FEATURE_STORE_BUCKET }}
   AQICN_API_KEY: ${{ secrets.AQICN_API_KEY }}
   OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+  CLEARML_API_ACCESS_KEY: ${{ secrets.CLEARML_API_ACCESS_KEY }}
+  CLEARML_API_SECRET_KEY: ${{ secrets.CLEARML_API_SECRET_KEY }}
 
 jobs:
   feature-pipeline:
@@ -30,6 +27,8 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
+
+
 
       - name: Install Dependencies
         run: |
@@ -63,7 +62,6 @@ jobs:
               df = pd.DataFrame([fv.to_flat_dict()])
               
               manager = FeatureStoreManager()
-              manager.create_feature_group()
               manager.insert_features(df)
               print(f'Pushed {len(df)} rows to feature store')
 

@@ -1,0 +1,54 @@
+{
+  "project": "Pearls AQI Predictor - Sargodha, Pakistan",
+  "analysis_date": "2026-07-17 16:47:01.190105",
+  "dataset": {
+    "rows": 43801,
+    "columns": 47,
+    "time_span": "2021-07-16 22:00:00+00:00 to 2026-07-15 22:00:00+00:00",
+    "hourly_resolution": true,
+    "source": "Synthetic backfill based on AQICN + OpenWeather patterns"
+  },
+  "key_findings": {
+    "mean_aqi": 120.0,
+    "median_aqi": 119.7,
+    "std_aqi": 60.9,
+    "max_aqi": 279.7,
+    "min_aqi": 10.0,
+    "dominant_category": "Determined from category distribution report",
+    "strongest_correlations": "See aqi_correlations.csv",
+    "best_predictive_features": "See feature_mutual_information.csv"
+  },
+  "artifacts_generated": {
+    "plots": [
+      "aqi_category_distribution.png",
+      "aqi_scatter_top_features.png",
+      "correlation_heatmap.png",
+      "feature_importance_mutual_info.png",
+      "monthly_aqi_timeseries.png",
+      "outlier_boxplots.png",
+      "pollutant_distributions.png",
+      "seasonal_decomposition.png",
+      "temporal_patterns.png",
+      "weather_pollutant_relationships.png"
+    ],
+    "reports": [
+      "aqi_category_distribution.csv",
+      "aqi_correlations.csv",
+      "correlation_matrix.csv",
+      "daily_aqi_pattern.csv",
+      "dataset_overview.json",
+      "descriptive_statistics.csv",
+      "feature_mutual_information.csv",
+      "feature_variance.csv",
+      "hazardous_events_analysis.json",
+      "hourly_aqi_pattern.csv",
+      "missing_values.csv",
+      "monthly_aqi_pattern.csv",
+      "outlier_analysis.json",
+      "pollutant_statistics.csv",
+      "seasonal_statistics.csv",
+      "stationarity_test.json",
+      "yearly_aqi_trend.csv"
+    ]
+  }
+}

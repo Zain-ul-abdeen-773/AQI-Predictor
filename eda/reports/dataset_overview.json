@@ -1,0 +1,13 @@
+{
+  "total_rows": 43801,
+  "total_columns": 47,
+  "time_range_start": "2021-07-16 22:00:00+00:00",
+  "time_range_end": "2026-07-15 22:00:00+00:00",
+  "duration_days": 1825,
+  "numeric_columns": 43,
+  "categorical_columns": 3,
+  "memory_usage_mb": 16.25,
+  "columns_with_missing": 0,
+  "total_missing_values": 0,
+  "total_missing_pct": 0.0
+}

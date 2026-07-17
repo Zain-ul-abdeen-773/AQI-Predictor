@@ -190,6 +190,11 @@ docker-compose up --build
 │   ├── settings.py                 #   Pydantic BaseSettings (env loading)
 │   └── schemas.py                  #   Request/response validation schemas
 │
+├── eda/                            # Exploratory Data Analysis
+│   ├── run_eda.py                  #   Comprehensive EDA pipeline (10 analyses)
+│   ├── plots/                      #   10 PNG visualizations
+│   └── reports/                    #   18 CSV/JSON statistical reports
+│
 ├── data_pipeline/                  # Data ingestion & engineering
 │   ├── ingest.py                   #   Real-time AQICN + OpenWeather API client
 │   ├── backfill.py                 #   Historical data generation (5 years)
@@ -298,6 +303,117 @@ The system engineers **37 features** from raw pollutant and weather data:
 | **Rolling Stats** | `pm25_rolling_mean_6h`, `pm25_rolling_std_6h`, `pm25_rolling_mean_24h` | Short/long-term trends |
 
 > **Leakage Prevention**: Short-horizon lags (1h, 3h) are deliberately excluded from the feature set to prevent information leakage in the 72-hour forecasting context.
+
+---
+
+## Exploratory Data Analysis (EDA)
+
+A comprehensive EDA was conducted on **43,801 hourly observations** spanning **5 years** (July 2021 - July 2026) with **47 engineered features**. All artifacts are reproducible via `python -m eda.run_eda`.
+
+### Dataset Summary
+
+| Metric | Value |
+|--------|-------|
+| Total Observations | 43,801 (hourly) |
+| Time Span | 2021-07-16 to 2026-07-15 |
+| Features | 47 columns |
+| Missing Values | **0** (0.0%) |
+| Mean AQI | 120.0 |
+| Max AQI Recorded | 279.7 |
+| Hazardous Hours (AQI > 150) | 16,085 (**36.72%**) |
+
+### AQI Category Distribution
+
+The majority of observations fall in concerning air quality categories, with over a third classified as unhealthy or worse:
+
+![AQI Category Distribution](eda/plots/aqi_category_distribution.png)
+
+### Pollutant Distributions
+
+Distribution analysis with KDE overlays and normality tests (D'Agostino-Pearson) reveals non-Gaussian behavior across all pollutants, justifying the use of non-parametric and ensemble models:
+
+![Pollutant Distributions](eda/plots/pollutant_distributions.png)
+
+### Correlation Analysis
+
+Strong correlations exist between AQI and gaseous pollutants (CO: 0.98, PM10: 0.96, NO2/SO2: 0.95). Weather features show moderate influence:
+
+![Correlation Heatmap](eda/plots/correlation_heatmap.png)
+
+#### Top Correlations with AQI
+
+| Feature | Pearson r |
+|---------|-----------|
+| CO | 0.980 |
+| PM10 | 0.963 |
+| NO2 | 0.951 |
+| SO2 | 0.951 |
+| O3 | -0.947 |
+| Temperature | Moderate negative |
+| Humidity | Moderate positive |
+
+![AQI vs Top Features](eda/plots/aqi_scatter_top_features.png)
+
+### Temporal Patterns
+
+Clear diurnal, weekly, and seasonal cycles are observed. AQI peaks during winter months (thermal inversions) and overnight hours (boundary layer collapse):
+
+![Temporal Patterns](eda/plots/temporal_patterns.png)
+
+#### Monthly AQI Time Series (5 Years)
+
+![Monthly AQI Time Series](eda/plots/monthly_aqi_timeseries.png)
+
+### Seasonal Decomposition
+
+Additive decomposition (period = 365 days) reveals a strong seasonal component and a slight upward long-term trend:
+
+![Seasonal Decomposition](eda/plots/seasonal_decomposition.png)
+
+**Stationarity Test (ADF):**
+- ADF Statistic: **-2.12** (critical 5%: -2.86)
+- p-value: **0.237** - Series is **non-stationary**
+- Implication: Lag features and differencing are essential for accurate forecasting
+
+### Weather-Pollutant Relationships
+
+Analysis of meteorological influence on air quality reveals that low wind speeds and cooler temperatures strongly correlate with poor AQI:
+
+![Weather-Pollutant Relationships](eda/plots/weather_pollutant_relationships.png)
+
+**Hazardous conditions profile:**
+- Average temperature during hazardous events: **15.3 C** (cooler months)
+- Average humidity: **57.8%**
+- Average wind speed: **0.8 m/s** (near-calm, poor dispersion)
+
+### Feature Importance (Mutual Information)
+
+Mutual information regression identifies the most predictive features for AQI forecasting. Lag features and pollution intensity dominate:
+
+![Feature Importance](eda/plots/feature_importance_mutual_info.png)
+
+**Top 5 Predictive Features:**
+1. `aqi_lag_1h` - Recent AQI history
+2. `pollution_intensity` - Composite pollutant index
+3. `co` - Carbon monoxide concentration
+4. `pm10` - Coarse particulate matter
+5. `so2` - Sulfur dioxide
+
+### Outlier Analysis
+
+IQR-based outlier detection across key variables with box plot characterization:
+
+![Outlier Analysis](eda/plots/outlier_boxplots.png)
+
+### Key EDA Insights
+
+1. **Non-Gaussian distributions** across all pollutants justify ensemble/tree-based model selection
+2. **Strong multicollinearity** among pollutants (r > 0.95) - handled by regularization (Ridge/ElasticNet) and tree-based feature selection
+3. **Clear seasonality** with winter peaks driven by thermal inversions and low wind speeds
+4. **Non-stationary series** requires autoregressive features (lags, rolling stats) for stationarity
+5. **36.7% hazardous hours** highlight the critical need for accurate AQI forecasting in Sargodha
+
+> All EDA artifacts are stored in `eda/plots/` (10 PNG visualizations) and `eda/reports/` (18 CSV/JSON statistical reports).
 
 ---
 

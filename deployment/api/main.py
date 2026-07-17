@@ -1,4 +1,4 @@
-"""High-throughput FastAPI service for AQI prediction and explainability.
+"""High-throughput Flask service for AQI prediction and explainability.
 
 Endpoints:
 - GET  /health   — Liveness and readiness check
@@ -6,10 +6,10 @@ Endpoints:
 - POST /explain  — SHAP feature contributions for predictions
 - GET  /historical — Historical AQI data for charting
 
-Built with modern async patterns and structured error handling.
+Built with modern patterns and structured error handling.
 
 Usage:
-    uvicorn deployment.api.main:app --host 0.0.0.0 --port 8000 --reload
+    flask --app deployment.api.main:app run --host 0.0.0.0 --port 8000 --debug
 """
 
 from __future__ import annotations
@@ -17,13 +17,12 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+from pathlib import Path
+import time
 
 import numpy as np
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from pathlib import Path
-from mangum import Mangum
+from flask import Flask, jsonify, request, send_from_directory, abort
+from flask_cors import CORS
 
 from config.schemas import (
     AQILevel,
@@ -34,13 +33,12 @@ from config.schemas import (
     ModelType,
     SHAPExplanation,
 )
-from config.settings import get_settings, AQI_BREAKPOINTS, AQICategory
+from config.settings import get_settings
 from deployment.api.dependencies import (
     get_feature_service,
     get_model_service,
     get_uptime_seconds,
 )
-from deployment.api.middleware import setup_middleware
 
 logger = logging.getLogger(__name__)
 
@@ -48,18 +46,46 @@ logger = logging.getLogger(__name__)
 # App Initialization
 # ──────────────────────────────────────────────────────────────────────────────
 
-app = FastAPI(
-    title="Pearls AQI Predictor API",
-    description=(
-        "Enterprise-grade Air Quality Index prediction service for Sargodha, Pakistan. "
-        "Provides 3-day AQI forecasts with SHAP explainability and health advisories."
-    ),
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
-)
+app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-setup_middleware(app)
+# ──────────────────────────────────────────────────────────────────────────────
+# Middleware / Error Handling
+# ──────────────────────────────────────────────────────────────────────────────
+
+@app.before_request
+def before_request():
+    request.start_time = time.time()
+
+@app.after_request
+def after_request(response):
+    if hasattr(request, 'start_time'):
+        duration = time.time() - request.start_time
+        response.headers["X-Process-Time"] = f"{duration:.4f}"
+        logger.info(
+            "%s %s → %d (%.3fs)",
+            request.method,
+            request.path,
+            response.status_code,
+            duration,
+        )
+    return response
+
+@app.errorhandler(Exception)
+def global_exception_handler(exc: Exception):
+    logger.error("Unhandled exception: %s", exc, exc_info=True)
+    return jsonify({
+        "error": "Internal Server Error",
+        "detail": str(exc),
+        "path": request.path,
+    }), 500
+
+@app.errorhandler(ValueError)
+def value_error_handler(exc: ValueError):
+    return jsonify({
+        "error": "Validation Error",
+        "detail": str(exc),
+    }), 422
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -68,14 +94,6 @@ setup_middleware(app)
 
 
 def classify_aqi(value: float) -> AQILevel:
-    """Classify an AQI value into its risk level category.
-
-    Args:
-        value: AQI numeric value.
-
-    Returns:
-        AQILevel: Corresponding risk level.
-    """
     if value <= 50:
         return AQILevel.GOOD
     elif value <= 100:
@@ -91,41 +109,13 @@ def classify_aqi(value: float) -> AQILevel:
 
 
 def generate_health_advisory(level: AQILevel) -> str:
-    """Generate health advisory text based on AQI level.
-
-    Args:
-        level: AQI risk level.
-
-    Returns:
-        str: Health advisory message.
-    """
     advisories = {
-        AQILevel.GOOD: (
-            "Air quality is satisfactory. Enjoy outdoor activities."
-        ),
-        AQILevel.MODERATE: (
-            "Air quality is acceptable. Sensitive individuals should "
-            "consider reducing prolonged outdoor exertion."
-        ),
-        AQILevel.UNHEALTHY_SENSITIVE: (
-            "Members of sensitive groups (children, elderly, respiratory conditions) "
-            "should limit prolonged outdoor exertion. Close windows if possible."
-        ),
-        AQILevel.UNHEALTHY: (
-            "Everyone may begin to experience health effects. "
-            "Sensitive groups should avoid outdoor activities. "
-            "Use N95 masks if going outdoors."
-        ),
-        AQILevel.VERY_UNHEALTHY: (
-            "⚠️ HEALTH ALERT: Significant health risk for entire population. "
-            "Avoid all outdoor activities. Keep windows and doors closed. "
-            "Use air purifiers indoors."
-        ),
-        AQILevel.HAZARDOUS: (
-            "🚨 EMERGENCY: Hazardous air quality. Stay indoors. "
-            "Seal windows and doors. Use air purifiers on maximum. "
-            "Seek medical attention if experiencing symptoms."
-        ),
+        AQILevel.GOOD: "Air quality is satisfactory. Enjoy outdoor activities.",
+        AQILevel.MODERATE: "Air quality is acceptable. Sensitive individuals should consider reducing prolonged outdoor exertion.",
+        AQILevel.UNHEALTHY_SENSITIVE: "Members of sensitive groups (children, elderly, respiratory conditions) should limit prolonged outdoor exertion. Close windows if possible.",
+        AQILevel.UNHEALTHY: "Everyone may begin to experience health effects. Sensitive groups should avoid outdoor activities. Use N95 masks if going outdoors.",
+        AQILevel.VERY_UNHEALTHY: "⚠️ HEALTH ALERT: Significant health risk for entire population. Avoid all outdoor activities. Keep windows and doors closed. Use air purifiers indoors.",
+        AQILevel.HAZARDOUS: "🚨 EMERGENCY: Hazardous air quality. Stay indoors. Seal windows and doors. Use air purifiers on maximum. Seek medical attention if experiencing symptoms.",
     }
     return advisories.get(level, "Monitor air quality conditions.")
 
@@ -134,62 +124,38 @@ def generate_health_advisory(level: AQILevel) -> str:
 # Endpoints
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Mount static files for frontend
-frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
-app.mount("/css", StaticFiles(directory=frontend_dir / "css"), name="css")
-app.mount("/js", StaticFiles(directory=frontend_dir / "js"), name="js")
+# Mount point removed since frontend is migrated to Streamlit.
 
-@app.get("/", tags=["UI"], include_in_schema=False)
-async def serve_dashboard():
-    """Serve the HTML dashboard."""
-    return FileResponse(frontend_dir / "index.html")
-
-@app.get("/models", tags=["Prediction"])
-async def list_models() -> Dict[str, Any]:
-    """Get all 8 models in the Model Zoo along with evaluation metrics (RMSE, MAE, R2) and default selection."""
+@app.route('/models', methods=['GET'])
+def list_models():
+    """Get all 8 models in the Model Zoo along with evaluation metrics."""
     model_service = get_model_service()
     if not model_service.is_loaded:
         model_service.load()
-    return {
+    return jsonify({
         "models": model_service.get_all_models_list(),
         "default_model_id": model_service.default_model_id,
-    }
+    })
 
 
-@app.get("/health", response_model=HealthResponse, tags=["System"])
-async def health_check() -> HealthResponse:
-    """Service health and readiness check.
-
-    Returns model loading status, feature store connectivity,
-    and uptime information.
-    """
+@app.route('/health', methods=['GET'])
+def health_check():
     model_service = get_model_service()
     feature_service = get_feature_service()
 
-    return HealthResponse(
+    response = HealthResponse(
         status="healthy" if model_service.is_loaded else "degraded",
         version="1.0.0",
         feature_store_connected=feature_service.is_connected,
         model_loaded=model_service.is_loaded,
         uptime_seconds=round(get_uptime_seconds(), 2),
     )
+    return jsonify(response.model_dump())
 
 
-@app.post("/predict", response_model=ForecastResponse, tags=["Prediction"])
-async def predict(
-    model_id: Optional[str] = Query(
-        None,
-        description="Select model from 8 models zoo: bilstm_attention, lightgbm, xgboost, gradient_boosting, random_forest, extra_trees, ridge, svr",
-    )
-) -> ForecastResponse:
-    """Generate a 3-day (72-hour) AQI forecast for Sargodha.
-
-    Workflow:
-    1. Fetches latest feature vectors from the Feature Store
-    2. Loads the selected or champion model from the Model Zoo
-    3. Executes inference
-    4. Returns hourly predictions with uncertainty bounds
-    """
+@app.route('/predict', methods=['POST'])
+def predict():
+    model_id = request.args.get("model_id")
     settings = get_settings()
     model_service = get_model_service()
     feature_service = get_feature_service()
@@ -198,10 +164,7 @@ async def predict(
         model_service.load()
 
     if not model_service.is_loaded:
-        raise HTTPException(
-            status_code=503,
-            detail="Model not loaded. Please ensure training pipeline has run.",
-        )
+        return jsonify({"detail": "Model not loaded. Please ensure training pipeline has run."}), 503
 
     # ── Fetch features ──
     features_df = feature_service.get_latest_features(
@@ -223,7 +186,6 @@ async def predict(
             dt = now - timedelta(hours=settings.lookback_window_hours - h)
             payloads.append(generator.generate_for_timestamp(dt))
 
-        import pandas as pd
         features_df = engineer.transform_batch(payloads)
         features_df = engineer.impute_missing_lags(features_df)
 
@@ -242,7 +204,6 @@ async def predict(
         if hasattr(model, "pipeline"):
             # Baseline/sklearn model — single point prediction
             current_pred = float(model.predict(X[-1:].reshape(1, -1))[0])
-            # Generate 72-hour forecast by applying trend
             predictions = np.array([
                 current_pred + np.random.normal(0, 5)
                 for _ in range(settings.forecast_horizon_hours)
@@ -255,14 +216,18 @@ async def predict(
                 for _ in range(settings.forecast_horizon_hours)
             ])
         else:
-            # Bi-LSTM — sequence prediction
+            # TF model — sequence prediction
             X_seq = X[-settings.lookback_window_hours:].reshape(1, -1, X.shape[1])
-            predictions = model.predict(X_seq).flatten()
+            if hasattr(model, "predict_with_attention"):
+                predictions, _ = model.predict_with_attention(X_seq)
+                predictions = predictions.flatten()
+            else:
+                predictions = model.predict(X_seq).flatten()
 
         predictions = np.clip(predictions, 0, 500)
     except Exception as e:
         logger.error("Prediction failed: %s", e)
-        raise HTTPException(status_code=500, detail=f"Prediction error: {e}")
+        return jsonify({"detail": f"Prediction error: {e}"}), 500
 
     # ── Build response ──
     now = datetime.now(timezone.utc)
@@ -275,7 +240,6 @@ async def predict(
         from datetime import timedelta
         pred_time = now + timedelta(hours=h)
 
-        # Uncertainty bounds (wider as forecast extends)
         uncertainty = 10 + h * 0.5
         hourly_predictions.append(
             HourlyPrediction(
@@ -289,12 +253,10 @@ async def predict(
             )
         )
 
-    # Check if any prediction exceeds alert threshold
     alert = any(p.aqi_predicted > settings.aqi_alert_threshold for p in hourly_predictions)
 
-    # Model type detection
     try:
-        model_type = ModelType(selected_meta.get("id", "bilstm_attention"))
+        model_type = ModelType(selected_meta.get("id", "bilstm_attention_tf"))
     except ValueError:
         model_type = ModelType.BILSTM_ATTENTION
         if hasattr(model, "model_type"):
@@ -306,7 +268,7 @@ async def predict(
 
     summary = generate_health_advisory(classify_aqi(np.mean(predictions)))
 
-    return ForecastResponse(
+    response = ForecastResponse(
         city=settings.target_city,
         generated_at=now,
         model_type=model_type,
@@ -316,25 +278,16 @@ async def predict(
         summary=summary,
         alert=alert,
     )
+    # Ensure correct datetime serialization via pydantic
+    return jsonify(response.model_dump(mode='json'))
 
 
-@app.post("/explain", response_model=ExplainResponse, tags=["Explainability"])
-async def explain() -> ExplainResponse:
-    """Generate SHAP feature contribution explanations.
-
-    Computes Shapley values for the current prediction payload
-    to explain which features are driving the AQI forecast.
-
-    Returns:
-        ExplainResponse: Feature contributions with directions.
-
-    Raises:
-        HTTPException: If explainer is not available.
-    """
+@app.route('/explain', methods=['POST'])
+def explain():
     model_service = get_model_service()
 
     if not model_service.is_loaded:
-        raise HTTPException(status_code=503, detail="Model not loaded")
+        return jsonify({"detail": "Model not loaded"}), 503
 
     if model_service.explainer is None:
         # Return mock explanations for demo
@@ -348,14 +301,14 @@ async def explain() -> ExplainResponse:
             SHAPExplanation(feature_name="wind_pm25_interaction", shap_value=-8.9, feature_value=300.0, direction="decrease"),
             SHAPExplanation(feature_name="pollution_intensity", shap_value=11.3, feature_value=78.0, direction="increase"),
         ]
-        return ExplainResponse(
+        resp = ExplainResponse(
             prediction_aqi=135.0,
             base_value=100.0,
             contributions=contributions,
             model_type=ModelType.LIGHTGBM,
         )
+        return jsonify(resp.model_dump(mode='json'))
 
-    # Real SHAP computation
     try:
         feature_service = get_feature_service()
         settings = get_settings()
@@ -369,31 +322,29 @@ async def explain() -> ExplainResponse:
             explanations = model_service.explainer.explain(X[-1:])
             if explanations:
                 prediction = float(model_service.model.predict(X[-1:].reshape(1, -1))[0])
-                return ExplainResponse(
+                resp = ExplainResponse(
                     prediction_aqi=round(prediction, 1),
                     base_value=model_service.explainer.base_value,
                     contributions=explanations[0],
                     model_type=ModelType.LIGHTGBM,
                 )
+                return jsonify(resp.model_dump(mode='json'))
     except Exception as e:
         logger.error("SHAP explanation failed: %s", e)
-        raise HTTPException(status_code=500, detail=f"Explanation error: {e}")
+        return jsonify({"detail": f"Explanation error: {e}"}), 500
 
-    raise HTTPException(status_code=500, detail="Could not generate explanation")
+    return jsonify({"detail": "Could not generate explanation"}), 500
 
 
-@app.get("/historical", tags=["Data"])
-async def get_historical(
-    hours: int = Query(default=168, ge=1, le=8760, description="Hours of history"),
-) -> Dict[str, Any]:
-    """Retrieve historical AQI data for dashboard charting.
+@app.route('/historical', methods=['GET'])
+def get_historical():
+    try:
+        hours = int(request.args.get("hours", 168))
+    except ValueError:
+        hours = 168
+    
+    hours = max(1, min(hours, 8760))
 
-    Args:
-        hours: Number of historical hours to return (default: 168 = 1 week).
-
-    Returns:
-        Dict with timestamps, AQI values, and pollutant breakdowns.
-    """
     feature_service = get_feature_service()
     features_df = feature_service.get_latest_features(hours)
 
@@ -418,13 +369,11 @@ async def get_historical(
                 "humidity_pct": payload.weather.humidity_pct,
             })
 
-        return {"data": data, "count": len(data), "source": "synthetic"}
+        return jsonify({"data": data, "count": len(data), "source": "synthetic"})
 
-    records = features_df.to_dict(orient="records")
-    return {"data": records, "count": len(records), "source": "feature_store"}
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Serverless handler for AWS Lambda
-# ──────────────────────────────────────────────────────────────────────────────
-handler = Mangum(app)
+    # Convert timestamps to string if they are not already
+    df = features_df.copy()
+    if 'timestamp' in df.columns:
+        df['timestamp'] = df['timestamp'].astype(str)
+    records = df.to_dict(orient="records")
+    return jsonify({"data": records, "count": len(records), "source": "feature_store"})

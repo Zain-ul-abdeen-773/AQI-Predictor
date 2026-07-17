@@ -1,0 +1,11 @@
+{
+  "hazardous_hours": 16085,
+  "hazardous_pct": 36.72,
+  "max_aqi_recorded": 279.7,
+  "avg_aqi_during_hazardous": 186.7,
+  "common_conditions_during_hazardous": {
+    "avg_temperature": 15.3,
+    "avg_humidity": 57.8,
+    "avg_wind_speed": 0.8
+  }
+}

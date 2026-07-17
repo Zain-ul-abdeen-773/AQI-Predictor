@@ -107,13 +107,9 @@ class Settings(BaseSettings):
     aqicn_api_key: str = Field(default="demo", description="AQICN API token")
     openweather_api_key: str = Field(default="", description="OpenWeatherMap API key")
 
-    # ── AWS Configuration ─────────────────────────────────────────────────
-    aws_region: str = Field(default="us-east-1", description="AWS region")
-    sagemaker_role_arn: str = Field(default="", description="SageMaker execution role ARN")
-    s3_feature_store_bucket: str = Field(
-        default="pearls-aqi-feature-store",
-        description="S3 bucket for SageMaker Feature Store offline storage",
-    )
+    # ── ClearML Configuration ─────────────────────────────────────────────
+    clearml_project_name: str = Field(default="AQI Predictor", description="ClearML Project Name")
+    clearml_dataset_name: str = Field(default="Sargodha Features", description="ClearML Dataset Name")
 
     # ── Target Location ───────────────────────────────────────────────────
     target_city: str = Field(default="Sargodha", description="Target city name")
