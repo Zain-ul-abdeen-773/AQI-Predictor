@@ -141,7 +141,6 @@ class ModelRegistryManager:
             tasks = Task.get_tasks(
                 project_name=self.settings.clearml_project_name,
                 tags=["champion", model_id],
-                task_status=["completed", "published", "stopped", "in_progress"],
                 order_by=["-created"]
             )
             

@@ -295,6 +295,10 @@ docker-compose up --build
 │   ├── test_training_pipeline.py
 │   └── test_validation.py
 │
+├── docs/                           # Technical documentation
+│   ├── documentation.tex           #   LaTeX source (27 pages)
+│   └── documentation.pdf           #   Compiled PDF
+│
 ├── .github/workflows/              # CI/CD automation
 │   ├── feature_pipeline_cron.yml   #   Hourly: ingest → transform → ClearML push
 │   ├── training_pipeline_cron.yml  #   Daily 2AM: train → evaluate → registry

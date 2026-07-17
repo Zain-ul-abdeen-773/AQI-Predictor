@@ -1,0 +1,902 @@
+% ═══════════════════════════════════════════════════════════════════════════════
+% Pearls AQI Predictor - Technical Documentation
+% Author: Zain ul Abdeen
+% Date: July 2026
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\documentclass[12pt, a4paper, oneside]{report}
+
+% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm, headheight=15pt]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{enumitem}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{tcolorbox}
+\tcbuselibrary{listingsutf8, skins, breakable}
+
+% ── Colors ────────────────────────────────────────────────────────────────────
+\definecolor{primaryblue}{RGB}{41, 128, 185}
+\definecolor{darkblue}{RGB}{23, 37, 84}
+\definecolor{accentgreen}{RGB}{39, 174, 96}
+\definecolor{codebg}{RGB}{245, 245, 250}
+\definecolor{codeframe}{RGB}{200, 200, 220}
+\definecolor{warnorange}{RGB}{230, 126, 34}
+\definecolor{dangerred}{RGB}{231, 76, 60}
+
+% ── Hyperref Setup ────────────────────────────────────────────────────────────
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue,
+    citecolor=accentgreen,
+    pdftitle={Pearls AQI Predictor - Technical Documentation},
+    pdfauthor={Zain ul Abdeen},
+    pdfsubject={Air Quality Index Forecasting System},
+}
+
+% ── Code Listing Style ────────────────────────────────────────────────────────
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    rulecolor=\color{codeframe},
+    keywordstyle=\color{primaryblue}\bfseries,
+    commentstyle=\color{gray},
+    stringstyle=\color{accentgreen},
+    showstringspaces=false,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=8pt,
+    tabsize=4,
+}
+\lstset{style=pythonstyle}
+
+% ── Header/Footer ─────────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{gray}{Pearls AQI Predictor}}
+\fancyhead[R]{\small\textcolor{gray}{Technical Documentation}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ── Chapter/Section Formatting ────────────────────────────────────────────────
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries\color{darkblue}}
+  {\chaptertitlename\ \thechapter}{20pt}{\Huge}
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{primaryblue}}
+  {\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{darkblue}}
+  {\thesubsection}{1em}{}
+
+% ── Custom Box Environments ───────────────────────────────────────────────────
+\newtcolorbox{infobox}[1][]{
+    colback=primaryblue!5,
+    colframe=primaryblue!75,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable,
+}
+
+\newtcolorbox{warnbox}[1][]{
+    colback=warnorange!5,
+    colframe=warnorange!75,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable,
+}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\begin{document}
+
+% ── Title Page ────────────────────────────────────────────────────────────────
+\begin{titlepage}
+\begin{center}
+
+\vspace*{1cm}
+
+% Decorative top rule
+\noindent\textcolor{primaryblue}{\rule{\textwidth}{3pt}}
+
+\vspace{1.5cm}
+
+{\Huge\bfseries\textcolor{darkblue}{Pearls AQI Predictor}}
+
+\vspace{0.5cm}
+
+{\LARGE\textcolor{primaryblue}{Technical Documentation}}
+
+\vspace{0.3cm}
+
+{\large\textcolor{gray}{End-to-End Air Quality Index Forecasting System}}
+
+\vspace{1.5cm}
+
+% Decorative element
+\begin{tikzpicture}
+    \draw[primaryblue, very thick] (0,0) circle (2.5cm);
+    \draw[accentgreen, thick] (0,0) circle (2cm);
+    \draw[warnorange, thick] (0,0) circle (1.5cm);
+    \draw[dangerred, thick] (0,0) circle (1cm);
+    \node[font=\Large\bfseries, text=darkblue] at (0,0) {AQI};
+    \node[font=\small, text=gray] at (0,-3.2) {72-Hour Forecast $\bullet$ 9 ML Models $\bullet$ Serverless};
+\end{tikzpicture}
+
+\vspace{1.5cm}
+
+\begin{tabular}{rl}
+    \textbf{Target City:} & Sargodha, Pakistan (32.08\textdegree N, 72.67\textdegree E) \\[4pt]
+    \textbf{Forecast Horizon:} & 72 Hours (3 Days) \\[4pt]
+    \textbf{Models:} & 9 (Linear, Ensemble, GBDT, Deep Learning) \\[4pt]
+    \textbf{Feature Store:} & ClearML Dataset API \\[4pt]
+    \textbf{Deployment:} & AWS Serverless (Terraform) \\
+\end{tabular}
+
+\vfill
+
+% Bottom section
+\noindent\textcolor{primaryblue}{\rule{\textwidth}{1pt}}
+
+\vspace{0.5cm}
+
+{\large\textbf{Author:} Zain ul Abdeen}
+
+\vspace{0.2cm}
+
+{\normalsize Pearls Engineering Program}
+
+\vspace{0.2cm}
+
+{\normalsize July 2026 $\bullet$ Version 1.0.0}
+
+\vspace{0.5cm}
+
+\noindent\textcolor{primaryblue}{\rule{\textwidth}{3pt}}
+
+\end{center}
+\end{titlepage}
+
+% ── Table of Contents ─────────────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+% ── List of Figures & Tables ──────────────────────────────────────────────────
+\listoffigures
+\listoftables
+\newpage
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\chapter{Introduction}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\section{Project Overview}
+
+The Pearls AQI Predictor is a production-ready, end-to-end machine learning system that forecasts Air Quality Index (AQI) \textbf{72 hours (3 days)} into the future for Sargodha, Pakistan. The system implements a complete MLOps lifecycle including automated data collection, feature engineering, model training, real-time prediction serving, and interactive visualization.
+
+\begin{infobox}[Key Objectives]
+\begin{itemize}[noitemsep]
+    \item Predict AQI for the next 3 days using a 100\% serverless stack
+    \item Automate data collection from AQICN and OpenWeatherMap APIs
+    \item Train and compare 9 ML models from statistical to deep learning
+    \item Provide model explainability via SHAP and LIME
+    \item Deploy with CI/CD automation (hourly ingestion + daily training)
+    \item Serve predictions through Flask API + Streamlit dashboard
+\end{itemize}
+\end{infobox}
+
+\section{Problem Statement}
+
+Air pollution is a critical public health concern in South Asian cities. Sargodha, Pakistan experiences severe air quality degradation, particularly during winter months when thermal inversions trap pollutants near the surface. Accurate 3-day AQI forecasting enables:
+
+\begin{itemize}
+    \item Early warning systems for sensitive populations
+    \item Municipal decision-making for traffic restrictions
+    \item Public awareness and health advisory dissemination
+    \item Agricultural burn planning to minimize impact
+\end{itemize}
+
+\section{Technology Stack}
+
+\begin{table}[H]
+\centering
+\caption{Technology Stack Overview}
+\label{tab:techstack}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Layer} & \textbf{Technologies} \\
+\midrule
+API Backend & Python 3.11, Flask 3.0+, flask-cors, Gunicorn \\
+Dashboard & Streamlit 1.30+, Plotly 5.15+ \\
+ML/DL & scikit-learn, LightGBM, XGBoost, PyTorch 2.2+, Optuna \\
+Feature Store & ClearML 1.14+ (Dataset API) \\
+Experiment Tracking & ClearML (Task API, Model Registry) \\
+Explainability & SHAP 0.42+, LIME 0.2+, Custom Temporal Grad-CAM \\
+Data Engineering & Pandas, NumPy, SciPy, aiohttp, tenacity \\
+Infrastructure & Terraform, Docker, AWS (Lambda, ECS, ECR, EventBridge) \\
+Validation & LangGraph, LangChain, OPA/Rego, Checkov \\
+CI/CD & GitHub Actions, AWS CodePipeline/CodeBuild \\
+Testing & pytest, pytest-asyncio, httpx \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\chapter{System Architecture}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\section{High-Level Architecture}
+
+The system follows a modular pipeline architecture with clear separation between data ingestion, feature engineering, model training, and serving layers. Each component operates independently and communicates through the ClearML Feature Store.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.2cm,
+    block/.style={rectangle, draw=primaryblue, thick, fill=primaryblue!10, text width=4.5cm, text centered, rounded corners, minimum height=1cm},
+    arrow/.style={->, thick, primaryblue},
+    label/.style={font=\small\itshape, text=gray}
+]
+    % Data Sources
+    \node[block] (apis) {AQICN + OpenWeatherMap\\+ Open-Meteo APIs};
+    
+    % Feature Pipeline
+    \node[block, below=of apis] (ingest) {Data Ingestion\\(async aiohttp + retries)};
+    \node[block, below=of ingest] (engineer) {Feature Engineering\\(37 features)};
+    \node[block, below=of engineer] (store) {ClearML Feature Store\\(Parquet partitioned)};
+    
+    % Training Pipeline
+    \node[block, below=of store] (train) {Model Training\\(9 models + Optuna HPO)};
+    \node[block, below=of train] (eval) {Evaluation + SHAP + LIME\\(RMSE, MAE, R\textsuperscript{2})};
+    \node[block, below=of eval] (registry) {ClearML Model Registry\\(Champion Promotion)};
+    
+    % Serving
+    \node[block, right=3cm of registry] (flask) {Flask REST API\\(/predict, /explain)};
+    \node[block, above=of flask] (streamlit) {Streamlit Dashboard\\(Plotly interactive)};
+    
+    % Arrows
+    \draw[arrow] (apis) -- (ingest);
+    \draw[arrow] (ingest) -- (engineer);
+    \draw[arrow] (engineer) -- (store);
+    \draw[arrow] (store) -- (train);
+    \draw[arrow] (train) -- (eval);
+    \draw[arrow] (eval) -- (registry);
+    \draw[arrow] (registry) -- (flask);
+    \draw[arrow] (flask) -- (streamlit);
+    \draw[arrow, dashed] (store) -- ++(3,0) |- (flask);
+    
+    % Labels
+    \node[label, left=0.5cm of ingest] {Hourly};
+    \node[label, left=0.5cm of train] {Daily};
+    \node[label, right=0.3cm of flask] {Real-time};
+\end{tikzpicture}
+\caption{System Architecture Overview}
+\label{fig:architecture}
+\end{figure}
+
+\section{Pipeline Components}
+
+\subsection{Feature Pipeline (Hourly)}
+\begin{itemize}
+    \item \textbf{Trigger:} GitHub Actions cron (every hour) / AWS EventBridge
+    \item \textbf{Process:} Fetch $\rightarrow$ Validate $\rightarrow$ Transform $\rightarrow$ Store
+    \item \textbf{Output:} 37 engineered features pushed to ClearML Dataset
+\end{itemize}
+
+\subsection{Training Pipeline (Daily)}
+\begin{itemize}
+    \item \textbf{Trigger:} GitHub Actions cron (2:00 AM UTC) / AWS ECS Fargate
+    \item \textbf{Process:} Extract $\rightarrow$ Train 9 Models $\rightarrow$ Evaluate $\rightarrow$ SHAP/LIME $\rightarrow$ Promote Champion
+    \item \textbf{Output:} Best model promoted in ClearML Model Registry
+\end{itemize}
+
+\subsection{Serving Layer}
+\begin{itemize}
+    \item \textbf{API:} Flask REST with 5 endpoints (predict, explain, health, historical, models)
+    \item \textbf{Dashboard:} Streamlit with Plotly for interactive 72-hour forecast visualization
+    \item \textbf{Deployment:} Docker container on AWS Lambda (Function URL)
+\end{itemize}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\chapter{Data Pipeline}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\section{Data Sources}
+
+\begin{table}[H]
+\centering
+\caption{External Data Sources}
+\label{tab:datasources}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Source} & \textbf{Data Type} & \textbf{Variables} \\
+\midrule
+AQICN API & Pollutants & PM2.5, PM10, NO\textsubscript{2}, SO\textsubscript{2}, CO, O\textsubscript{3}, AQI \\
+OpenWeatherMap & Weather & Temperature, humidity, wind, pressure, precipitation \\
+Open-Meteo Archive & Historical & Hourly air quality + weather (2022--present) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Historical Data Backfill}
+
+The backfill pipeline fetches \textbf{real historical data} from Open-Meteo's free archive APIs:
+
+\begin{lstlisting}[caption={Historical data fetching from Open-Meteo APIs}]
+class RealHistoricalDataFetcher:
+    def fetch_all(self, start_date, end_date):
+        # Air Quality API (PM2.5, PM10, CO, NO2, SO2, O3, US AQI)
+        aq_url = f"https://air-quality-api.open-meteo.com/v1/air-quality"
+                 f"?latitude={lat}&longitude={lon}"
+                 f"&start_date={start_date}&end_date={end_date}"
+                 f"&hourly=pm10,pm2_5,carbon_monoxide,..."
+        
+        # Weather Archive (temperature, humidity, wind, pressure)
+        w_url = f"https://archive-api.open-meteo.com/v1/archive"
+                f"?latitude={lat}&longitude={lon}"
+                f"&start_date={start_date}&end_date={end_date}"
+                f"&hourly=temperature_2m,relative_humidity_2m,..."
+\end{lstlisting}
+
+Features of the backfill pipeline:
+\begin{itemize}
+    \item Fetches real hourly observations (not synthetic data)
+    \item Supports configurable date ranges via CLI arguments
+    \item Checkpoint/resume for interrupted operations
+    \item Batch processing to prevent memory overflow
+    \item Automatic EDA summary logging after completion
+\end{itemize}
+
+\section{Feature Engineering}
+
+The feature engineering module computes \textbf{37 features} from raw pollutant and weather data:
+
+\begin{table}[H]
+\centering
+\caption{Feature Groups (37 Total Features)}
+\label{tab:features}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Group} & \textbf{Count} & \textbf{Description} \\
+\midrule
+Cyclical Temporal & 6 & $\sin/\cos$ encoding of hour, day-of-week, month \\
+AQI Change Rate & 3 & Rate of change at 1h, 3h, 6h horizons \\
+Wind-Pollutant Interaction & 4 & Wind U/V components $\times$ PM2.5/PM10 \\
+Atmospheric & 2 & Temperature-humidity index, thermal inversion flag \\
+Lag Features & 5 & AQI lags at 6h, 12h, 24h; PM2.5 lags at 1h, 3h \\
+Rolling Statistics & 3 & PM2.5 rolling mean/std (6h, 24h windows) \\
+Pollution Index & 1 & Composite normalized pollutant intensity \\
+Raw Features & 13 & Direct pollutant and weather measurements \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warnbox}[Leakage Prevention]
+Short-horizon lags (1h, 3h for AQI) are excluded from training features to prevent information leakage in the 72-hour forecasting context. Only lags $\geq$ 6h are used as model inputs.
+\end{warnbox}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\chapter{Exploratory Data Analysis}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\section{Dataset Overview}
+
+\begin{table}[H]
+\centering
+\caption{Dataset Summary Statistics}
+\label{tab:dataset}
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Total Observations & 43,801 (hourly) \\
+Time Span & July 2021 -- July 2026 (5 years) \\
+Engineered Features & 47 columns \\
+Missing Values & 0 (0.0\%) \\
+Mean AQI & 120.0 \\
+Median AQI & 119.7 \\
+Max AQI Recorded & 279.7 \\
+Std Deviation & 60.9 \\
+Hazardous Hours (AQI $>$ 150) & 16,085 (36.72\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Distribution Analysis}
+
+All pollutant distributions exhibit non-Gaussian behavior with heavy right tails. D'Agostino-Pearson normality tests reject normality ($p < 0.001$) for all variables, justifying the use of ensemble and non-parametric models over linear assumptions.
+
+\section{Correlation Structure}
+
+Strong linear relationships exist between AQI and gaseous pollutants:
+
+\begin{table}[H]
+\centering
+\caption{Top Correlations with AQI (Pearson r)}
+\label{tab:correlations}
+\begin{tabular}{lr}
+\toprule
+\textbf{Feature} & \textbf{Correlation} \\
+\midrule
+CO (Carbon Monoxide) & 0.980 \\
+PM10 (Coarse Particulate) & 0.963 \\
+NO\textsubscript{2} (Nitrogen Dioxide) & 0.951 \\
+SO\textsubscript{2} (Sulfur Dioxide) & 0.951 \\
+O\textsubscript{3} (Ozone) & $-0.947$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Temporal Patterns}
+
+Key temporal findings:
+\begin{itemize}
+    \item \textbf{Diurnal:} AQI peaks overnight (boundary layer collapse) and improves midday (convective mixing)
+    \item \textbf{Weekly:} Slight weekday/weekend variation from traffic patterns
+    \item \textbf{Seasonal:} Strong winter peaks from thermal inversions and biomass burning
+    \item \textbf{Yearly:} Slight upward trend over the 5-year period
+\end{itemize}
+
+\section{Stationarity Analysis}
+
+Augmented Dickey-Fuller test on daily-averaged AQI:
+\begin{itemize}
+    \item ADF Statistic: $-2.12$ (critical value at 5\%: $-2.86$)
+    \item $p$-value: $0.237$
+    \item \textbf{Conclusion:} Series is non-stationary $\Rightarrow$ lag features and differencing are essential
+\end{itemize}
+
+\section{Granger Causality}
+
+Weather variables tested for Granger-causality with AQI (7-day lag):
+\begin{itemize}
+    \item Temperature: \textbf{Significant} (Granger-causes AQI)
+    \item Wind Speed: \textbf{Significant} (Granger-causes AQI)
+    \item Pressure: \textbf{Significant} (Granger-causes AQI)
+    \item Humidity: Not significant
+\end{itemize}
+
+\section{EDA Artifacts}
+
+The complete EDA generates:
+\begin{itemize}
+    \item \textbf{20 PNG visualizations} (distributions, correlations, temporal patterns, decomposition, wind rose, pair plots, heatmaps, volatility, ECDF)
+    \item \textbf{26 CSV/JSON reports} (statistics, hypothesis tests, Granger causality, percentiles)
+    \item \textbf{1 Jupyter notebook} (\texttt{eda/EDA\_Analysis.ipynb}) for interactive exploration
+\end{itemize}
+
+Reproducible via: \texttt{python -m eda.run\_eda \&\& python -m eda.advanced\_eda}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\chapter{Model Development}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\section{Model Zoo (9 Models)}
+
+\begin{table}[H]
+\centering
+\caption{Complete Model Zoo}
+\label{tab:models}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Model} & \textbf{Category} & \textbf{HPO} & \textbf{Description} \\
+\midrule
+Ridge Regression & Linear & Grid & L2-regularized with RobustScaler \\
+ElasticNet & Linear & Grid & L1+L2 combined regularization \\
+Random Forest & Ensemble & Default & Bagged decision trees \\
+Extra Trees & Ensemble & Default & Extremely randomized trees \\
+Gradient Boosting & Ensemble & Default & Sequential boosting \\
+SVR & Kernel & Default & RBF kernel support vectors \\
+LightGBM & GBDT & Optuna (50) & Leaf-wise, TimeSeriesSplit CV \\
+XGBoost & GBDT & Optuna (50) & Level-wise, L1/L2 regularization \\
+Bi-LSTM + Attention & DL & Callbacks & PyTorch, Multi-Head Self-Attention \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Deep Learning Architecture}
+
+The Bi-LSTM with Multi-Head Attention model processes 72 hours of input to predict 72 hours of AQI:
+
+\begin{align}
+\vec{h}_t &= \text{BiLSTM}(x_t, \vec{h}_{t-1}, \overleftarrow{h}_{t+1}) \\
+\alpha_{t,s} &= \text{softmax}\left(\frac{Q_t \cdot K_s^T}{\sqrt{d_k}}\right) \\
+\text{context}_t &= \sum_s \alpha_{t,s} \cdot V_s \\
+\hat{y}_{t+1:t+72} &= \text{Linear}(\text{context}_T)
+\end{align}
+
+Architecture parameters:
+\begin{itemize}
+    \item Hidden size: 128, Layers: 2, Dropout: 0.3
+    \item Attention heads: 4, Key dimension: 32
+    \item Optimizer: AdamW, Scheduler: Cosine warm restarts
+    \item Mixed precision training (FP16) enabled
+\end{itemize}
+
+\section{Hyperparameter Optimization}
+
+LightGBM and XGBoost are tuned using \textbf{Optuna Bayesian optimization} with 50 trials each:
+
+\begin{lstlisting}[caption={Optuna HPO for LightGBM}]
+def objective(trial):
+    params = {
+        "num_leaves": trial.suggest_int("num_leaves", 20, 150),
+        "learning_rate": trial.suggest_float("lr", 0.01, 0.3, log=True),
+        "n_estimators": trial.suggest_int("n_estimators", 100, 1000),
+        "min_child_samples": trial.suggest_int("min_child", 5, 50),
+        "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+        "colsample_bytree": trial.suggest_float("colsample", 0.6, 1.0),
+        "reg_alpha": trial.suggest_float("alpha", 1e-8, 10.0, log=True),
+        "reg_lambda": trial.suggest_float("lambda", 1e-8, 10.0, log=True),
+    }
+    # 5-fold TimeSeriesSplit cross-validation
+    cv_scores = cross_val_score(model, X, y, cv=tscv, scoring="neg_rmse")
+    return -cv_scores.mean()
+\end{lstlisting}
+
+\section{Evaluation Metrics}
+
+Models are evaluated using temporal train/test split (80/20):
+
+\begin{table}[H]
+\centering
+\caption{Model Performance (Latest Training Run)}
+\label{tab:performance}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Model} & \textbf{RMSE} & \textbf{MAE} & \textbf{R\textsuperscript{2}} & \textbf{MAPE (\%)} \\
+\midrule
+\textbf{Ridge (Champion)} & \textbf{5.77} & \textbf{4.50} & \textbf{0.903} & \textbf{9.23} \\
+ElasticNet & 6.59 & 4.50 & 0.874 & 9.37 \\
+Random Forest & 7.58 & 5.18 & 0.833 & 10.33 \\
+Extra Trees & 7.37 & 5.24 & 0.843 & 10.45 \\
+Gradient Boosting & 8.10 & 6.30 & 0.810 & 13.89 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Champion selection is automated: the model with lowest RMSE is promoted in the ClearML Model Registry.
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\chapter{Explainability}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\section{SHAP (SHapley Additive exPlanations)}
+
+Two SHAP explainer types are implemented:
+
+\begin{enumerate}
+    \item \textbf{TreeExplainer:} For tree-based models (LightGBM, XGBoost, Random Forest). Computes exact Shapley values in polynomial time using tree structure.
+    \item \textbf{GradientExplainer:} For the PyTorch Bi-LSTM model. Computes expected gradients as SHAP value approximations.
+\end{enumerate}
+
+The SHAP explainer provides:
+\begin{itemize}
+    \item Per-sample feature contributions (top-$k$ features)
+    \item Global feature importance (mean $|$SHAP$|$)
+    \item Direction indicators (increase/decrease/neutral)
+    \item Serialization for deployment (\texttt{.pkl} format)
+\end{itemize}
+
+\section{LIME (Local Interpretable Model-agnostic Explanations)}
+
+LIME generates local surrogate explanations for any black-box model:
+
+\begin{lstlisting}[caption={LIME explanation example}]
+from training_pipeline.explainability import LIMEExplainer
+
+lime_exp = LIMEExplainer(
+    model=trained_model,
+    training_data=X_train,
+    feature_names=feature_names,
+    mode="regression",
+    kernel_width=0.75,
+)
+
+# Explain a single prediction
+result = lime_exp.explain_instance(X_test[0], num_samples=5000)
+# Returns: predicted_value, local_r2, contributions list
+\end{lstlisting}
+
+LIME capabilities:
+\begin{itemize}
+    \item Single instance explanations with configurable perturbation count
+    \item Batch explanations for multiple predictions
+    \item Global importance via averaged absolute LIME weights
+    \item Local R\textsuperscript{2} score indicating surrogate model fidelity
+    \item Save/load for deployment integration
+\end{itemize}
+
+\section{Temporal Grad-CAM}
+
+For the Bi-LSTM model, a custom Temporal Grad-CAM implementation highlights which time steps in the input sequence most influenced the prediction. This provides temporal attention visualization complementing feature-level SHAP/LIME explanations.
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\chapter{CI/CD and Automation}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\section{GitHub Actions Workflows}
+
+\begin{table}[H]
+\centering
+\caption{Automated CI/CD Pipelines}
+\label{tab:cicd}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Workflow} & \textbf{Trigger} & \textbf{Actions} \\
+\midrule
+\texttt{feature\_pipeline\_cron.yml} & Every hour & Ingest data, engineer features, push to ClearML \\
+\texttt{training\_pipeline\_cron.yml} & Daily 2AM UTC & Train 9 models, evaluate, promote champion \\
+\texttt{infra\_validation.yml} & PR on infra paths & LangGraph multi-agent Terraform validation \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Infrastructure Validation (LangGraph)}
+
+A multi-agent system gates infrastructure changes before deployment:
+
+\begin{enumerate}
+    \item \textbf{Linter Agent:} Validates Terraform syntax and best practices
+    \item \textbf{Security Agent:} Runs Checkov security scanning
+    \item \textbf{Policy Agent:} Enforces OPA/Rego organizational policies
+    \item \textbf{Decision Agent:} Aggregates results and issues pass/fail
+\end{enumerate}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\chapter{Infrastructure}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\section{AWS Serverless Architecture}
+
+\begin{table}[H]
+\centering
+\caption{AWS Resources (Terraform-managed)}
+\label{tab:aws}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Service} & \textbf{Purpose} & \textbf{Trigger} \\
+\midrule
+Lambda & Feature pipeline (hourly) & EventBridge cron \\
+Lambda & API service (Function URL) & HTTP requests \\
+ECS Fargate & Training pipeline (daily) & EventBridge schedule \\
+ECR & Container registry (10 images max) & CodeBuild push \\
+SSM Parameter Store & Encrypted API keys & Runtime access \\
+CloudWatch & Log aggregation (30-day) & All services \\
+CodePipeline & Build + deploy automation & GitHub webhook \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Docker Configuration}
+
+Multi-stage Dockerfile with:
+\begin{itemize}
+    \item Builder stage: Python 3.11, compile dependencies
+    \item Runtime stage: Slim image, non-root user (\texttt{appuser})
+    \item Production server: Gunicorn with 2 workers
+    \item Health check: HTTP probe to \texttt{/health} endpoint
+\end{itemize}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\chapter{API Reference}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\section{Endpoints}
+
+\begin{table}[H]
+\centering
+\caption{REST API Endpoints}
+\label{tab:api}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Method} & \textbf{Endpoint} & \textbf{Description} \\
+\midrule
+GET & \texttt{/health} & Liveness/readiness with model status \\
+POST & \texttt{/predict} & 72-hour AQI forecast with confidence intervals \\
+POST & \texttt{/explain} & SHAP feature contributions for prediction \\
+GET & \texttt{/historical} & Historical AQI data (configurable hours) \\
+GET & \texttt{/models} & List all 8 models with performance metrics \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Response Format}
+
+The \texttt{/predict} endpoint returns:
+\begin{lstlisting}[language={}]
+{
+  "model_type": "ridge",
+  "forecast_hours": 72,
+  "hourly_predictions": [
+    {
+      "timestamp": "2026-07-17T12:00:00Z",
+      "aqi_predicted": 142.5,
+      "aqi_lower_80": 134.5,
+      "aqi_upper_80": 150.5,
+      "aqi_lower_95": 128.0,
+      "aqi_upper_95": 157.0,
+      "level": "Unhealthy for Sensitive Groups"
+    }
+  ],
+  "alert_triggered": true,
+  "health_advisory": "Sensitive groups should reduce outdoor exertion."
+}
+\end{lstlisting}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\chapter{Testing}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\section{Test Suite}
+
+\begin{table}[H]
+\centering
+\caption{Test Modules}
+\label{tab:tests}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Module} & \textbf{Coverage} \\
+\midrule
+\texttt{test\_api.py} & Flask endpoint tests (health, predict, models, historical) \\
+\texttt{test\_data\_pipeline.py} & Data ingestion and transformation validation \\
+\texttt{test\_feature\_pipeline.py} & Feature store registration and retrieval \\
+\texttt{test\_training\_pipeline.py} & Model training and evaluation \\
+\texttt{test\_validation.py} & Infrastructure validation agent tests \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Run tests: \texttt{pytest tests/ -v --cov=. --cov-report=term-missing}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\chapter{Deployment Guide}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\section{Local Development}
+
+\begin{lstlisting}[language=bash, caption={Local setup}]
+# Clone and install
+git clone https://github.com/Zain-ul-abdeen-773/AQI-Predictor.git
+cd AQI-Predictor
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env  # Edit with API keys
+
+# Generate training data (real historical)
+python -m data_pipeline.backfill --start-date 2022-07-28
+
+# Train models
+python -m training_pipeline.train
+
+# Launch
+flask --app deployment.api.main:app run --port 8000
+streamlit run deployment/streamlit_app/app.py
+\end{lstlisting}
+
+\section{Docker Deployment}
+
+\begin{lstlisting}[language=bash, caption={Docker deployment}]
+docker-compose up --build
+# API available at http://localhost:8000
+\end{lstlisting}
+
+\section{AWS Deployment (Terraform)}
+
+\begin{lstlisting}[language=bash, caption={Terraform provisioning}]
+cd infrastructure/terraform
+terraform init
+terraform plan
+terraform apply
+\end{lstlisting}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\chapter{Conclusion}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\section{Summary}
+
+The Pearls AQI Predictor delivers a complete MLOps solution for air quality forecasting:
+
+\begin{itemize}
+    \item \textbf{Data:} Real historical data from Open-Meteo APIs, 43,801+ hourly observations
+    \item \textbf{Features:} 37 engineered features with leakage prevention
+    \item \textbf{Models:} 9 models spanning linear to deep learning, with automated champion selection
+    \item \textbf{Explainability:} SHAP + LIME + Temporal Grad-CAM for full model transparency
+    \item \textbf{Automation:} Hourly ingestion + daily retraining via GitHub Actions
+    \item \textbf{Infrastructure:} Serverless AWS deployment managed by Terraform
+    \item \textbf{Quality:} Comprehensive EDA (19 analyses), test suite, LangGraph infra validation
+\end{itemize}
+
+\section{Future Work}
+
+\begin{enumerate}
+    \item Expand to multiple cities across Pakistan
+    \item Integrate satellite imagery (MODIS AOD) for spatial context
+    \item Implement online learning for model adaptation without full retraining
+    \item Add ensemble stacking (combining top-3 models)
+    \item Deploy mobile push notifications for hazardous alerts
+\end{enumerate}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\appendix
+\chapter{Environment Variables}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\begin{longtable}{l l p{5cm}}
+\caption{Complete Environment Variable Reference} \\
+\toprule
+\textbf{Variable} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Variable} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{AQICN\_API\_KEY} & \texttt{demo} & AQICN API token \\
+\texttt{OPENWEATHER\_API\_KEY} & -- & OpenWeatherMap key \\
+\texttt{CLEARML\_API\_ACCESS\_KEY} & -- & ClearML access key \\
+\texttt{CLEARML\_API\_SECRET\_KEY} & -- & ClearML secret key \\
+\texttt{TARGET\_CITY} & Sargodha & Forecast target \\
+\texttt{FORECAST\_HORIZON\_HOURS} & 72 & Prediction window \\
+\texttt{LOOKBACK\_WINDOW\_HOURS} & 72 & Input sequence length \\
+\texttt{AQI\_ALERT\_THRESHOLD} & 150 & Alert trigger level \\
+\texttt{LSTM\_HIDDEN\_SIZE} & 128 & LSTM hidden dim \\
+\texttt{LSTM\_NUM\_LAYERS} & 2 & LSTM layers \\
+\texttt{OPTUNA\_N\_TRIALS} & 50 & HPO budget \\
+\texttt{LOG\_LEVEL} & INFO & Logging verbosity \\
+\bottomrule
+\end{longtable}
+
+\chapter{Project File Structure}
+
+\begin{lstlisting}[language={}, basicstyle=\ttfamily\footnotesize, caption={Complete project structure}]
+.
++-- config/                     Configuration (Pydantic BaseSettings)
++-- eda/                        Exploratory Data Analysis (19 analyses)
++-- data_pipeline/              Data ingestion & feature engineering
++-- feature_pipeline/           ClearML Feature Store management
++-- training_pipeline/          Model training, evaluation, explainability
+|   +-- models/                 9 model implementations
++-- deployment/
+|   +-- api/                    Flask REST API
+|   +-- streamlit_app/          Streamlit dashboard
++-- infrastructure/
+|   +-- terraform/              AWS IaC
+|   +-- validation_agents/      LangGraph multi-agent validation
++-- data/                       Feature store (Parquet) + backfill CSV
++-- models/                     Trained model artifacts
++-- tests/                      pytest test suite
++-- docs/                       This documentation
++-- .github/workflows/          CI/CD (hourly + daily + PR)
++-- Dockerfile                  Multi-stage build
++-- docker-compose.yml          Container orchestration
++-- requirements.txt            Python dependencies
+\end{lstlisting}
+
+\end{document}

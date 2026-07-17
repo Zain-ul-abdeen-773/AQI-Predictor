@@ -26,7 +26,7 @@ export default function RootLayout({
         className={`${inter.variable} font-sans bg-[#FAFAFC] text-[#090A0F] min-h-screen antialiased overflow-x-hidden selection:bg-[#0066FF]/15 selection:text-[#0066FF]`}
       >
         <LiquidNavigation />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 pb-24 relative z-10">
+        <main className="w-full mx-auto px-4 sm:px-6 lg:px-12 pb-24 relative z-10">
           {children}
         </main>
       </body>

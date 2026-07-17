@@ -79,7 +79,7 @@ export default function EditorialExplainabilityPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('https://fjockq4c644a4lcxxhapyne2my0lgkly.lambda-url.us-east-1.on.aws/explain', {
+        const res = await fetch('http://localhost:8000/explain', {
           method: 'POST',
         }).catch(() => null);
         if (res && res.ok) {

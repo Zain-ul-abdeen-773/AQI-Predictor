@@ -138,7 +138,7 @@ class FeatureStoreManager:
             df = pd.read_csv(csv_path)
             
             if not df.empty and "timestamp" in df.columns:
-                df["timestamp"] = pd.to_datetime(df["timestamp"])
+                df["timestamp"] = pd.to_datetime(df["timestamp"], format='ISO8601', utc=True)
                 if start_date:
                     if start_date.tzinfo is not None:
                         start_date = start_date.replace(tzinfo=None)

@@ -71,16 +71,31 @@ function SpringNumberCounter({ target }: { target: number }) {
 }
 
 export default function EditorialHomePage() {
-  const [models] = useState<ModelZooEntry[]>(MODEL_ZOO);
+  const [models, setModels] = useState<ModelZooEntry[]>(MODEL_ZOO);
   const [activeModel, setActiveModel] = useState('bilstm_attention');
   const [forecast, setForecast] = useState<PredictionPayload>(DEFAULT_FORECAST);
   const [loading, setLoading] = useState(false);
   const [lastSync, setLastSync] = useState('Just now');
 
+  useEffect(() => {
+    fetch('http://localhost:8000/models')
+      .then(r => r.json())
+      .then(data => {
+        if (data && Array.isArray(data)) {
+          setModels(data);
+          const defaultModel = data.find((m: ModelZooEntry) => m.is_default);
+          if (defaultModel) {
+            setActiveModel(defaultModel.id);
+          }
+        }
+      })
+      .catch(err => console.error('Failed to fetch models from local API:', err));
+  }, []);
+
   const syncData = async (modelId: string) => {
     setLoading(true);
     try {
-      const url = `https://fjockq4c644a4lcxxhapyne2my0lgkly.lambda-url.us-east-1.on.aws/predict?model_id=${modelId}`;
+      const url = `http://localhost:8000/predict?model_id=${modelId}`;
       const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(() => null);
 
       if (res && res.ok) {
