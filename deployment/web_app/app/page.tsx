@@ -70,6 +70,8 @@ function SpringNumberCounter({ target }: { target: number }) {
   return <span>{display}</span>;
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 export default function EditorialHomePage() {
   const [models, setModels] = useState<ModelZooEntry[]>(MODEL_ZOO);
   const [activeModel, setActiveModel] = useState('bilstm_attention');
@@ -78,14 +80,16 @@ export default function EditorialHomePage() {
   const [lastSync, setLastSync] = useState('Just now');
 
   useEffect(() => {
-    fetch('http://localhost:8000/models')
+    fetch(`${API_BASE}/models`)
       .then(r => r.json())
       .then(data => {
-        if (data && Array.isArray(data)) {
-          setModels(data);
-          const defaultModel = data.find((m: ModelZooEntry) => m.is_default);
-          if (defaultModel) {
-            setActiveModel(defaultModel.id);
+        // API returns { models: [...], default_model_id: "..." }
+        const list: ModelZooEntry[] = Array.isArray(data) ? data : (data?.models ?? []);
+        if (list.length > 0) {
+          setModels(list);
+          const champion = list.find((m: ModelZooEntry) => m.is_default);
+          if (champion) {
+            setActiveModel(champion.id);
           }
         }
       })
@@ -95,7 +99,7 @@ export default function EditorialHomePage() {
   const syncData = async (modelId: string) => {
     setLoading(true);
     try {
-      const url = `http://localhost:8000/predict?model_id=${modelId}`;
+      const url = `${API_BASE}/predict?model_id=${modelId}`;
       const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(() => null);
 
       if (res && res.ok) {
@@ -241,6 +245,24 @@ export default function EditorialHomePage() {
 
       {/* Telemetric Verification Engine */}
       <ActualVsPredictedGraph />
+
+      {/* LIME Explainability Teaser */}
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="flex flex-col md:flex-row items-center justify-between p-6 rounded-2xl border border-slate-700/50 bg-slate-800/40 backdrop-blur-xl shadow-2xl mb-12"
+      >
+        <div>
+          <h3 className="text-lg font-semibold text-white tracking-tight">LIME Interpretability Matrix</h3>
+          <p className="text-sm text-slate-400 mt-1 max-w-xl leading-relaxed">
+            Dive deeper into the local decision boundaries. Our LIME explainer isolates and ranks the most influential real-time atmospheric features driving the current forecast.
+          </p>
+        </div>
+        <a href="/explainability" className="mt-4 md:mt-0 px-6 py-2.5 rounded-lg bg-slate-900 border border-slate-700/80 text-sm font-semibold text-[#3388FF] hover:bg-slate-800 hover:text-white transition-colors shadow-2xs whitespace-nowrap">
+          View LIME Analysis
+        </a>
+      </motion.div>
     </div>
   );
 }

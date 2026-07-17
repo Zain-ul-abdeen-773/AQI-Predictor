@@ -39,25 +39,25 @@ export default function EditorialAnalyticsPage() {
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="flex flex-col md:flex-row items-start md:items-end justify-between border-b border-neutral-200/60 pb-6 gap-6"
+        className="flex flex-col md:flex-row items-start md:items-end justify-between border-b border-slate-700/50 pb-6 gap-6"
       >
         <div className="max-w-2xl">
-          <span className="text-xs font-mono tracking-wider text-neutral-400 block mb-2">
+          <span className="text-xs font-mono tracking-wider text-slate-400 block mb-2">
             REGRESSION ARCHITECTURE EVALUATION
           </span>
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-[#090A0F]">
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
             Model Comparison & Cross-Validation
           </h1>
-          <p className="text-sm text-neutral-600 mt-2 leading-relaxed">
+          <p className="text-sm text-slate-300 mt-2 leading-relaxed">
             Out-of-sample telemetric validation across 8 distinct machine learning models trained on `43,800` hourly meteorological and particulate records (`2021-2026`).
           </p>
         </div>
 
-        <div className="flex flex-col items-start md:items-end p-4 rounded-md border border-neutral-200/60 bg-white/80 text-xs font-mono text-neutral-600">
+        <div className="flex flex-col items-start md:items-end p-4 rounded-md border border-slate-700/50 bg-slate-800/40 text-xs font-mono text-slate-300">
           <span className="text-[#0066FF] font-semibold text-sm">
             BENCHMARK LEADER: R² 0.945
           </span>
-          <span className="mt-0.5 text-neutral-400">5-Fold TimeSeriesSplit Rigor</span>
+          <span className="mt-0.5 text-slate-400">5-Fold TimeSeriesSplit Rigor</span>
         </div>
       </motion.div>
 
@@ -71,14 +71,14 @@ export default function EditorialAnalyticsPage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="lg:col-span-7 p-7 rounded-md border border-neutral-200/60 bg-white/80 backdrop-blur-sm flex flex-col justify-between"
+          className="lg:col-span-7 p-7 rounded-md border border-slate-700/50 bg-slate-800/40 backdrop-blur-sm flex flex-col justify-between"
         >
           <div>
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-neutral-200/60">
-              <h2 className="text-lg font-semibold text-[#090A0F] tracking-tight">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-700/50">
+              <h2 className="text-lg font-semibold text-white tracking-tight">
                 Model Zoo Leaderboard
               </h2>
-              <span className="text-xs font-mono text-neutral-400">RANKED BY R² VARIANCE</span>
+              <span className="text-xs font-mono text-slate-400">RANKED BY R² VARIANCE</span>
             </div>
 
             <div className="flex flex-col gap-3">
@@ -88,23 +88,23 @@ export default function EditorialAnalyticsPage() {
                   className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-md border transition-all ${
                     m.best
                       ? 'bg-[#0066FF]/5 border-[#0066FF]/40'
-                      : 'bg-white border-neutral-200/60 hover:border-neutral-300'
+                      : 'bg-slate-800 border-slate-700/50 hover:border-neutral-300'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="flex items-center justify-center w-6 h-6 rounded text-xs font-mono font-semibold text-neutral-500 bg-neutral-100 border border-neutral-200">
+                    <span className="flex items-center justify-center w-6 h-6 rounded text-xs font-mono font-semibold text-slate-400 bg-slate-800 border border-slate-700/80">
                       {m.rank}
                     </span>
                     <div>
-                      <span className="text-xs font-semibold text-[#090A0F]">{m.name}</span>
-                      <span className="block text-[11px] font-mono text-neutral-400 mt-0.5">
+                      <span className="text-xs font-semibold text-white">{m.name}</span>
+                      <span className="block text-[11px] font-mono text-slate-400 mt-0.5">
                         RMSE {m.rmse} • MAE {m.mae}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-4 self-end sm:self-auto">
-                    <div className="w-24 sm:w-32 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                    <div className="w-24 sm:w-32 h-1.5 bg-slate-800 rounded-full overflow-hidden">
                       <div
                         style={{ width: `${m.r2 * 100}%` }}
                         className={`h-full rounded-full bg-gradient-to-r ${m.color}`}
@@ -112,7 +112,7 @@ export default function EditorialAnalyticsPage() {
                     </div>
                     <span
                       className={`font-mono font-semibold text-xs min-w-[44px] text-right ${
-                        m.best ? 'text-[#0066FF]' : 'text-[#090A0F]'
+                        m.best ? 'text-[#0066FF]' : 'text-white'
                       }`}
                     >
                       {m.r2.toFixed(3)}
@@ -130,24 +130,24 @@ export default function EditorialAnalyticsPage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="lg:col-span-5 p-7 rounded-md border border-neutral-200/60 bg-white/80 backdrop-blur-sm flex flex-col justify-between"
+          className="lg:col-span-5 p-7 rounded-md border border-slate-700/50 bg-slate-800/40 backdrop-blur-sm flex flex-col justify-between"
         >
           <div>
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-neutral-200/60">
-              <h2 className="text-lg font-semibold text-[#090A0F] tracking-tight">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-700/50">
+              <h2 className="text-lg font-semibold text-white tracking-tight">
                 Diurnal Air Quality Profile
               </h2>
-              <span className="text-xs font-mono text-neutral-400">24-HOUR CYCLE</span>
+              <span className="text-xs font-mono text-slate-400">24-HOUR CYCLE</span>
             </div>
-            <p className="text-xs text-neutral-600 mb-6 leading-relaxed">
+            <p className="text-xs text-slate-300 mb-6 leading-relaxed">
               Empirical telemetry reveals two sharp peaks: morning inversion (`09:00`) and evening thermal accumulation (`18:00`) driven by residential emissions and traffic patterns.
             </p>
           </div>
 
-          <div className="flex items-end justify-between gap-2 h-72 p-4 rounded-md border border-neutral-200/60 bg-neutral-50/50 pb-8 relative">
+          <div className="flex items-end justify-between gap-2 h-72 p-4 rounded-md border border-slate-700/50 bg-slate-900/50 pb-8 relative">
             {/* Threshold Line */}
             <div className="absolute left-3 right-3 top-[28%] border-b border-dashed border-rose-400/40 pointer-events-none flex justify-end pr-1">
-              <span className="text-[9px] font-mono font-semibold text-rose-700 bg-white px-1.5 py-0.5 rounded border border-rose-200 -mt-2.5">
+              <span className="text-[9px] font-mono font-semibold text-rose-700 bg-slate-800 px-1.5 py-0.5 rounded border border-rose-200 -mt-2.5">
                 150 LIMIT
               </span>
             </div>
@@ -161,7 +161,7 @@ export default function EditorialAnalyticsPage() {
                   onMouseLeave={() => setSelectedCycleIdx(null)}
                   className="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer"
                 >
-                  <span className="text-[10px] font-mono font-medium text-neutral-400 group-hover:text-[#0066FF] transition-colors">
+                  <span className="text-[10px] font-mono font-medium text-slate-400 group-hover:text-[#0066FF] transition-colors">
                     {d.aqi}
                   </span>
                   <div
@@ -175,8 +175,8 @@ export default function EditorialAnalyticsPage() {
                     }`}
                   />
                   <div className="flex flex-col items-center mt-1">
-                    <span className="text-[10px] font-mono font-semibold text-[#090A0F]">{d.hour}</span>
-                    <span className="text-[9px] font-mono text-neutral-400 hidden sm:block">{d.temp}</span>
+                    <span className="text-[10px] font-mono font-semibold text-white">{d.hour}</span>
+                    <span className="text-[9px] font-mono text-slate-400 hidden sm:block">{d.temp}</span>
                   </div>
                 </div>
               );
@@ -184,14 +184,14 @@ export default function EditorialAnalyticsPage() {
           </div>
 
           {/* Descriptive Footer */}
-          <div className="mt-5 p-3.5 rounded-md border border-neutral-200/60 bg-neutral-50/70 min-h-[48px] flex items-center justify-between text-xs">
+          <div className="mt-5 p-3.5 rounded-md border border-slate-700/50 bg-slate-900/50 min-h-[48px] flex items-center justify-between text-xs">
             {selectedCycleIdx !== null ? (
-              <div className="flex items-center gap-2 text-[#090A0F]">
+              <div className="flex items-center gap-2 text-white">
                 <span className="font-mono font-semibold text-[#0066FF]">{DIURNAL_CYCLE[selectedCycleIdx].hour}:</span>
-                <span className="text-neutral-600">{DIURNAL_CYCLE[selectedCycleIdx].desc}</span>
+                <span className="text-slate-300">{DIURNAL_CYCLE[selectedCycleIdx].desc}</span>
               </div>
             ) : (
-              <span className="text-neutral-400 italic">Hover any hour bar to inspect regional dispersion mechanisms.</span>
+              <span className="text-slate-400 italic">Hover any hour bar to inspect regional dispersion mechanisms.</span>
             )}
           </div>
         </motion.div>

@@ -39,16 +39,16 @@ export default function VignetteAlert({ currentAqi = 0, isTriggered = false }: V
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             className="absolute top-16 left-1/2 -translate-x-1/2 pointer-events-auto max-w-xl w-full px-4"
           >
-            <div className="flex items-start gap-4 p-4 rounded-md bg-slate-800/80 border border-amber-300/80 shadow-2xs backdrop-blur-md text-white">
-              <div className="p-2 rounded bg-amber-50 text-amber-700 border border-amber-200">
+            <div className="flex items-start gap-4 p-4 rounded-md bg-slate-800/80 border border-amber-300/80 shadow-2xs backdrop-blur-md text-slate-100">
+              <div className="p-2 rounded bg-amber-50 text-amber-700 border border-amber-500/30">
                 <AlertTriangle className="w-4 h-4" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-semibold uppercase tracking-wider text-amber-900">
+                  <span className="text-xs font-mono font-semibold uppercase tracking-wider text-amber-300">
                     REGIONAL ADVISORY • ELEVATED PARTICULATE LOAD
                   </span>
-                  <span className="text-xs font-mono font-semibold bg-amber-100 text-amber-900 px-2 py-0.5 rounded border border-amber-200">
+                  <span className="text-xs font-mono font-semibold bg-amber-900/30 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
                     AQI {Math.round(currentAqi)}
                   </span>
                 </div>

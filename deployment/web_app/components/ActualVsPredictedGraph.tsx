@@ -215,7 +215,7 @@ export default function ActualVsPredictedGraph() {
                   return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
                 }).join(' ')}
                 fill="none"
-                stroke="#090A0F"
+                stroke="#FFFFFF"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
