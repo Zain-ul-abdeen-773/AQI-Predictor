@@ -141,7 +141,7 @@ class TemporalGradCAM:
         # activations shape: (batch, seq_len, hidden_dim)
         cam = (self.activations * self.gradients).sum(dim=-1)  # (batch, seq_len)
 
-        # ReLU — only keep positive contributions
+        # ReLU - only keep positive contributions
         cam = torch.relu(cam)
 
         # Normalize per sample

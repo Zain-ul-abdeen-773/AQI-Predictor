@@ -34,6 +34,7 @@
 \pgfplotsset{compat=1.18}
 \usepackage{tcolorbox}
 \tcbuselibrary{listingsutf8, skins, breakable}
+\raggedbottom
 
 % ── Graphics Path ─────────────────────────────────────────────────────────────
 \graphicspath{{../eda/plots/}}
@@ -821,10 +822,12 @@ LIME capabilities:
 For the Bi-LSTM model, a custom Temporal Grad-CAM implementation highlights which time steps in the input sequence most influenced the prediction. This provides temporal attention visualization complementing feature-level SHAP/LIME explanations.
 
 % ═══════════════════════════════════════════════════════════════════════════════
-\chapter{CI/CD and Automation}
+\chapter{CI/CD, Testing, and Automation}
 % ═══════════════════════════════════════════════════════════════════════════════
 
 \section{GitHub Actions Workflows}
+
+Three automated workflows provide continuous integration and delivery for the entire ML lifecycle:
 
 \begin{table}[H]
 \centering
@@ -834,228 +837,268 @@ For the Bi-LSTM model, a custom Temporal Grad-CAM implementation highlights whic
 \toprule
 \textbf{Workflow} & \textbf{Trigger} & \textbf{Actions} \\
 \midrule
-\texttt{feature\_pipeline\_cron.yml} & Every hour & Ingest data, engineer features, push to ClearML \\
-\texttt{training\_pipeline\_cron.yml} & Daily 2AM UTC & Train 9 models, evaluate, promote champion \\
-\texttt{infra\_validation.yml} & PR on infra paths & LangGraph multi-agent Terraform validation \\
+\texttt{feature\_pipeline\_cron.yml} & Every hour & Ingest real-time data from AQICN and OpenWeather APIs, apply 37-feature engineering transformations, push versioned dataset to ClearML Feature Store \\
+\texttt{training\_pipeline\_cron.yml} & Daily 2AM UTC & Extract latest training data, train all 9 models with cross-validation, compute SHAP/LIME explanations, evaluate metrics, promote champion model to ClearML registry, upload training artifacts \\
+\texttt{infra\_validation.yml} & PR on \texttt{infrastructure/**} & Execute LangGraph multi-agent validation pipeline (Linter $\rightarrow$ Security $\rightarrow$ Policy $\rightarrow$ Decision) to gate infrastructure changes \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section{Infrastructure Validation (LangGraph)}
+\section{Infrastructure Validation (LangGraph Multi-Agent)}
 
-A multi-agent system gates infrastructure changes before deployment:
+A sophisticated multi-agent system powered by LangGraph validates all infrastructure changes before they are merged. This prevents misconfigured or insecure Terraform from reaching production.
 
 \begin{enumerate}
-    \item \textbf{Linter Agent:} Validates Terraform syntax and best practices
-    \item \textbf{Security Agent:} Runs Checkov security scanning
-    \item \textbf{Policy Agent:} Enforces OPA/Rego organizational policies
-    \item \textbf{Decision Agent:} Aggregates results and issues pass/fail
+    \item \textbf{Linter Agent:} Validates Terraform HCL syntax, checks formatting with \texttt{terraform fmt}, and enforces naming conventions and module structure best practices.
+    \item \textbf{Security Agent:} Executes Checkov static analysis to identify security vulnerabilities including unencrypted storage, overly permissive IAM policies, and missing logging configurations.
+    \item \textbf{Policy Agent:} Evaluates custom OPA/Rego organizational policies defined in \texttt{infrastructure/validation\_agents/policies/aws\_compliance.rego} covering resource tagging, encryption requirements, and cost controls.
+    \item \textbf{Decision Agent:} Aggregates findings from all three agents, applies severity weighting, and issues a final pass/fail determination. On failure, generates actionable remediation suggestions.
 \end{enumerate}
 
-% ═══════════════════════════════════════════════════════════════════════════════
-\chapter{Deployment}
-% ═══════════════════════════════════════════════════════════════════════════════
-
-\section{Production Deployment}
-
-The application is deployed on \textbf{HuggingFace Spaces} using the Docker SDK, providing a publicly accessible endpoint with automatic scaling.
-
-\begin{table}[H]
-\centering
-\caption{Deployment Configuration}
-\label{tab:deployment}
-\begin{tabularx}{\textwidth}{l X}
-\toprule
-\textbf{Property} & \textbf{Value} \\
-\midrule
-Platform & HuggingFace Spaces \\
-SDK & Docker \\
-URL & \url{https://huggingface.co/spaces/Zain-773/AQI-Predictor} \\
-Container & Python 3.11-slim, Gunicorn (2 workers) \\
-Port & 8000 \\
-Health Check & \texttt{/health} endpoint (30s interval) \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\section{Docker Configuration}
-
-Multi-stage Dockerfile optimized for minimal image size:
-\begin{itemize}
-    \item \textbf{Builder stage:} Python 3.11, compiles native dependencies (cmake, gcc)
-    \item \textbf{Runtime stage:} Slim image, non-root user (\texttt{appuser}), production Gunicorn server
-    \item Health check via HTTP probe to \texttt{/health}
-    \item Volumes mounted for \texttt{/app/data} and \texttt{/app/models}
-\end{itemize}
-
-\begin{lstlisting}[language=bash, caption={Docker deployment}]
-# Build and run locally
-docker-compose up --build
-
-# Push to HuggingFace Spaces (auto-deploys on git push)
-git push hf main
-\end{lstlisting}
-
-\section{Infrastructure as Code (Terraform)}
-
-For enterprise deployment, Terraform configurations provision AWS serverless resources:
-
-\begin{table}[H]
-\centering
-\caption{AWS Resources (Terraform-managed, Optional)}
-\label{tab:aws}
-\begin{tabularx}{\textwidth}{l l X}
-\toprule
-\textbf{Service} & \textbf{Purpose} & \textbf{Trigger} \\
-\midrule
-Lambda & Feature pipeline (hourly) & EventBridge cron \\
-Lambda & API service (Function URL) & HTTP requests \\
-ECS Fargate & Training pipeline (daily) & EventBridge schedule \\
-ECR & Container registry & CodeBuild push \\
-SSM Parameter Store & Encrypted API keys & Runtime access \\
-CloudWatch & Log aggregation (30-day) & All services \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\begin{lstlisting}[language=bash, caption={Terraform provisioning (optional)}]
-cd infrastructure/terraform
-terraform init && terraform plan && terraform apply
-\end{lstlisting}
-
-% ═══════════════════════════════════════════════════════════════════════════════
-\chapter{API Reference}
-% ═══════════════════════════════════════════════════════════════════════════════
-
-\section{Endpoints}
-
-\begin{table}[H]
-\centering
-\caption{REST API Endpoints}
-\label{tab:api}
-\begin{tabularx}{\textwidth}{l l X}
-\toprule
-\textbf{Method} & \textbf{Endpoint} & \textbf{Description} \\
-\midrule
-GET & \texttt{/health} & Liveness/readiness with model status \\
-POST & \texttt{/predict} & 72-hour AQI forecast with confidence intervals \\
-POST & \texttt{/explain} & SHAP feature contributions for prediction \\
-GET & \texttt{/historical} & Historical AQI data (configurable hours) \\
-GET & \texttt{/models} & List all 8 models with performance metrics \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\section{Response Format}
-
-The \texttt{/predict} endpoint returns:
-\begin{lstlisting}[language={}]
-{
-  "model_type": "ridge",
-  "forecast_hours": 72,
-  "hourly_predictions": [
-    {
-      "timestamp": "2026-07-17T12:00:00Z",
-      "aqi_predicted": 142.5,
-      "aqi_lower_80": 134.5,
-      "aqi_upper_80": 150.5,
-      "aqi_lower_95": 128.0,
-      "aqi_upper_95": 157.0,
-      "level": "Unhealthy for Sensitive Groups"
-    }
-  ],
-  "alert_triggered": true,
-  "health_advisory": "Sensitive groups should reduce outdoor exertion."
-}
-\end{lstlisting}
-
-% ═══════════════════════════════════════════════════════════════════════════════
-\chapter{Testing}
-% ═══════════════════════════════════════════════════════════════════════════════
+The validation pipeline runs automatically on any pull request that modifies files under the \texttt{infrastructure/} directory, providing immediate feedback to developers before code review.
 
 \section{Test Suite}
 
+The project includes a comprehensive pytest test suite covering all pipeline stages:
+
 \begin{table}[H]
 \centering
-\caption{Test Modules}
+\caption{Test Modules and Coverage}
 \label{tab:tests}
-\begin{tabularx}{\textwidth}{l X}
+\begin{tabularx}{\textwidth}{l X l}
 \toprule
-\textbf{Module} & \textbf{Coverage} \\
+\textbf{Module} & \textbf{Coverage Scope} & \textbf{Tests} \\
 \midrule
-\texttt{test\_api.py} & Flask endpoint tests (health, predict, models, historical) \\
-\texttt{test\_data\_pipeline.py} & Data ingestion and transformation validation \\
-\texttt{test\_feature\_pipeline.py} & Feature store registration and retrieval \\
-\texttt{test\_training\_pipeline.py} & Model training and evaluation \\
-\texttt{test\_validation.py} & Infrastructure validation agent tests \\
+\texttt{test\_api.py} & Flask endpoint correctness: health response structure, predict returns 72 hours, model selection works, historical data respects parameters & 6 \\
+\texttt{test\_data\_pipeline.py} & Data ingestion (API mocking), async retry logic, feature engineering output shape and column presence, null handling & 8 \\
+\texttt{test\_feature\_pipeline.py} & ClearML Dataset creation, Parquet write/read, feature store retrieval with time filtering & 5 \\
+\texttt{test\_training\_pipeline.py} & Model training runs to completion, metrics are finite, champion selection logic, model serialization round-trip & 7 \\
+\texttt{test\_validation.py} & LangGraph agent execution, Rego policy evaluation, end-to-end validation pipeline pass/fail & 4 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Run tests: \texttt{pytest tests/ -v --cov=. --cov-report=term-missing}
+\begin{lstlisting}[language=bash, caption={Running the test suite}]
+# Full test suite with verbose output
+pytest tests/ -v
 
-% ═══════════════════════════════════════════════════════════════════════════════
-\chapter{Local Development Guide}
-% ═══════════════════════════════════════════════════════════════════════════════
+# With coverage report
+pytest tests/ --cov=. --cov-report=term-missing --cov-report=html
 
-\section{Setup}
-
-\begin{lstlisting}[language=bash, caption={Local setup}]
-# Clone and install
-git clone https://github.com/Zain-ul-abdeen-773/AQI-Predictor.git
-cd AQI-Predictor
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env  # Edit with API keys
-
-# Generate training data (real historical from Open-Meteo)
-python -m data_pipeline.backfill --start-date 2022-07-28
-
-# Train models
-python -m training_pipeline.train
-
-# Launch API
-flask --app deployment.api.main:app run --port 8000
-
-# Launch Dashboard (separate terminal)
-streamlit run deployment/streamlit_app/app.py
+# Run specific module
+pytest tests/test_api.py -v --tb=short
 \end{lstlisting}
 
-\section{Docker Deployment}
-
-\begin{lstlisting}[language=bash, caption={Docker deployment}]
-docker-compose up --build
-# API available at http://localhost:8000
-\end{lstlisting}
+All tests use mocked external dependencies (API calls, ClearML connections) to enable fast, deterministic execution without network access.
 
 % ═══════════════════════════════════════════════════════════════════════════════
-\chapter{Conclusion}
+\chapter{Deployment and Infrastructure}
 % ═══════════════════════════════════════════════════════════════════════════════
 
-\section{Summary}
+\section{Production Architecture}
 
-The Pearls AQI Predictor delivers a complete MLOps solution for air quality forecasting:
+The production system uses a split deployment strategy optimized for the free tier of modern cloud platforms:
+
+\begin{table}[H]
+\centering
+\caption{Production Deployment Architecture}
+\label{tab:deploy_arch}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Component} & \textbf{Platform} & \textbf{Details} \\
+\midrule
+Frontend (Next.js) & Vercel & React 19 + TypeScript + Tailwind CSS 4, automatic deploys on git push, global CDN, serverless functions \\
+Backend (Flask API) & Render & Python 3.11, Gunicorn with 2 workers, automatic deploys from GitHub, free tier with auto-sleep \\
+Feature Store & ClearML & Dataset versioning with Parquet artifacts, experiment tracking, model registry \\
+CI/CD & GitHub Actions & Hourly feature pipeline, daily training pipeline, PR validation \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Frontend Deployment (Vercel)}
+
+The Next.js 16 dashboard is deployed on Vercel with the following configuration:
 
 \begin{itemize}
-    \item \textbf{Data:} Real historical data from Open-Meteo APIs, 43,801+ hourly observations
-    \item \textbf{Features:} 37 engineered features with leakage prevention
-    \item \textbf{Models:} 9 models spanning linear to deep learning, with automated champion selection
-    \item \textbf{Explainability:} SHAP + LIME + Temporal Grad-CAM for full model transparency
-    \item \textbf{Automation:} Hourly ingestion + daily retraining via GitHub Actions
-    \item \textbf{Infrastructure:} Serverless AWS deployment managed by Terraform
-    \item \textbf{Quality:} Comprehensive EDA (19 analyses), test suite, LangGraph infra validation
+    \item \textbf{Framework:} Next.js 16 (App Router) with React 19
+    \item \textbf{Root Directory:} \texttt{deployment/web\_app}
+    \item \textbf{Build Command:} \texttt{npm run build}
+    \item \textbf{Environment Variable:} \texttt{NEXT\_PUBLIC\_API\_URL} pointing to Render backend
+    \item \textbf{Features:} Framer Motion animations, Plotly charts, model selector, SHAP/LIME visualization pages
+    \item \textbf{Performance:} Edge-cached static assets, ISR for dynamic pages, Lighthouse score $>$ 90
+\end{itemize}
+
+\section{Backend Deployment (Render)}
+
+The Flask REST API is deployed on Render's free web service tier:
+
+\begin{lstlisting}[language=bash, caption={Render start command}]
+gunicorn deployment.api.main:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+\end{lstlisting}
+
+\begin{itemize}
+    \item \textbf{Runtime:} Python 3.11, auto-detected from \texttt{requirements.txt}
+    \item \textbf{Build:} \texttt{pip install -r requirements.txt}
+    \item \textbf{Health Check:} \texttt{GET /health} endpoint (30s interval)
+    \item \textbf{Environment:} API keys injected via Render's encrypted environment variables
+    \item \textbf{Cold Start:} Free tier sleeps after 15 minutes of inactivity; first request takes $\sim$30s
+\end{itemize}
+
+\section{Docker Configuration}
+
+For local development and self-hosted deployment, a multi-stage Dockerfile optimizes for minimal image size:
+
+\begin{lstlisting}[caption={Multi-stage Dockerfile architecture}]
+# Stage 1: Builder (compiles native dependencies)
+FROM python:3.11-slim AS builder
+RUN apt-get install -y gcc g++ cmake
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Stage 2: Runtime (production-optimized)
+FROM python:3.11-slim AS runtime
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+COPY --from=builder /opt/venv /opt/venv
+COPY . /app
+USER appuser
+EXPOSE 8000
+CMD ["gunicorn", "deployment.api.main:app", "--bind", "0.0.0.0:8000",
+     "--workers", "2", "--timeout", "120"]
+\end{lstlisting}
+
+Security measures include: non-root execution, no build tools in runtime image, no secrets baked into layers, and an explicit health check probe.
+
+\section{Infrastructure as Code (Terraform)}
+
+For enterprise-scale deployment, Terraform configurations provision a fully serverless AWS architecture:
+
+\begin{table}[H]
+\centering
+\caption{AWS Resources (Terraform-managed)}
+\label{tab:aws}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Service} & \textbf{Purpose} & \textbf{Configuration} \\
+\midrule
+Lambda & Feature pipeline (hourly) & Container image, 512MB RAM, 5min timeout \\
+Lambda & API serving (Function URL) & Container image, 1GB RAM, 30s timeout \\
+ECS Fargate & Training pipeline (daily) & 2 vCPU, 4GB RAM, spot instances \\
+ECR & Container registry & Lifecycle: retain last 10 images \\
+EventBridge & Scheduling & Cron expressions for hourly/daily triggers \\
+SSM Parameter Store & Secrets management & Encrypted API keys (SecureString) \\
+CloudWatch & Observability & Log groups with 30-day retention, custom metrics \\
+CodePipeline & CI/CD & Source (GitHub) $\rightarrow$ Build (CodeBuild) $\rightarrow$ Deploy \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{lstlisting}[language=bash, caption={Terraform provisioning}]
+cd infrastructure/terraform
+terraform init        # Initialize providers and backend
+terraform plan        # Preview resource changes
+terraform apply       # Provision infrastructure
+terraform output      # Display endpoint URLs and ARNs
+\end{lstlisting}
+
+\section{Local Development Setup}
+
+\begin{lstlisting}[language=bash, caption={Complete local development workflow}]
+# 1. Clone and create virtual environment
+git clone https://github.com/Zain-ul-abdeen-773/AQI-Predictor.git
+cd AQI-Predictor
+python -m venv venv && source venv/bin/activate  # Linux/Mac
+pip install -r requirements.txt
+
+# 2. Configure environment variables
+cp .env.example .env
+# Edit .env with: AQICN_API_KEY, OPENWEATHER_API_KEY, CLEARML keys
+
+# 3. Generate training data (fetches real historical data from Open-Meteo)
+python -m data_pipeline.backfill --start-date 2022-07-28
+
+# 4. Run exploratory data analysis
+python -m eda.run_eda && python -m eda.advanced_eda
+
+# 5. Train all 9 models
+python -m training_pipeline.train
+
+# 6. Launch Flask API backend
+flask --app deployment.api.main:app run --port 8000
+
+# 7. Launch Streamlit dashboard (separate terminal)
+streamlit run deployment/streamlit_app/app.py
+
+# 8. Launch Next.js frontend (separate terminal)
+cd deployment/web_app && npm install && npm run dev
+
+# 9. Run tests
+pytest tests/ -v --cov=. --cov-report=term-missing
+
+# 10. Docker deployment (alternative to steps 6-8)
+docker-compose up --build
+\end{lstlisting}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\chapter{Conclusion and Future Work}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\section{Project Summary}
+
+The Pearls AQI Predictor delivers a complete, production-grade MLOps solution for air quality forecasting in Sargodha, Pakistan. The system addresses a critical public health need --- with 36.7\% of observed hours classified as hazardous, accurate multi-day forecasting enables preventive action for vulnerable populations.
+
+\begin{table}[H]
+\centering
+\caption{Project Deliverables Summary}
+\label{tab:deliverables}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Component} & \textbf{Deliverable} \\
+\midrule
+Data Pipeline & Real-time ingestion (AQICN + OpenWeather) + historical backfill (Open-Meteo), 43,801+ hourly observations \\
+Feature Engineering & 37 engineered features with leakage prevention, cyclical encoding, lag features, rolling statistics \\
+Model Development & 9 trained models spanning 4 paradigms with Optuna Bayesian HPO (50 trials) \\
+Explainability & SHAP (TreeExplainer + GradientExplainer) + LIME (TabularExplainer) + Temporal Grad-CAM \\
+EDA & 19-stage analysis producing 20 visualizations and 26 statistical reports \\
+Automation & Hourly ingestion + daily retraining via GitHub Actions; LangGraph infra validation \\
+Deployment & Next.js frontend (Vercel) + Flask API (Render) + Docker + Terraform IaC \\
+Testing & 30+ pytest tests across 5 modules covering all pipeline stages \\
+Documentation & 40+ page LaTeX technical report + README with Mermaid architecture diagrams \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Key Achievements}
+
+\begin{itemize}
+    \item Achieved \textbf{R\textsuperscript{2} = 0.903} (champion model) on 72-hour ahead AQI forecasting with MAPE of 9.23\%
+    \item Built a fully automated pipeline requiring \textbf{zero manual intervention} for ongoing production operation
+    \item Demonstrated \textbf{Granger causality} linking temperature, wind speed, and pressure to AQI --- validating the scientific basis for using meteorological features
+    \item Identified \textbf{thermal inversions} (low wind + cool temperatures) as the primary driver of hazardous events in Sargodha through comprehensive EDA
+    \item Implemented \textbf{three complementary explainability methods} providing both global and local model interpretability at feature and temporal levels
+    \item Deployed a \textbf{production-ready system} with interactive Next.js dashboard, REST API, and automated CI/CD
+\end{itemize}
+
+\section{Limitations}
+
+\begin{itemize}
+    \item Training data availability limited by Open-Meteo API coverage (historical data from 2022 onwards)
+    \item LightGBM/XGBoost Optuna HPO requires sufficient training samples; small datasets may cause convergence issues
+    \item Free-tier deployment (Render) introduces cold-start latency ($\sim$30s after 15 minutes of inactivity)
+    \item Model assumes stationarity of pollution sources; structural changes require retraining
+    \item Current confidence intervals use heuristic widening; formal conformal prediction would provide theoretical guarantees
 \end{itemize}
 
 \section{Future Work}
 
 \begin{enumerate}
-    \item Expand to multiple cities across Pakistan
-    \item Integrate satellite imagery (MODIS AOD) for spatial context
-    \item Implement online learning for model adaptation without full retraining
-    \item Add ensemble stacking (combining top-3 models)
-    \item Deploy mobile push notifications for hazardous alerts
+    \item \textbf{Multi-City Expansion:} Extend to Lahore, Karachi, Islamabad, and Faisalabad with city-specific fine-tuned models
+    \item \textbf{Satellite Integration:} Incorporate MODIS Aerosol Optical Depth (AOD) and Sentinel-5P NO\textsubscript{2} column data for spatial pollution mapping
+    \item \textbf{Ensemble Stacking:} Combine top-3 models via a meta-learner for improved predictions beyond any individual model
+    \item \textbf{Online Learning:} Implement incremental updates using river/Vowpal Wabbit to adapt without full retraining
+    \item \textbf{Mobile Alerts:} Firebase Cloud Messaging push notifications for hazardous AQI predictions targeting sensitive groups
+    \item \textbf{Causal Discovery:} Apply PC algorithm or NOTEARS for causal graph structure learning between pollution sources
+    \item \textbf{Conformal Prediction:} Replace heuristic confidence intervals with distribution-free coverage guarantees
+    \item \textbf{Model Monitoring:} Integrate Evidently AI for automated data drift and model degradation detection in production
 \end{enumerate}
 
 % ═══════════════════════════════════════════════════════════════════════════════

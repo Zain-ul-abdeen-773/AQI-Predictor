@@ -16,11 +16,7 @@ from training_pipeline.evaluation import (
 from training_pipeline.models.baseline import BaselineRegressor
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Metric Function Tests
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Metric Function Tests ---
 class TestMetrics:
     """Test suite for evaluation metric functions."""
 
@@ -60,11 +56,7 @@ class TestMetrics:
         assert mape >= 0
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Baseline Model Tests
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Baseline Model Tests ---
 class TestBaselineRegressor:
     """Test suite for BaselineRegressor."""
 
@@ -133,11 +125,7 @@ class TestBaselineRegressor:
         )
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Evaluator Tests
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Evaluator Tests ---
 class TestModelEvaluator:
     """Test suite for ModelEvaluator."""
 
@@ -168,11 +156,7 @@ class TestModelEvaluator:
         assert champion == "model_B"
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Data Drift Tests
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Data Drift Tests ---
 class TestDataDriftDetector:
     """Test suite for DataDriftDetector."""
 

@@ -49,10 +49,7 @@ from training_pipeline.registry import ModelRegistryManager
 logger = logging.getLogger(__name__)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Feature columns — Split into categories for leakage control
-# ──────────────────────────────────────────────────────────────────────────────
-
+# --- Feature columns - Split into categories for leakage control ---
 # Raw sensor features (no leakage risk)
 RAW_FEATURES: List[str] = [
     "pm25", "pm10", "no2", "so2", "co", "o3",
@@ -74,7 +71,7 @@ DERIVED_FEATURES: List[str] = [
     "temperature_humidity_index", "pollution_intensity",
 ]
 
-# Lag features — CONTROLLED for leakage prevention
+# Lag features - CONTROLLED for leakage prevention
 # Removed aqi_lag_1h (too leaky) and kept only longer-horizon lags
 # that force the model to learn actual patterns, not just copy recent AQI
 LAG_FEATURES: List[str] = [
@@ -135,7 +132,7 @@ class TrainingOrchestrator:
 
             if df.empty:
                 # Generate synthetic data as fallback
-                logger.warning("No training data found — generating synthetic data")
+                logger.warning("No training data found - generating synthetic data")
                 from data_pipeline.backfill import BackfillPipeline
                 pipeline = BackfillPipeline(self.settings)
                 df = pipeline.run(years=2, batch_size=5000)
@@ -198,8 +195,7 @@ class TrainingOrchestrator:
         )
         return X, y, available_features
 
-    # ── Individual Model Trainers ─────────────────────────────────────────
-
+    # Individual Model Trainers
     def _train_model(
         self,
         name: str,
@@ -270,7 +266,7 @@ class TrainingOrchestrator:
             )
             return None, EvaluationMetrics(rmse=float("inf"), model_name="BiLSTM")
 
-        # Train/val split (temporal — no shuffling)
+        # Train/val split (temporal - no shuffling)
         split_idx = int(0.8 * len(X_seq))
         X_train_seq, X_val_seq = X_seq[:split_idx], X_seq[split_idx:]
         y_train_seq, y_val_seq = y_seq[:split_idx], y_seq[split_idx:]
@@ -303,7 +299,7 @@ class TrainingOrchestrator:
             model_name="BiLSTM",
         )
 
-        # ── Grad-CAM ──
+        # Grad-CAM
         try:
             from training_pipeline.models.grad_cam import TemporalGradCAM
             import torch
@@ -340,29 +336,29 @@ class TrainingOrchestrator:
             Dict with training results, metrics, and champion info.
         """
         logger.info("=" * 60)
-        logger.info("PEARLS AQI PREDICTOR — TRAINING PIPELINE (8 MODELS)")
+        logger.info("PEARLS AQI PREDICTOR - TRAINING PIPELINE (8 MODELS)")
         logger.info("=" * 60)
 
-        # ── 1. Load Data ──
+        # 1. Load Data
         df = self.load_training_data(csv_path)
         X, y, feature_names = self.prepare_features(df)
 
-        # ── 2. Train/Test Split (temporal) ──
+        # 2. Train/Test Split (temporal)
         split_idx = int(0.8 * len(X))
         X_train, X_test = X[:split_idx], X[split_idx:]
         y_train, y_test = y[:split_idx], y[split_idx:]
 
         logger.info("Split: train=%d, test=%d", len(X_train), len(X_test))
 
-        # ── 3. Anomaly Detection ──
+        # 3. Anomaly Detection
         self.anomaly_detector.fit(X_train)
         anomalies = self.anomaly_detector.detect(X_test, feature_names)
         anomaly_count = sum(1 for a in anomalies if a["is_anomaly"])
 
-        # ── 4. Data Drift Detection ──
+        # 4. Data Drift Detection
         drift_results = self.drift_detector.detect_drift(X_train, X_test, feature_names)
 
-        # ── 5. Train Models ──
+        # 5. Train Models
         results: Dict[str, EvaluationMetrics] = {}
         trained_models: Dict[str, Any] = {}
 
@@ -444,7 +440,7 @@ class TrainingOrchestrator:
         # --- SVR ---
         if "SVR" in all_models:
             try:
-                # SVR is slow on large datasets — subsample if needed
+                # SVR is slow on large datasets - subsample if needed
                 max_svr_samples = 5000
                 if len(X_train) > max_svr_samples:
                     logger.info("SVR: subsampling to %d samples", max_svr_samples)
@@ -490,7 +486,7 @@ class TrainingOrchestrator:
                 results["XGBoost"] = metrics
                 trained_models["XGBoost"] = model
             except ImportError:
-                logger.warning("XGBoost not installed — skipping")
+                logger.warning("XGBoost not installed - skipping")
                 results["XGBoost"] = EvaluationMetrics(rmse=float("inf"), model_name="XGBoost")
             except Exception as e:
                 logger.error("XGBoost training failed: %s", e)
@@ -507,14 +503,14 @@ class TrainingOrchestrator:
                 logger.error("BiLSTM training failed: %s", e)
                 results["BiLSTM"] = EvaluationMetrics(rmse=float("inf"), model_name="BiLSTM")
 
-        # ── 6. Compare and Select Champion ──
+        # 6. Compare and Select Champion
         champion_name = self.evaluator.compare_models(results)
 
         if champion_name and champion_name in trained_models:
             champion_model = trained_models[champion_name]
             champion_metrics = results[champion_name]
 
-            # ── 7. SHAP Explainability ──
+            # 7. SHAP Explainability
             explainer = None
             if champion_name == "LightGBM" and hasattr(champion_model, "model"):
                 try:
@@ -526,7 +522,7 @@ class TrainingOrchestrator:
                 except Exception as e:
                     logger.warning("SHAP setup failed: %s", e)
 
-            # ── 8. Register Champion ──
+            # 8. Register Champion
             if self.registry.should_promote_challenger(champion_metrics):
                 version = self.registry.register_model(
                     model=champion_model,
@@ -537,7 +533,7 @@ class TrainingOrchestrator:
                 )
                 logger.info("Champion registered: %s v%s", champion_name, version)
 
-        # ── 9. Summary ──
+        # 9. Summary
         summary = {
             "champion": champion_name,
             "metrics": {name: m.to_dict() for name, m in results.items()},
@@ -561,17 +557,13 @@ class TrainingOrchestrator:
         logger.info("Training report saved to %s", report_path)
 
         logger.info("=" * 60)
-        logger.info("TRAINING PIPELINE COMPLETE — Champion: %s", champion_name)
+        logger.info("TRAINING PIPELINE COMPLETE - Champion: %s", champion_name)
         logger.info("=" * 60)
 
         return summary
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# CLI Entry Point
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- CLI Entry Point ---
 def main() -> None:
     """CLI entry point for running the training pipeline."""
     import argparse

@@ -55,16 +55,13 @@ class FeatureEngineer:
         self.settings = settings or get_settings()
         self._history_buffer: List[Dict] = []
 
-    # ──────────────────────────────────────────────────────────────────────
-    # Temporal Features
-    # ──────────────────────────────────────────────────────────────────────
-
+    # --- Temporal Features ---
     @staticmethod
     def compute_temporal_features(dt: datetime) -> TemporalFeatures:
         """Compute cyclical temporal features from a datetime.
 
         Uses sine and cosine encoding to maintain cyclical continuity
-        at period boundaries (e.g., hour 23 → 0).
+        at period boundaries (e.g., hour 23 -> 0).
 
         Args:
             dt: UTC datetime to extract temporal features from.
@@ -91,10 +88,7 @@ class FeatureEngineer:
             is_weekend=dow >= 5,
         )
 
-    # ──────────────────────────────────────────────────────────────────────
-    # Derived Environmental Features
-    # ──────────────────────────────────────────────────────────────────────
-
+    # --- Derived Environmental Features ---
     @staticmethod
     def compute_wind_components(
         wind_speed: float, wind_direction_deg: float
@@ -175,7 +169,7 @@ class FeatureEngineer:
         PM2.5 receiving the highest weight due to health impact.
 
         Args:
-            pollutant_dict: Dictionary of pollutant name → concentration.
+            pollutant_dict: Dictionary of pollutant name -> concentration.
 
         Returns:
             float: Composite pollution intensity score (0-500+).
@@ -237,10 +231,7 @@ class FeatureEngineer:
             pollution_intensity=intensity,
         )
 
-    # ──────────────────────────────────────────────────────────────────────
-    # Lag Features & History Management
-    # ──────────────────────────────────────────────────────────────────────
-
+    # --- Lag Features & History Management ---
     def update_history(self, timestamp: datetime, aqi: float, pm25: float) -> None:
         """Add an observation to the history buffer for lag computation.
 
@@ -321,10 +312,7 @@ class FeatureEngineer:
 
         return rates
 
-    # ──────────────────────────────────────────────────────────────────────
-    # Main Transform: RawDataPayload → FeatureVector
-    # ──────────────────────────────────────────────────────────────────────
-
+    # --- Main Transform: RawDataPayload -> FeatureVector ---
     def transform(self, payload: RawDataPayload) -> FeatureVector:
         """Transform a raw data payload into a complete feature vector.
 
@@ -340,12 +328,12 @@ class FeatureEngineer:
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
 
-        # ── Extract pollutant values ──
+        # Extract pollutant values
         pollutant_dict: Dict[str, float] = {}
         for p in payload.pollutants:
             pollutant_dict[p.name] = p.value
 
-        # ── Extract weather ──
+        # Extract weather
         w = payload.weather
         weather_dict = {
             "temperature_c": w.temperature_c,
@@ -356,28 +344,28 @@ class FeatureEngineer:
             "precipitation_mm": w.precipitation_mm,
         }
 
-        # ── Compute temporal features ──
+        # Compute temporal features
         temporal = self.compute_temporal_features(dt)
 
-        # ── Update history and compute lags ──
+        # Update history and compute lags
         aqi = payload.aqi_value or 0.0
         pm25 = pollutant_dict.get("pm25", 0.0)
         self.update_history(dt, aqi, pm25)
 
         lags = self.compute_lag_features()
 
-        # ── Compute derived features ──
+        # Compute derived features
         derived = self.compute_derived_features(
             weather_dict, pollutant_dict, dt.hour
         )
 
-        # ── Inject AQI change rates ──
+        # Inject AQI change rates
         change_rates = self.compute_aqi_change_rates()
         derived.aqi_change_rate_1h = change_rates["rate_1h"]
         derived.aqi_change_rate_3h = change_rates["rate_3h"]
         derived.aqi_change_rate_6h = change_rates["rate_6h"]
 
-        # ── Assemble feature vector ──
+        # Assemble feature vector
         feature_vector = FeatureVector(
             timestamp=dt,
             year=dt.year,
@@ -407,10 +395,7 @@ class FeatureEngineer:
         )
         return feature_vector
 
-    # ──────────────────────────────────────────────────────────────────────
-    # Batch DataFrame Transform
-    # ──────────────────────────────────────────────────────────────────────
-
+    # --- Batch DataFrame Transform ---
     def transform_batch(self, payloads: List[RawDataPayload]) -> pd.DataFrame:
         """Transform a list of raw payloads into a feature DataFrame.
 
@@ -432,7 +417,7 @@ class FeatureEngineer:
             vectors.append(fv.to_flat_dict())
 
         df = pd.DataFrame(vectors)
-        logger.info("Batch transform: %d payloads → %d rows × %d cols",
+        logger.info("Batch transform: %d payloads -> %d rows x %d cols",
                      len(payloads), len(df), len(df.columns))
         return df
 

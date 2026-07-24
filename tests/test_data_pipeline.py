@@ -17,11 +17,7 @@ from data_pipeline.ingest import SyntheticDataGenerator
 from data_pipeline.transformers import FeatureEngineer
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Synthetic Data Generator Tests
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Synthetic Data Generator Tests ---
 class TestSyntheticDataGenerator:
     """Test suite for SyntheticDataGenerator."""
 
@@ -84,11 +80,7 @@ class TestSyntheticDataGenerator:
         assert 900 <= w.pressure_hpa <= 1080
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Feature Engineer Tests
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Feature Engineer Tests ---
 class TestFeatureEngineer:
     """Test suite for FeatureEngineer."""
 

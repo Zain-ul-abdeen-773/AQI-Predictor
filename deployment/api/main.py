@@ -1,10 +1,10 @@
 """High-throughput Flask service for AQI prediction and explainability.
 
 Endpoints:
-- GET  /health   — Liveness and readiness check
-- POST /predict  — 3-day AQI forecast with uncertainty bounds
-- POST /explain  — SHAP feature contributions for predictions
-- GET  /historical — Historical AQI data for charting
+- GET  /health   - Liveness and readiness check
+- POST /predict  - 3-day AQI forecast with uncertainty bounds
+- POST /explain  - SHAP feature contributions for predictions
+- GET  /historical - Historical AQI data for charting
 
 Built with modern patterns and structured error handling.
 
@@ -42,17 +42,11 @@ from deployment.api.dependencies import (
 
 logger = logging.getLogger(__name__)
 
-# ──────────────────────────────────────────────────────────────────────────────
-# App Initialization
-# ──────────────────────────────────────────────────────────────────────────────
-
+# --- App Initialization ---
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Middleware / Error Handling
-# ──────────────────────────────────────────────────────────────────────────────
-
+# --- Middleware / Error Handling ---
 @app.before_request
 def before_request():
     request.start_time = time.time()
@@ -63,7 +57,7 @@ def after_request(response):
         duration = time.time() - request.start_time
         response.headers["X-Process-Time"] = f"{duration:.4f}"
         logger.info(
-            "%s %s → %d (%.3fs)",
+            "%s %s -> %d (%.3fs)",
             request.method,
             request.path,
             response.status_code,
@@ -88,11 +82,7 @@ def value_error_handler(exc: ValueError):
     }), 422
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Helper Functions
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Helper Functions ---
 def classify_aqi(value: float) -> AQILevel:
     if value <= 50:
         return AQILevel.GOOD
@@ -114,16 +104,13 @@ def generate_health_advisory(level: AQILevel) -> str:
         AQILevel.MODERATE: "Air quality is acceptable. Sensitive individuals should consider reducing prolonged outdoor exertion.",
         AQILevel.UNHEALTHY_SENSITIVE: "Members of sensitive groups (children, elderly, respiratory conditions) should limit prolonged outdoor exertion. Close windows if possible.",
         AQILevel.UNHEALTHY: "Everyone may begin to experience health effects. Sensitive groups should avoid outdoor activities. Use N95 masks if going outdoors.",
-        AQILevel.VERY_UNHEALTHY: "⚠️ HEALTH ALERT: Significant health risk for entire population. Avoid all outdoor activities. Keep windows and doors closed. Use air purifiers indoors.",
-        AQILevel.HAZARDOUS: "🚨 EMERGENCY: Hazardous air quality. Stay indoors. Seal windows and doors. Use air purifiers on maximum. Seek medical attention if experiencing symptoms.",
+        AQILevel.VERY_UNHEALTHY: "HEALTH ALERT: Significant health risk for entire population. Avoid all outdoor activities. Keep windows and doors closed. Use air purifiers indoors.",
+        AQILevel.HAZARDOUS: "EMERGENCY: Hazardous air quality. Stay indoors. Seal windows and doors. Use air purifiers on maximum. Seek medical attention if experiencing symptoms.",
     }
     return advisories.get(level, "Monitor air quality conditions.")
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Endpoints
-# ──────────────────────────────────────────────────────────────────────────────
-
+# --- Endpoints ---
 # Mount point removed since frontend is migrated to Streamlit.
 
 @app.route('/models', methods=['GET'])
@@ -166,7 +153,7 @@ def predict():
     if not model_service.is_loaded:
         return jsonify({"detail": "Model not loaded. Please ensure training pipeline has run."}), 503
 
-    # ── Fetch features ──
+    # Fetch features
     features_df = feature_service.get_latest_features(
         n_hours=settings.lookback_window_hours
     )
@@ -174,20 +161,20 @@ def predict():
     if features_df is None or features_df.empty:
         return jsonify({"detail": "No feature data available. Please ensure data pipeline has run."}), 503
 
-    # ── Prepare features for prediction ──
+    # Prepare features for prediction
     from training_pipeline.train import FEATURE_COLUMNS
 
     available_cols = [c for c in FEATURE_COLUMNS if c in features_df.columns]
     X = features_df[available_cols].fillna(0.0).values.astype(np.float32)
 
-    # ── Run inference ──
+    # Run inference
     try:
         model = model_service.get_model(model_id)
         selected_meta = model_service.get_model_metadata(model_id)
 
         # Handle different model types
         if hasattr(model, "pipeline"):
-            # Baseline/sklearn model — single point prediction
+            # Baseline/sklearn model - single point prediction
             current_pred = float(model.predict(X[-1:].reshape(1, -1))[0])
             predictions = np.array([
                 current_pred + np.random.normal(0, 5)
@@ -201,7 +188,7 @@ def predict():
                 for _ in range(settings.forecast_horizon_hours)
             ])
         else:
-            # Sequence model (Bi-LSTM) — multi-step prediction
+            # Sequence model (Bi-LSTM) - multi-step prediction
             X_seq = X[-settings.lookback_window_hours:].reshape(1, -1, X.shape[1])
             if hasattr(model, "predict_with_attention"):
                 predictions, _ = model.predict_with_attention(X_seq)
@@ -214,7 +201,7 @@ def predict():
         logger.error("Prediction failed: %s", e)
         return jsonify({"detail": f"Prediction error: {e}"}), 500
 
-    # ── Build response ──
+    # Build response
     now = datetime.now(timezone.utc)
     current_aqi = float(predictions[0])
     current_level = classify_aqi(current_aqi)

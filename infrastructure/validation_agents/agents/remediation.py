@@ -44,18 +44,18 @@ class RemediationAgent:
         }
 
         if not self.issues:
-            results["summary"] = "No issues detected — no remediation required."
-            logger.info("🤖 Remediation Agent: %s", results["summary"])
+            results["summary"] = "No issues detected - no remediation required."
+            logger.info("Remediation Agent: %s", results["summary"])
             return results
 
-        logger.info("🤖 Remediation Agent: Analyzing %d issues with LangChain...", len(self.issues))
+        logger.info("Remediation Agent: Analyzing %d issues with LangChain...", len(self.issues))
 
         # Attempt LangChain structured prompt execution or use expert heuristics
         remediations = self._generate_remediations()
         results["remediations"] = remediations
         results["summary"] = f"Generated {len(remediations)} actionable remediation plans."
 
-        logger.info("🤖 Remediation Agent: %s", results["summary"])
+        logger.info("Remediation Agent: %s", results["summary"])
         return results
 
     def _generate_remediations(self) -> List[Dict[str, Any]]:

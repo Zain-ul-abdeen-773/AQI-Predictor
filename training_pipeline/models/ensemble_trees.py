@@ -60,7 +60,7 @@ class _BaseEnsembleTree:
         self.feature_names = feature_names or [f"f{i}" for i in range(X.shape[1])]
 
         logger.info(
-            "Training %s on %d samples × %d features",
+            "Training %s on %d samples x %d features",
             self.model_name, X.shape[0], X.shape[1],
         )
 
@@ -123,11 +123,7 @@ class _BaseEnsembleTree:
         return instance
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Random Forest
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Random Forest ---
 class RandomForestModel(_BaseEnsembleTree):
     """Random Forest Regressor with RobustScaler preprocessing.
 
@@ -162,11 +158,7 @@ class RandomForestModel(_BaseEnsembleTree):
         logger.info("Initialized RandomForest (n_estimators=%d)", n_estimators)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Extra Trees
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Extra Trees ---
 class ExtraTreesModel(_BaseEnsembleTree):
     """Extremely Randomized Trees Regressor.
 
@@ -198,11 +190,7 @@ class ExtraTreesModel(_BaseEnsembleTree):
         logger.info("Initialized ExtraTrees (n_estimators=%d)", n_estimators)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Gradient Boosting (sklearn)
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Gradient Boosting (sklearn) ---
 class GradientBoostingModel(_BaseEnsembleTree):
     """Sklearn Gradient Boosting Regressor with Huber loss.
 
@@ -242,11 +230,7 @@ class GradientBoostingModel(_BaseEnsembleTree):
         )
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# SVR (Support Vector Regression)
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- SVR (Support Vector Regression) ---
 class SVRModel(_BaseEnsembleTree):
     """Support Vector Regression with RBF kernel.
 

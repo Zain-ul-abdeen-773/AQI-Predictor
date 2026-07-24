@@ -304,8 +304,7 @@ class FeatureService:
         return self._connected
 
 
-# ── Singleton instances ──────────────────────────────────────────────────────
-
+# Singleton instances
 _model_service: Optional[ModelService] = None
 _feature_service: Optional[FeatureService] = None
 

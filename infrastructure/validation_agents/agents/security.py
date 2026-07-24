@@ -117,11 +117,11 @@ class SecurityAgent:
                 }
 
         except FileNotFoundError:
-            logger.info("Checkov not installed — running custom security checks only")
+            logger.info("Checkov not installed - running custom security checks only")
             return {
                 "name": "checkov_scan",
                 "passed": True,
-                "details": ["Checkov not installed — skipped"],
+                "details": ["Checkov not installed - skipped"],
                 "message": "Skipped (checkov not installed)",
             }
         except Exception as e:

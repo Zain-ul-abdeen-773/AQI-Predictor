@@ -44,11 +44,7 @@ from training_pipeline.models.callbacks import (
 logger = logging.getLogger(__name__)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Multi-Head Attention Module
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Multi-Head Attention Module ---
 class MultiHeadAttention(nn.Module):
     """Multi-head attention mechanism for temporal sequence focus.
 
@@ -113,11 +109,7 @@ class MultiHeadAttention(nn.Module):
         return output, weights
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Asymmetric Loss Function
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Asymmetric Loss Function ---
 class AsymmetricMSELoss(nn.Module):
     """Asymmetric MSE loss penalizing under-prediction of hazardous AQI.
 
@@ -164,11 +156,7 @@ class AsymmetricMSELoss(nn.Module):
         return weighted_loss
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Bi-LSTM + Attention Network
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Bi-LSTM + Attention Network ---
 class BiLSTMNetwork(nn.Module):
     """Bidirectional LSTM with Multi-Head Attention for sequence-to-sequence prediction.
 
@@ -281,11 +269,7 @@ class BiLSTMNetwork(nn.Module):
         return output.unsqueeze(-1), attn_weights  # (batch, 72, 1)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Training Wrapper
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Training Wrapper ---
 class BiLSTMAttention:
     """High-level training wrapper for the Bi-LSTM + Attention model.
 
@@ -510,7 +494,7 @@ class BiLSTMAttention:
             self.learning_rate, self.scheduler_type, self.use_amp,
         )
 
-        # ── Training Loop ──
+        # Training Loop
         for epoch in range(self.epochs):
             epoch_start = time.time()
             self.model.train()
@@ -591,7 +575,7 @@ class BiLSTMAttention:
 
             if (epoch + 1) % 10 == 0:
                 logger.info(
-                    "Epoch %d/%d — train=%.4f, val=%.4f, lr=%.6f, "
+                    "Epoch %d/%d - train=%.4f, val=%.4f, lr=%.6f, "
                     "grad_norm=%.2f, time=%.1fs",
                     epoch + 1, self.epochs, train_loss, val_loss,
                     current_lr, metrics.grad_norm, epoch_time,

@@ -8,7 +8,7 @@ from datetime import datetime
 # Configure page
 st.set_page_config(
     page_title="AQI Predictor",
-    page_icon="🌍",
+    page_icon="AQI",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -16,7 +16,7 @@ st.set_page_config(
 # Constants
 API_URL = "http://localhost:8000"
 
-st.title("🌍 AQI Predictor Dashboard")
+st.title("AQI Predictor Dashboard")
 st.markdown("Air Quality Index forecast and analytics for Sargodha, Pakistan.")
 
 # Sidebar for controls
@@ -54,7 +54,7 @@ if st.sidebar.button("Generate Forecast"):
                 col1, col2, col3 = st.columns(3)
                 col1.metric("Current AQI", f"{data['current_aqi']} ({data['current_level']})")
                 col2.metric("Model Used", data['model_type'])
-                col3.metric("Alert Status", "Active ⚠️" if data['alert'] else "Normal ✅")
+                col3.metric("Alert Status", "Active" if data['alert'] else "Normal")
                 
                 st.info(f"**Health Advisory**: {data['summary']}")
                 

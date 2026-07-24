@@ -105,7 +105,7 @@ class BaselineRegressor:
         self.feature_names = feature_names or [f"feature_{i}" for i in range(X.shape[1])]
 
         logger.info(
-            "Training %s on %d samples × %d features",
+            "Training %s on %d samples x %d features",
             self.model_type, X.shape[0], X.shape[1],
         )
 

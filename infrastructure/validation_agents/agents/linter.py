@@ -89,7 +89,7 @@ class LinterAgent:
             return {
                 "name": "terraform_fmt",
                 "passed": True,
-                "details": ["terraform CLI not found — skipping format check"],
+                "details": ["terraform CLI not found - skipping format check"],
                 "message": "Skipped (terraform not installed)",
             }
         except Exception as e:
@@ -129,7 +129,7 @@ class LinterAgent:
             return {
                 "name": "terraform_validate",
                 "passed": True,
-                "details": ["terraform CLI not found — skipping validation"],
+                "details": ["terraform CLI not found - skipping validation"],
                 "message": "Skipped (terraform not installed)",
             }
         except Exception as e:

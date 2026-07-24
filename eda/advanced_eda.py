@@ -3,7 +3,7 @@ Advanced Exploratory Data Analysis (EDA) - Part 2
 ==================================================
 Extends the base EDA with advanced statistical analyses:
 - Autocorrelation (ACF/PACF) for time-series modeling guidance
-- Granger causality tests (weather → AQI)
+- Granger causality tests (weather -> AQI)
 - Hypothesis testing (seasonal differences, weekend effects)
 - Pollution wind rose analysis
 - Pair plots with kernel density
@@ -47,7 +47,7 @@ def load_data() -> pd.DataFrame:
 
 
 def autocorrelation_analysis(df: pd.DataFrame):
-    """ACF/PACF plots for AQI time series — guides ARIMA/lag selection."""
+    """ACF/PACF plots for AQI time series - guides ARIMA/lag selection."""
     print("[A1] Autocorrelation (ACF/PACF) analysis...")
     from statsmodels.tsa.stattools import acf, pacf
     from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
@@ -240,7 +240,7 @@ def hypothesis_testing(df: pd.DataFrame):
 
 
 def hourly_monthly_heatmap(df: pd.DataFrame):
-    """2D heatmap of AQI by hour-of-day vs month — reveals pollution hotspots."""
+    """2D heatmap of AQI by hour-of-day vs month - reveals pollution hotspots."""
     print("[A3] Hour x Month AQI heatmap...")
 
     df_t = df.copy()
@@ -319,7 +319,7 @@ def cumulative_distribution(df: pd.DataFrame):
 
 
 def rolling_volatility(df: pd.DataFrame):
-    """Rolling standard deviation (volatility) over time — identifies unstable periods."""
+    """Rolling standard deviation (volatility) over time - identifies unstable periods."""
     print("[A5] Rolling volatility analysis...")
 
     daily = df.set_index("timestamp")["aqi_value"].resample("D").mean().dropna()
@@ -511,7 +511,7 @@ def granger_causality_test(df: pd.DataFrame):
     bars = ax.barh(variables, [-np.log10(p) for p in p_values_min], color=colors_bar, alpha=0.8)
     ax.axvline(-np.log10(0.05), color="black", ls="--", label="p=0.05 threshold")
     ax.set_xlabel("-log10(p-value)")
-    ax.set_title("Granger Causality: Weather Variables → AQI\n(Green = Significant, Red = Not Significant)",
+    ax.set_title("Granger Causality: Weather Variables -> AQI\n(Green = Significant, Red = Not Significant)",
                  fontweight="bold")
     ax.legend()
     plt.tight_layout()

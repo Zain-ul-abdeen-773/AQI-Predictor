@@ -293,11 +293,7 @@ class SHAPExplainer:
         return instance
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# LIME Explainer
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- LIME Explainer ---
 class LIMEExplainer:
     """LIME (Local Interpretable Model-agnostic Explanations) for AQI models.
 

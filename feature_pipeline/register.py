@@ -49,7 +49,7 @@ class FeatureStoreManager:
             write_options: Optional write options.
         """
         if df.empty:
-            logger.warning("Empty DataFrame — skipping insertion")
+            logger.warning("Empty DataFrame - skipping insertion")
             return
 
         try:

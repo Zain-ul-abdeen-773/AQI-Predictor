@@ -157,11 +157,11 @@ class BackfillPipeline:
             start_date, end_date, batch_size
         )
 
-        # ── Fetch real historical payloads ──
+        # Fetch real historical payloads
         all_payloads = fetcher.fetch_all(start_date=start_date, end_date=end_date)
         total = len(all_payloads)
 
-        # ── Resume from checkpoint ──
+        # Resume from checkpoint
         start_idx = 0
         if resume:
             checkpoint = self._load_checkpoint()
@@ -180,12 +180,12 @@ class BackfillPipeline:
                 100 * batch_end / total,
             )
 
-            # ── Apply feature engineering ──
+            # Apply feature engineering
             batch_df = self.engineer.transform_batch(batch_payloads)
             batch_df = self.engineer.impute_missing_lags(batch_df)
             all_dfs.append(batch_df)
 
-            # ── Save checkpoint ──
+            # Save checkpoint
             self._save_checkpoint(batch_end, total)
 
             logger.info(
@@ -193,20 +193,20 @@ class BackfillPipeline:
                 len(batch_df), sum(len(d) for d in all_dfs),
             )
 
-        # ── Concatenate all batches ──
+        # Concatenate all batches
         if all_dfs:
             final_df = pd.concat(all_dfs, ignore_index=True)
         else:
             final_df = pd.DataFrame()
 
-        # ── Save to CSV ──
+        # Save to CSV
         final_df.to_csv(output_path, index=False)
         logger.info(
-            "Backfill complete: %d rows × %d cols → %s",
+            "Backfill complete: %d rows x %d cols -> %s",
             len(final_df), len(final_df.columns), output_path,
         )
 
-        # ── EDA Summary Statistics ──
+        # EDA Summary Statistics
         self._log_eda_summary(final_df)
 
         self._clear_checkpoint()
@@ -222,13 +222,13 @@ class BackfillPipeline:
             df: The backfilled feature DataFrame.
         """
         if df.empty:
-            logger.warning("Empty DataFrame — no EDA summary available")
+            logger.warning("Empty DataFrame - no EDA summary available")
             return
 
         logger.info("=" * 60)
         logger.info("BACKFILL EDA SUMMARY")
         logger.info("=" * 60)
-        logger.info("Shape: %d rows × %d columns", *df.shape)
+        logger.info("Shape: %d rows x %d columns", *df.shape)
 
         if "aqi_value" in df.columns:
             aqi = df["aqi_value"].dropna()
@@ -260,11 +260,7 @@ class BackfillPipeline:
         logger.info("=" * 60)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# CLI Entry Point
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- CLI Entry Point ---
 def main() -> None:
     """CLI entry point for running the backfill pipeline."""
     import argparse

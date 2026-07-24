@@ -1,6 +1,6 @@
 """LangGraph multi-agent infrastructure validator.
 
-Orchestrates a graph of validation agents (Linter → Security → Policy →
+Orchestrates a graph of validation agents (Linter -> Security -> Policy ->
 Decision) that acts as a gatekeeper for Terraform deployments.
 
 The graph executes sequentially:
@@ -29,11 +29,7 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# State Definition
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- State Definition ---
 @dataclass
 class AgentState:
     """State container for the validation graph.
@@ -64,11 +60,7 @@ class AgentState:
     all_issues: List[str] = field(default_factory=list)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Agent Nodes
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Agent Nodes ---
 def linter_node(state: AgentState) -> AgentState:
     """Execute the Terraform linter agent.
 
@@ -80,7 +72,7 @@ def linter_node(state: AgentState) -> AgentState:
     """
     from infrastructure.validation_agents.agents.linter import LinterAgent
 
-    logger.info("🔍 Running Linter Agent...")
+    logger.info("Running Linter Agent...")
     agent = LinterAgent(state.terraform_dir)
     state.lint_results = agent.run()
 
@@ -101,7 +93,7 @@ def security_node(state: AgentState) -> AgentState:
     """
     from infrastructure.validation_agents.agents.security import SecurityAgent
 
-    logger.info("🛡️ Running Security Agent...")
+    logger.info("Running Security Agent...")
     agent = SecurityAgent(state.terraform_dir)
     state.security_issues = agent.run()
 
@@ -122,7 +114,7 @@ def policy_node(state: AgentState) -> AgentState:
     """
     from infrastructure.validation_agents.agents.policy import PolicyAgent
 
-    logger.info("📋 Running Policy Agent...")
+    logger.info("Running Policy Agent...")
     agent = PolicyAgent(state.terraform_dir)
     state.policy_compliance = agent.run()
 
@@ -146,7 +138,7 @@ def remediation_node(state: AgentState) -> AgentState:
     """
     from infrastructure.validation_agents.agents.remediation import RemediationAgent
 
-    logger.info("🤖 Running AI Remediation Agent...")
+    logger.info("Running AI Remediation Agent...")
     agent = RemediationAgent(state.terraform_code, state.all_issues)
     state.remediation_plan = agent.run()
 
@@ -154,7 +146,7 @@ def remediation_node(state: AgentState) -> AgentState:
 
 
 def decision_node(state: AgentState) -> AgentState:
-    """Orchestrator decision agent — compile and decide.
+    """Orchestrator decision agent - compile and decide.
 
     Aggregates all agent results. If any critical check fails,
     sets approval_status = False and blocks deployment.
@@ -165,7 +157,7 @@ def decision_node(state: AgentState) -> AgentState:
     Returns:
         AgentState: Final state with approval decision.
     """
-    logger.info("⚖️ Running Decision Agent...")
+    logger.info("Running Decision Agent...")
 
     # Determine approval
     lint_passed = state.lint_results.get("passed", True)
@@ -220,16 +212,12 @@ def decision_node(state: AgentState) -> AgentState:
     return state
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Graph Construction & Execution
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Graph Construction & Execution ---
 class ValidationGraph:
     """State graph for infrastructure validation.
 
     Links validation agents as sequential nodes with transitional edges.
-    Execution flow: Linter → Security → Policy → Remediation → Decision.
+    Execution flow: Linter -> Security -> Policy -> Remediation -> Decision.
 
     This can be replaced with LangGraph's StateGraph when the
     langgraph package is available, maintaining API compatibility.
@@ -251,7 +239,7 @@ class ValidationGraph:
         """Compile the graph (no-op in simple mode, prepares for LangGraph)."""
         logger.info(
             "Validation graph compiled: %s",
-            " → ".join(name for name, _ in self.nodes),
+            " -> ".join(name for name, _ in self.nodes),
         )
         return self
 
@@ -307,16 +295,12 @@ def build_langgraph_validator() -> Any:
 
     except ImportError:
         logger.info(
-            "langgraph not installed — using built-in sequential graph"
+            "langgraph not installed - using built-in sequential graph"
         )
         return ValidationGraph().compile()
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# CLI Entry Point
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- CLI Entry Point ---
 def main(terraform_dir: Optional[str] = None) -> bool:
     """Run the validation pipeline from CLI or GitHub Actions.
 

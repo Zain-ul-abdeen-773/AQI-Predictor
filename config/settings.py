@@ -18,10 +18,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Constants
-# ──────────────────────────────────────────────────────────────────────────────
-
+# --- Constants ---
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 """Absolute path to the project root directory."""
 
@@ -48,11 +45,7 @@ AQI_BREAKPOINTS: dict[str, dict] = {
 """AQI category breakpoints with color coding for dashboard rendering."""
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Settings
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Settings ---
 class Settings(BaseSettings):
     """Application-wide settings loaded from environment variables.
 
@@ -101,38 +94,38 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ── API Keys ──────────────────────────────────────────────────────────
+    # API Keys
     aqicn_api_key: str = Field(default="demo", description="AQICN API token")
     openweather_api_key: str = Field(default="", description="OpenWeatherMap API key")
 
-    # ── ClearML Configuration ─────────────────────────────────────────────
+    # ClearML Configuration
     clearml_project_name: str = Field(default="AQI Predictor", description="ClearML Project Name")
     clearml_dataset_name: str = Field(default="Sargodha Features", description="ClearML Dataset Name")
 
-    # ── Target Location ───────────────────────────────────────────────────
+    # Target Location
     target_city: str = Field(default="Sargodha", description="Target city name")
     target_latitude: float = Field(default=32.0836, description="Target latitude")
     target_longitude: float = Field(default=72.6711, description="Target longitude")
     target_timezone: str = Field(default="Asia/Karachi", description="IANA timezone")
 
-    # ── Feature Store & Model Registry ─────────────────────────────────
+    # Feature Store & Model Registry
     feature_group_name: str = Field(default="sargodha_aqi_features")
     feature_group_version: int = Field(default=1, ge=1)
     model_registry_name: str = Field(default="sargodha-aqi-forecast-model")
 
-    # ── Data Pipeline ─────────────────────────────────────────────────────
+    # Data Pipeline
     backfill_years: int = Field(default=5, ge=1, le=10)
     backfill_batch_size: int = Field(default=10_000, ge=100)
     api_retry_max_attempts: int = Field(default=5, ge=1, le=20)
     api_retry_wait_seconds: float = Field(default=1.0, ge=0.1)
     api_rate_limit_per_minute: int = Field(default=60, ge=1)
 
-    # ── Model Architecture ────────────────────────────────────────────────
+    # Model Architecture
     forecast_horizon_hours: int = Field(default=72, ge=1, description="3 days = 72 hours")
     lookback_window_hours: int = Field(default=72, ge=1, description="Input sequence length")
     aqi_alert_threshold: int = Field(default=150, ge=50)
 
-    # ── LSTM Hyperparameters ──────────────────────────────────────────────
+    # LSTM Hyperparameters
     lstm_hidden_size: int = Field(default=128, ge=16)
     lstm_num_layers: int = Field(default=2, ge=1)
     lstm_dropout: float = Field(default=0.3, ge=0.0, le=0.8)
@@ -140,30 +133,30 @@ class Settings(BaseSettings):
     lstm_epochs: int = Field(default=100, ge=1)
     lstm_batch_size: int = Field(default=64, ge=8)
 
-    # ── Advanced Training ─────────────────────────────────────────────────
+    # Advanced Training
     grad_accumulation_steps: int = Field(default=4, ge=1)
     lr_scheduler_type: str = Field(default="cosine_warm_restarts")
     mixed_precision: bool = Field(default=True)
     early_stopping_patience: int = Field(default=15, ge=1)
     early_stopping_min_delta: float = Field(default=1e-4, ge=0.0)
 
-    # ── LightGBM Tuning ──────────────────────────────────────────────────
+    # LightGBM Tuning
     optuna_n_trials: int = Field(default=50, ge=5)
 
-    # ── Evaluation ────────────────────────────────────────────────────────
+    # Evaluation
     cv_n_splits: int = Field(default=5, ge=2)
 
-    # ── Caching & Performance ─────────────────────────────────────────────
+    # Caching & Performance
     cache_ttl_seconds: int = Field(default=300, ge=60, description="5-minute default TTL")
 
-    # ── Logging ───────────────────────────────────────────────────────────
+    # Logging
     log_level: str = Field(default="INFO")
 
-    # ── Server ────────────────────────────────────────────────────────────
+    # Server
     server_host: str = Field(default="0.0.0.0", description="API server bind host")
     server_port: int = Field(default=8000, ge=1024, le=65535, description="API server port")
 
-    # ── News Pipeline ─────────────────────────────────────────────────────
+    # News Pipeline
     news_rss_feeds: List[str] = Field(
         default=[
             "https://www.dawn.com/feeds/home",
@@ -184,8 +177,7 @@ class Settings(BaseSettings):
         ]
     )
 
-    # ── Validators ────────────────────────────────────────────────────────
-
+    # Validators
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:
@@ -196,8 +188,7 @@ class Settings(BaseSettings):
             raise ValueError(f"log_level must be one of {valid_levels}, got '{v}'")
         return upper
 
-    # ── Derived Properties ────────────────────────────────────────────────
-
+    # Derived Properties
     @property
     def coordinates(self) -> tuple[float, float]:
         """Return (latitude, longitude) tuple."""

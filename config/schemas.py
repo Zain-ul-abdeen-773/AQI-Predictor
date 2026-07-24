@@ -14,11 +14,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Enums
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Enums ---
 class AQILevel(str, Enum):
     """AQI risk level classification."""
 
@@ -53,11 +49,7 @@ class ModelType(str, Enum):
     SVR = "svr"
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Raw API Response Schemas
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Raw API Response Schemas ---
 class PollutantReading(BaseModel):
     """Single pollutant concentration reading from any source.
 
@@ -128,11 +120,7 @@ class RawDataPayload(BaseModel):
     fetch_timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Processed Feature Schemas
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Processed Feature Schemas ---
 class TemporalFeatures(BaseModel):
     """Cyclical and categorical temporal features.
 
@@ -143,12 +131,12 @@ class TemporalFeatures(BaseModel):
         day_of_week: Day of week (0-6, Monday=0).
         month: Month (1-12).
         day_of_year: Day of year (1-366).
-        hour_sin: sin(2π × hour / 24).
-        hour_cos: cos(2π × hour / 24).
-        day_sin: sin(2π × day_of_week / 7).
-        day_cos: cos(2π × day_of_week / 7).
-        month_sin: sin(2π × month / 12).
-        month_cos: cos(2π × month / 12).
+        hour_sin: sin(2*pi * hour / 24).
+        hour_cos: cos(2*pi * hour / 24).
+        day_sin: sin(2*pi * day_of_week / 7).
+        day_cos: cos(2*pi * day_of_week / 7).
+        month_sin: sin(2*pi * month / 12).
+        month_cos: cos(2*pi * month / 12).
         is_weekend: Boolean weekend indicator.
     """
 
@@ -314,11 +302,7 @@ class FeatureVector(BaseModel):
         return base
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Prediction / Response Schemas
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Prediction / Response Schemas ---
 class HourlyPrediction(BaseModel):
     """Single hourly AQI prediction with uncertainty bounds.
 

@@ -44,11 +44,7 @@ from config.schemas import (
 logger = logging.getLogger(__name__)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Custom Exceptions
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Custom Exceptions ---
 class APIError(Exception):
     """Base exception for API communication errors."""
 
@@ -68,11 +64,7 @@ class TransientError(APIError):
     pass
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# AQICN Client
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- AQICN Client ---
 class AQICNClient:
     """Async client for AQICN Air Quality API v2.
 
@@ -195,11 +187,7 @@ class AQICNClient:
         return readings, aqi_value
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# OpenWeatherMap Client
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- OpenWeatherMap Client ---
 class OpenWeatherClient:
     """Async client for OpenWeatherMap Air Pollution and Weather APIs.
 
@@ -351,11 +339,7 @@ class OpenWeatherClient:
         return readings
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Synthetic Data Generator (Development / Fallback)
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Synthetic Data Generator (Development / Fallback) ---
 class SyntheticDataGenerator:
     """Generates realistic synthetic AQI data for development and testing.
 
@@ -389,18 +373,18 @@ class SyntheticDataGenerator:
         Returns:
             RawDataPayload: A complete synthetic data payload.
         """
-        # ── Seasonal component (peaks in Dec-Jan smog season) ──
+        # Seasonal component (peaks in Dec-Jan smog season)
         month_angle = 2 * math.pi * (dt.month - self.PEAK_POLLUTION_MONTH) / 12
         seasonal = self.SEASONAL_AMPLITUDE * math.cos(month_angle)
 
-        # ── Diurnal component (peaks during morning rush) ──
+        # Diurnal component (peaks during morning rush)
         hour_angle = 2 * math.pi * (dt.hour - self.PEAK_POLLUTION_HOUR) / 24
         diurnal = self.DIURNAL_AMPLITUDE * math.cos(hour_angle)
 
-        # ── Stochastic noise ──
+        # Stochastic noise
         noise = random.gauss(0, 15)
 
-        # ── Physical Meteorological Base ──
+        # Physical Meteorological Base
         # Temperature: Summer 35-45°C, Winter 5-18°C
         temp_seasonal = 25 + 15 * math.cos(2 * math.pi * (dt.month - 7) / 12)
         temp_diurnal = 5 * math.cos(2 * math.pi * (dt.hour - 14) / 24)
@@ -413,7 +397,7 @@ class SyntheticDataGenerator:
         wind_base = 2.0 + 3.0 * math.sin(2 * math.pi * (dt.month - 4) / 12)
         wind_speed = max(0.5, wind_base + random.gauss(0, 1.8))
 
-        # ── Non-Linear Emissions & Dispersion Engine ──
+        # Non-Linear Emissions & Dispersion Engine
         # Boundary layer inversion effect (cold ground + calm winds = high trapping)
         inversion_trapping = max(0.8, (28.0 - temperature) * 0.04) * (1.0 / max(0.8, wind_speed * 0.5))
         traffic_rush = 1.4 if dt.hour in [7, 8, 9, 17, 18, 19] else 0.85
@@ -427,7 +411,7 @@ class SyntheticDataGenerator:
         co_base = max(300, 720.0 * traffic_rush + random.gauss(0, 120))
         o3_base = max(10, 45.0 * max(0.2, temperature / 35.0) + random.gauss(0, 10))
 
-        # ── Piecewise EPA AQI Calculation + Sensor Drift Noise ──
+        # Piecewise EPA AQI Calculation + Sensor Drift Noise
         # Prevent exact linear mapping by adding independent sensor measurement variance
         sensor_drift = random.gauss(0, 12)
         aqi = max(15, min(480, int(pm25_base * 2.8 + sensor_drift)))
@@ -441,7 +425,7 @@ class SyntheticDataGenerator:
             PollutantReading(name="o3", value=round(o3_base, 2), unit="µg/m³", timestamp=dt),
         ]
 
-        # ── Weather (Sargodha climate: hot semi-arid) ──
+        # Weather (Sargodha climate: hot semi-arid)
         # Temperature: Summer 35-45°C, Winter 5-18°C
         temp_seasonal = 25 + 15 * math.cos(2 * math.pi * (dt.month - 7) / 12)
         temp_diurnal = 5 * math.cos(2 * math.pi * (dt.hour - 14) / 24)
@@ -481,11 +465,7 @@ class SyntheticDataGenerator:
         )
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Orchestrator
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Orchestrator ---
 class DataIngestionOrchestrator:
     """Orchestrates data fetching from multiple sources with graceful fallback.
 
@@ -522,7 +502,7 @@ class DataIngestionOrchestrator:
         aqi_value: Optional[float] = None
         weather: Optional[WeatherReading] = None
 
-        # ── Concurrent fetch from both sources ──
+        # Concurrent fetch from both sources
         aqicn_task = asyncio.create_task(self._safe_fetch_aqicn())
         openweather_task = asyncio.create_task(self._safe_fetch_openweather())
 
@@ -530,13 +510,13 @@ class DataIngestionOrchestrator:
             aqicn_task, openweather_task
         )
 
-        # ── Merge AQICN results ──
+        # Merge AQICN results
         if aqicn_result is not None:
             aqicn_pollutants, aqicn_aqi = aqicn_result
             pollutants.extend(aqicn_pollutants)
             aqi_value = aqicn_aqi
 
-        # ── Merge OpenWeather results ──
+        # Merge OpenWeather results
         if openweather_result is not None:
             ow_weather, ow_pollutants = openweather_result
             weather = ow_weather
@@ -546,10 +526,10 @@ class DataIngestionOrchestrator:
                 if p.name not in existing_names:
                     pollutants.append(p)
 
-        # ── Fallback to synthetic if both failed ──
+        # Fallback to synthetic if both failed
         if not pollutants or weather is None:
             logger.warning(
-                "API sources unavailable — using synthetic data for %s", now
+                "API sources unavailable - using synthetic data for %s", now
             )
             synthetic_payload = self.synthetic.generate_for_timestamp(now)
             if not pollutants:
@@ -592,7 +572,7 @@ class DataIngestionOrchestrator:
     ) -> Optional[Tuple[WeatherReading, List[PollutantReading]]]:
         """Safely attempt OpenWeather fetch, returning None on failure."""
         if not self.settings.openweather_api_key:
-            logger.info("OpenWeather API key not configured — skipping")
+            logger.info("OpenWeather API key not configured - skipping")
             return None
         try:
             weather_task = asyncio.create_task(self.openweather.fetch_weather())
@@ -611,11 +591,7 @@ class DataIngestionOrchestrator:
         await self.openweather.close()
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# CLI Entry Point
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- CLI Entry Point ---
 async def _main() -> None:
     """CLI entry point for testing data ingestion."""
     orchestrator = DataIngestionOrchestrator()

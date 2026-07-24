@@ -32,11 +32,7 @@ import torch.nn as nn
 logger = logging.getLogger(__name__)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Early Stopping
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Early Stopping ---
 class EarlyStopping:
     """Early stopping with best model state restoration.
 
@@ -127,11 +123,7 @@ class EarlyStopping:
             )
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Model Checkpoint
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Model Checkpoint ---
 class ModelCheckpoint:
     """Save model checkpoints during training.
 
@@ -229,11 +221,7 @@ class ModelCheckpoint:
         torch.save(checkpoint, path)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Gradient Accumulation
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Gradient Accumulation ---
 class GradientAccumulator:
     """Simulate larger batch sizes via gradient accumulation.
 
@@ -280,11 +268,7 @@ class GradientAccumulator:
         self.current_step = 0
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Training Logger
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Training Logger ---
 @dataclass
 class EpochMetrics:
     """Metrics for a single training epoch."""

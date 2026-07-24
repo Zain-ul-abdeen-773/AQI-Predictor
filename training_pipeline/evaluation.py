@@ -24,11 +24,7 @@ from config.settings import get_settings
 logger = logging.getLogger(__name__)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Protocols & Data Classes
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Protocols & Data Classes ---
 class Predictor(Protocol):
     """Protocol for any model with a predict method."""
 
@@ -84,11 +80,7 @@ class EvaluationMetrics:
         )
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Core Evaluation Functions
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Core Evaluation Functions ---
 def compute_rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """Root Mean Squared Error."""
     return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
@@ -116,11 +108,7 @@ def compute_mape(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return float(100 * np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])))
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Model Evaluator
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# --- Model Evaluator ---
 class ModelEvaluator:
     """Comprehensive model evaluation with temporal cross-validation.
 
@@ -266,7 +254,7 @@ class ModelEvaluator:
         logger.info("MODEL COMPARISON (ranked by RMSE)")
         logger.info("=" * 60)
         for rank, (name, metrics) in enumerate(ranked, 1):
-            marker = " ★ CHAMPION" if rank == 1 else ""
+            marker = " [CHAMPION]" if rank == 1 else ""
             logger.info(
                 "  %d. %s: RMSE=%.4f, MAE=%.4f, R²=%.4f%s",
                 rank, name, metrics.rmse, metrics.mae, metrics.r2, marker,

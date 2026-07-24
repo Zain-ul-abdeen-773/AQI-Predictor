@@ -167,7 +167,7 @@ class LightGBMOptimized:
             self.n_trials, len(X_train), len(X_val),
         )
 
-        # ── Bayesian Optimization ──
+        # Bayesian Optimization
         study = optuna.create_study(
             direction="minimize",
             study_name="lightgbm_aqi",
@@ -184,7 +184,7 @@ class LightGBMOptimized:
         )
         logger.info("Best parameters: %s", json.dumps(self.best_params, indent=2))
 
-        # ── Train final model with best params ──
+        # Train final model with best params
         final_params = {
             "objective": "regression",
             "metric": "rmse",
@@ -205,7 +205,7 @@ class LightGBMOptimized:
             ],
         )
 
-        # ── Extract feature importances ──
+        # Extract feature importances
         importances = self.model.feature_importances_
         self.feature_importances = {
             name: float(imp)

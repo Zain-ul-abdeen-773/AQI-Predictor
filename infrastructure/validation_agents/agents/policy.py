@@ -94,7 +94,7 @@ class PolicyAgent:
                 return {
                     "name": "opa_eval",
                     "passed": True,
-                    "details": ["Could not generate Terraform JSON — using builtin checks"],
+                    "details": ["Could not generate Terraform JSON - using builtin checks"],
                     "message": "Skipped (no TF JSON)",
                 }
 
@@ -140,7 +140,7 @@ class PolicyAgent:
             return {
                 "name": "opa_eval",
                 "passed": True,
-                "details": ["OPA not installed — using builtin policy checks"],
+                "details": ["OPA not installed - using builtin policy checks"],
                 "message": "Skipped (OPA not installed)",
             }
         except Exception as e:
