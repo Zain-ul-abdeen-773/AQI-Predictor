@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, useSpring } from 'framer-motion';
 import ParticleWindEngine from '../components/ParticleWindEngine';
 import ModelZooSelector, { ModelZooEntry } from '../components/ModelZooSelector';
 import AtmosphericBentoGrid, { DiurnalPredictionHour } from '../components/AtmosphericBentoGrid';
 import VignetteAlert from '../components/VignetteAlert';
 import ActualVsPredictedGraph from '../components/ActualVsPredictedGraph';
+import CausalPolicySimulator from '../components/CausalPolicySimulator';
+import EdgeInferenceEngine from '../components/EdgeInferenceEngine';
+import SatelliteParticleMap from '../components/SatelliteParticleMap';
+import ShadowCanaryMonitor from '../components/ShadowCanaryMonitor';
 
 interface PredictionPayload {
   city: string;
@@ -96,7 +100,7 @@ export default function EditorialHomePage() {
       .catch(err => console.error('Failed to fetch models from local API:', err));
   }, []);
 
-  const syncData = async (modelId: string) => {
+  const syncData = useCallback(async (modelId: string) => {
     setLoading(true);
     try {
       const url = `${API_BASE}/predict?model_id=${modelId}`;
@@ -152,16 +156,27 @@ export default function EditorialHomePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [models]);
 
   useEffect(() => {
     syncData(activeModel);
-  }, [activeModel]);
+  }, [activeModel, syncData]);
 
   return (
     <div className="relative z-10 flex flex-col gap-14">
       <ParticleWindEngine aqiValue={forecast.current_aqi} />
       <VignetteAlert currentAqi={forecast.current_aqi} isTriggered={forecast.alert} />
+
+      {/* Feature 2: Offline Edge Inference Switcher */}
+      <EdgeInferenceEngine
+        onEdgePrediction={(edgeAqi) => {
+          setForecast((prev) => ({
+            ...prev,
+            current_aqi: edgeAqi,
+            model_type: 'ONNX WebAssembly Edge',
+          }));
+        }}
+      />
 
       {/* Model Zoo Architectural Switcher */}
       <ModelZooSelector
@@ -234,17 +249,26 @@ export default function EditorialHomePage() {
               <span>{loading ? 'CALIBRATING TELEMETRY...' : 'REFRESH STATION DATA'}</span>
             </button>
             <span className="text-[10px] font-mono text-center text-slate-400">
-              Direct telemetry stream via AWS Lambda containerized engine
+              Direct telemetry stream via Render containerized engine
             </span>
           </div>
         </div>
       </motion.div>
 
+      {/* Feature 1: Causal Policy Simulator */}
+      <CausalPolicySimulator apiBaseUrl={API_BASE} />
+
       {/* 3-Day Diurnal Prediction Matrix */}
       <AtmosphericBentoGrid hourlyPredictions={forecast.hourly_predictions} />
 
+      {/* Feature 3: Satellite Sentinel-5P Earth Observation Map */}
+      <SatelliteParticleMap apiBaseUrl={API_BASE} />
+
       {/* Telemetric Verification Engine */}
       <ActualVsPredictedGraph />
+
+      {/* Feature 5: Champion vs Challenger Live Canary Router */}
+      <ShadowCanaryMonitor apiBaseUrl={API_BASE} />
 
       {/* LIME Explainability Teaser */}
       <motion.div

@@ -55,7 +55,6 @@ class Settings(BaseSettings):
     Attributes:
         aqicn_api_key: API token for AQICN (https://aqicn.org/data-platform/token/).
         openweather_api_key: API key for OpenWeatherMap APIs.
-        aws_region: AWS region for deployment services.
         target_city: The city being monitored.
         target_latitude: Latitude of the target location.
         target_longitude: Longitude of the target location.

@@ -1,4 +1,4 @@
-"""Feature pipeline module for AWS SageMaker Feature Store integration."""
+"""Feature pipeline module for ClearML Dataset integration."""
 
 from feature_pipeline.register import FeatureStoreManager
 

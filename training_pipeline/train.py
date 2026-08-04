@@ -506,12 +506,10 @@ class TrainingOrchestrator:
         # 6. Compare and Select Champion
         champion_name = self.evaluator.compare_models(results)
 
+        # 7. SHAP Explainability (for champion)
+        explainer = None
         if champion_name and champion_name in trained_models:
             champion_model = trained_models[champion_name]
-            champion_metrics = results[champion_name]
-
-            # 7. SHAP Explainability
-            explainer = None
             if champion_name == "LightGBM" and hasattr(champion_model, "model"):
                 try:
                     bg_data = X_train[:min(500, len(X_train))]
@@ -522,16 +520,18 @@ class TrainingOrchestrator:
                 except Exception as e:
                     logger.warning("SHAP setup failed: %s", e)
 
-            # 8. Register Champion
-            if self.registry.should_promote_challenger(champion_metrics):
-                version = self.registry.register_model(
-                    model=champion_model,
-                    metrics=champion_metrics,
-                    params=champion_model.get_params(),
-                    explainer=explainer,
-                    model_type=champion_name.lower(),
-                )
-                logger.info("Champion registered: %s v%s", champion_name, version)
+        # 8. Register ALL models (not just champion)
+        if trained_models:
+            versions = self.registry.register_all_models(
+                trained_models=trained_models,
+                results=results,
+                champion_name=champion_name,
+                explainer=explainer,
+            )
+            logger.info(
+                "Registered %d models – champion: %s",
+                len(versions), champion_name,
+            )
 
         # 9. Summary
         summary = {

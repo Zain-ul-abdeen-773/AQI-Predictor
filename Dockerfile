@@ -4,7 +4,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Stage 1: Builder ─────────────────────────────────────────────────────────
-FROM public.ecr.aws/docker/library/python:3.11-slim AS builder
+FROM python:3.11-slim AS builder
 
 WORKDIR /build
 
@@ -25,7 +25,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Stage 2: Runtime ─────────────────────────────────────────────────────────
-FROM public.ecr.aws/docker/library/python:3.11-slim AS runtime
+FROM python:3.11-slim AS runtime
 
 # Security: run as non-root
 RUN groupadd -r appuser && useradd -r -g appuser appuser
@@ -42,7 +42,6 @@ COPY data_pipeline/ ./data_pipeline/
 COPY feature_pipeline/ ./feature_pipeline/
 COPY training_pipeline/ ./training_pipeline/
 COPY deployment/ ./deployment/
-COPY infrastructure/ ./infrastructure/
 
 # Create data directories
 RUN mkdir -p /app/data /app/models /app/logs \

@@ -92,3 +92,41 @@ class TestModelZooEndpoints:
         data = response.get_json()
         assert data["model_type"] == "ridge"
         assert len(data["hourly_predictions"]) == 72
+
+
+class TestNewMindblowingEndpoints:
+    """Tests for Causal Policy Simulator, Satellite Sentinel-5P, and Shadow Canary Router."""
+
+    def test_simulate_causal_policy(self, client):
+        """Verify /simulate endpoint returns calculated counterfactual trajectories."""
+        response = client.post("/simulate", json={
+            "traffic_reduction_pct": 30.0,
+            "crop_burning_increase_pct": 10.0,
+            "wind_speed_delta_ms": 2.0
+        })
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["status"] == "success"
+        assert "simulated_mean_aqi" in data
+        assert "baseline_mean_aqi" in data
+        assert len(data["simulated_curve"]) == 72
+
+    def test_satellite_sentinel5p(self, client):
+        """Verify /satellite/sentinel5p endpoint returns spatial Earth observation grid."""
+        response = client.get("/satellite/sentinel5p")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert "Copernicus Sentinel-5P" in data["satellite"]
+        assert len(data["grid_points"]) == 25
+        assert "no2_column_density" in data["grid_points"][0]
+        assert "aerosol_optical_depth" in data["grid_points"][0]
+
+    def test_shadow_metrics(self, client):
+        """Verify /shadow/metrics endpoint returns shadow routing canary metrics."""
+        response = client.get("/shadow/metrics")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert "canary_status" in data
+        assert "champion_id" in data
+        assert "challengers" in data
+

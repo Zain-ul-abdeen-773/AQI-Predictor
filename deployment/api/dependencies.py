@@ -103,7 +103,102 @@ class ModelService:
             logger.info("Set default champion model: %s", self.default_model_id)
 
     def _initialize_8_models(self, settings: Any) -> None:
-        """Initialize all 8 models and their evaluation benchmarks for dynamic user selection."""
+        """Initialize all models for dynamic user selection.
+
+        Tries loading pre-trained models from the local registry manifest
+        first.  Falls back to quick re-training only when no saved
+        artifacts are found.
+        """
+        # ── Attempt 1: Load from local manifest ──────────────────────
+        loaded_from_manifest = self._try_load_from_manifest(settings)
+        if loaded_from_manifest:
+            return
+
+        # ── Attempt 2: Quick re-train fallback ───────────────────────
+        self._quick_retrain_fallback(settings)
+
+    def _try_load_from_manifest(self, settings: Any) -> bool:
+        """Load models from the local model_registry.json manifest."""
+        try:
+            from training_pipeline.registry import ModelRegistryManager
+            import json
+            import pickle
+
+            registry = ModelRegistryManager(settings)
+            registered = registry.list_registered_models()
+
+            if not registered:
+                logger.info("No models in registry manifest – will train fresh")
+                return False
+
+            loaded_count = 0
+            for entry in registered:
+                model_id = entry["id"]
+                model_path_str = entry.get("path", "")
+                if not model_path_str:
+                    continue
+
+                model_dir = Path(model_path_str)
+                if not model_dir.exists():
+                    continue
+
+                # Find model file
+                model_file = None
+                for ext in (".pkl", ".pt"):
+                    candidate = model_dir / f"model{ext}"
+                    if candidate.exists():
+                        model_file = candidate
+                        break
+
+                if model_file is None:
+                    continue
+
+                try:
+                    if model_file.suffix == ".pkl":
+                        with open(model_file, "rb") as f:
+                            model_obj = pickle.load(f)
+                    else:
+                        import torch
+                        model_obj = torch.load(model_file, map_location="cpu", weights_only=False)
+
+                    self.models[model_id] = model_obj
+                    self.models_metadata[model_id] = {
+                        "id": model_id,
+                        "name": entry.get("name", model_id),
+                        "category": self._infer_category(model_id),
+                        "r2": entry.get("metrics", {}).get("r2", 0.0),
+                        "rmse": entry.get("metrics", {}).get("rmse", 0.0),
+                        "mae": entry.get("metrics", {}).get("mae", 0.0),
+                        "is_default": entry.get("is_champion", False),
+                        "description": self._get_model_description(model_id),
+                    }
+
+                    if entry.get("is_champion"):
+                        self.default_model_id = model_id
+                        self.model = model_obj
+                        # Load explainer if available
+                        explainer_path = model_dir / "explainer.pkl"
+                        if explainer_path.exists():
+                            with open(explainer_path, "rb") as f:
+                                self.explainer = pickle.load(f)
+
+                    loaded_count += 1
+                    logger.info("Loaded model %s from %s", model_id, model_file)
+                except Exception as ex:
+                    logger.warning("Failed to load model %s: %s", model_id, ex)
+
+            if loaded_count > 0:
+                self._loaded = True
+                logger.info("Loaded %d models from registry manifest", loaded_count)
+                return True
+
+            return False
+        except Exception as ex:
+            logger.warning("Manifest loading failed: %s", ex)
+            return False
+
+    def _quick_retrain_fallback(self, settings: Any) -> None:
+        """Fallback: quick‑train lightweight models for the model zoo."""
         try:
             from training_pipeline.models.baseline import BaselineRegressor
             from training_pipeline.models.ensemble_trees import (
@@ -129,67 +224,51 @@ class ModelService:
             else:
                 y = df["aqi_value"].fillna(100.0).values.astype(np.float32)[:5]
 
-            # Define exact metadata benchmarks for the 8 models ordered by R2
+            # Define metadata benchmarks
             self.models_metadata = {
                 "ridge": {
-                    "id": "ridge",
-                    "name": "Scikit-Learn Ridge + RobustScaler",
-                    "category": "Baseline",
-                    "r2": 0.9988, "rmse": 1.54, "mae": 0.87, "is_default": True,
-                    "description": "L2 regularized linear regression pipeline with robust quantile outlier scaling."
+                    "id": "ridge", "name": "Scikit-Learn Ridge + RobustScaler",
+                    "category": "Baseline", "r2": 0.9988, "rmse": 1.54, "mae": 0.87,
+                    "is_default": True, "description": "L2 regularized linear regression pipeline with robust quantile outlier scaling.",
                 },
                 "gradient_boosting": {
-                    "id": "gradient_boosting",
-                    "name": "Gradient Boosting Regressor",
-                    "category": "Ensemble Trees",
-                    "r2": 0.9986, "rmse": 1.68, "mae": 0.87, "is_default": False,
-                    "description": "Sequential additive decision tree ensemble focusing on minimizing residual errors."
+                    "id": "gradient_boosting", "name": "Gradient Boosting Regressor",
+                    "category": "Ensemble Trees", "r2": 0.9986, "rmse": 1.68, "mae": 0.87,
+                    "is_default": False, "description": "Sequential additive decision tree ensemble focusing on minimizing residual errors.",
                 },
                 "extra_trees": {
-                    "id": "extra_trees",
-                    "name": "Extra Trees Regressor",
-                    "category": "Ensemble Trees",
-                    "r2": 0.9979, "rmse": 2.05, "mae": 1.00, "is_default": False,
-                    "description": "Extremely randomized decision tree forest with random split thresholds for enhanced diversity."
+                    "id": "extra_trees", "name": "Extra Trees Regressor",
+                    "category": "Ensemble Trees", "r2": 0.9979, "rmse": 2.05, "mae": 1.00,
+                    "is_default": False, "description": "Extremely randomized decision tree forest with random split thresholds.",
                 },
                 "xgboost": {
-                    "id": "xgboost",
-                    "name": "XGBoost (Optuna Tuned)",
-                    "category": "Tree Ensemble",
-                    "r2": 0.9975, "rmse": 2.25, "mae": 1.18, "is_default": False,
-                    "description": "Extreme gradient boosting trees with L1/L2 regularization to prevent overfitting on outlier telemetry."
+                    "id": "xgboost", "name": "XGBoost (Optuna Tuned)",
+                    "category": "Tree Ensemble", "r2": 0.9975, "rmse": 2.25, "mae": 1.18,
+                    "is_default": False, "description": "Extreme gradient boosting trees with L1/L2 regularization.",
                 },
                 "lightgbm": {
-                    "id": "lightgbm",
-                    "name": "LightGBM (Optuna Tuned)",
-                    "category": "Tree Ensemble",
-                    "r2": 0.9975, "rmse": 2.26, "mae": 1.19, "is_default": False,
-                    "description": "Gradient boosted decision trees optimized via Bayesian hyperparameter search using Optuna."
+                    "id": "lightgbm", "name": "LightGBM (Optuna Tuned)",
+                    "category": "Tree Ensemble", "r2": 0.9975, "rmse": 2.26, "mae": 1.19,
+                    "is_default": False, "description": "Gradient boosted trees optimized via Bayesian hyperparameter search.",
                 },
                 "random_forest": {
-                    "id": "random_forest",
-                    "name": "Random Forest Regressor",
-                    "category": "Ensemble Trees",
-                    "r2": 0.9908, "rmse": 4.33, "mae": 2.39, "is_default": False,
-                    "description": "Bagged ensemble of randomized decision trees providing robust variance reduction."
+                    "id": "random_forest", "name": "Random Forest Regressor",
+                    "category": "Ensemble Trees", "r2": 0.9908, "rmse": 4.33, "mae": 2.39,
+                    "is_default": False, "description": "Bagged ensemble of randomized decision trees.",
                 },
                 "svr": {
-                    "id": "svr",
-                    "name": "Support Vector Regressor (SVR)",
-                    "category": "Kernel Methods",
-                    "r2": 0.9815, "rmse": 6.13, "mae": 3.25, "is_default": False,
-                    "description": "Radial Basis Function (RBF) kernel support vector machine mapping telemetry into high-dimensional space."
+                    "id": "svr", "name": "Support Vector Regressor (SVR)",
+                    "category": "Kernel Methods", "r2": 0.9815, "rmse": 6.13, "mae": 3.25,
+                    "is_default": False, "description": "RBF kernel support vector machine.",
                 },
                 "bilstm_attention": {
-                    "id": "bilstm_attention",
-                    "name": "Bi-LSTM + Multi-Head Attention",
-                    "category": "Deep Learning",
-                    "r2": 0.5913, "rmse": 28.94, "mae": 21.19, "is_default": False,
-                    "description": "Deep bidirectional recurrent neural network with multi-head attention mechanism capturing long-range atmospheric lag dependencies."
-                }
+                    "id": "bilstm_attention", "name": "Bi-LSTM + Multi-Head Attention",
+                    "category": "Deep Learning", "r2": 0.5913, "rmse": 28.94, "mae": 21.19,
+                    "is_default": False, "description": "Deep bidirectional recurrent neural network with attention.",
+                },
             }
 
-            # Instantiate and fit all 8 models cleanly
+            # Quick-train models
             m_ridge = BaselineRegressor(model_type="ridge")
             m_ridge.fit(X, y, feature_names=available_cols)
             self.models["ridge"] = m_ridge
@@ -210,7 +289,6 @@ class ModelService:
             m_svr.fit(X, y, feature_names=available_cols)
             self.models["svr"] = m_svr
 
-            # For LightGBM and XGBoost, fit fast instances or share baseline fallback if optuna is long
             try:
                 m_lgb = LightGBMOptimized(n_trials=1)
                 m_lgb.fit(X, y, feature_names=available_cols)
@@ -226,16 +304,15 @@ class ModelService:
             except Exception:
                 self.models["xgboost"] = m_gb
 
-            # Bi-LSTM deep learning model or champion model
             if self.model and hasattr(self.model, "predict"):
                 self.models["bilstm_attention"] = self.model
             else:
                 self.models["bilstm_attention"] = m_gb
 
             self._loaded = True
-            logger.info("Successfully initialized all 8 models in Model Zoo")
+            logger.info("Quick-trained all 8 models for Model Zoo (fallback)")
         except Exception as ex:
-            logger.error("Failed to initialize 8 models zoo: %s", ex)
+            logger.error("Failed to initialize models zoo: %s", ex)
 
     def get_model(self, model_id: Optional[str] = None) -> Any:
         """Get model instance by ID, defaulting to highest metric champion."""
