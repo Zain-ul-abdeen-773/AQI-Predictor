@@ -1,12 +1,3 @@
----
-title: AQI Predictor App
-emoji: "📊"
-colorFrom: green
-colorTo: blue
-sdk: docker
-pinned: false
----
-
 <div align="center">
 
 <img src="https://img.shields.io/badge/AIR_QUALITY-PREDICTOR-0D1117?style=for-the-badge&labelColor=161B22&color=58A6FF" alt="AQI Predictor"/>
@@ -70,49 +61,52 @@ This system delivers **72-hour AQI predictions** with uncertainty quantification
 
 ## System Architecture
 
-```mermaid
-flowchart TB
-    subgraph EXT["  DATA SOURCES  "]
-        direction LR
-        API1["AQICN API<br/><sub>PM2.5 | PM10 | NO2 | SO2 | CO | O3</sub>"]
-        API2["OpenWeatherMap<br/><sub>Temp | Humidity | Wind | Pressure</sub>"]
-    end
-
-    subgraph FEAT["  FEATURE PIPELINE  <sub>Hourly via GitHub Actions</sub>"]
-        direction LR
-        F1["Async Ingestion<br/><sub>aiohttp + tenacity retry</sub>"]
-        F2["37-Feature Engineering<br/><sub>Cyclical | Lag | Rolling | Interaction</sub>"]
-        F3[("ClearML<br/>Feature Store<br/><sub>Hive-Partitioned Parquet</sub>")]
-    end
-
-    subgraph TRAIN["  TRAINING PIPELINE  <sub>Daily via GitHub Actions</sub>"]
-        direction LR
-        T1["Temporal Split<br/><sub>No-shuffle | Leakage-safe</sub>"]
-        T2["Train 9 Models<br/><sub>Optuna HPO | TimeSeriesSplit CV</sub>"]
-        T3["Evaluate + Explain<br/><sub>SHAP | LIME | Grad-CAM</sub>"]
-        T4[("ClearML<br/>Model Registry")]
-    end
-
-    subgraph SERVE["  SERVING LAYER  "]
-        direction LR
-        S1["Flask REST API<br/><sub>8 Endpoints | Gunicorn</sub>"]
-        S2["Next.js Dashboard<br/><sub>React 19 | Framer Motion</sub>"]
-    end
-
-    subgraph CLOUD["  DEPLOYMENT  "]
-        direction LR
-        C1["Render<br/><sub>Docker Container</sub>"]
-        C2["Vercel<br/><sub>Edge Network</sub>"]
-    end
-
-    API1 & API2 --> F1
-    F1 --> F2 --> F3
-    F3 --> T1 --> T2 --> T3 --> T4
-    F3 -.-> S1
-    T4 -.-> S1
-    S1 --> S2
-    S1 --> C1
-    S2 --> C2
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                              DATA SOURCES                                                │
+│         ┌──────────────────┐              ┌──────────────────────┐                      │
+│         │    AQICN API     │              │   OpenWeatherMap API  │                      │
+│         │ PM2.5|PM10|NO2   │              │  Temp|Humidity|Wind   │                      │
+│         │ SO2|CO|O3        │              │  Pressure|Precip      │                      │
+│         └────────┬─────────┘              └──────────┬───────────┘                      │
+└──────────────────┼───────────────────────────────────┼──────────────────────────────────┘
+                   │                                   │
+                   ▼                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                    FEATURE PIPELINE  (Hourly via GitHub Actions)                         │
+│                                                                                         │
+│   ┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────────────┐     │
+│   │ Async Ingestion │────▶│  37-Feature Engineer │────▶│   ClearML Feature Store  │     │
+│   │ aiohttp+tenacity│     │ Cyclical|Lag|Rolling │     │  Hive-Partitioned Parquet│     │
+│   └─────────────────┘     └──────────────────────┘     └────────────┬────────────┘     │
+└──────────────────────────────────────────────────────────────────────┼───────────────────┘
+                                                                       │
+                   ┌───────────────────────────────────────────────────┤
+                   │                                                   │
+                   ▼                                                   ▼
+┌─────────────────────────────────────────────────────┐  ┌────────────────────────────────┐
+│         TRAINING PIPELINE  (Daily via GitHub Actions)│  │        SERVING LAYER           │
+│                                                      │  │                                │
+│  ┌────────────┐  ┌──────────┐  ┌────────────────┐  │  │  ┌──────────────────────────┐  │
+│  │  Temporal   │─▶│ Train 9  │─▶│  Evaluate +    │  │  │  │    Flask REST API        │  │
+│  │   Split     │  │  Models  │  │   Explain      │  │  │  │    8 Endpoints           │  │
+│  │(no-shuffle) │  │(Optuna)  │  │ (SHAP/LIME)    │  │  │  │    Gunicorn              │  │
+│  └────────────┘  └──────────┘  └───────┬────────┘  │  │  └─────────────┬────────────┘  │
+│                                         │           │  │                │               │
+│                               ┌─────────▼────────┐  │  │  ┌────────────▼───────────┐   │
+│                               │  ClearML Model   │──┼──┼─▶│   Next.js Dashboard    │   │
+│                               │    Registry      │  │  │  │   React 19 + Tailwind  │   │
+│                               └──────────────────┘  │  │  └────────────────────────┘   │
+└─────────────────────────────────────────────────────┘  └────────────────────────────────┘
+                                                                       │
+                                                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                              CLOUD DEPLOYMENT                                           │
+│              ┌─────────────────────┐         ┌─────────────────────┐                    │
+│              │   Render (Backend)  │         │   Vercel (Frontend)  │                    │
+│              │   Docker Container  │         │    Edge Network      │                    │
+│              └─────────────────────┘         └─────────────────────┘                    │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 <br/>
