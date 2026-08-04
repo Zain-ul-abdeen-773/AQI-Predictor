@@ -196,73 +196,115 @@ export default function EditorialHomePage() {
         isFetching={loading}
       />
 
-      {/* Editorial Asymmetrical Split-Grid (70/30 Layout with Negative Space) */}
+      {/* Editorial Asymmetrical Split-Grid */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="grid grid-cols-12 gap-8 items-start"
+        style={{ perspective: '1400px' }}
       >
-        {/* Left Column (8 cols): High-Contrast Editorial Typography */}
-        <div className="col-span-12 lg:col-span-8 flex flex-col justify-between py-2">
+        {/* Left Column: Editorial Typography */}
+        <motion.div
+          initial={{ opacity: 0, x: -30, rotateY: 5 }}
+          animate={{ opacity: 1, x: 0, rotateY: 0 }}
+          transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="col-span-12 lg:col-span-8 flex flex-col justify-between py-2"
+        >
           <div className="flex flex-col">
-            <span className="text-xs font-mono tracking-wider text-slate-400 mb-2">
-              SARGODHA BASIN • STATION #4 TELEMETRY
-            </span>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-white leading-[1.08]">
+            <motion.span
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-xs font-mono tracking-wider text-slate-400 mb-2"
+            >
+              SARGODHA BASIN &bull; STATION #4 TELEMETRY
+            </motion.span>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-slate-400 leading-[1.08]">
               Atmospheric Intelligence Engine
             </h1>
-            <p className="text-base sm:text-lg font-normal text-slate-300 mt-5 max-w-2xl leading-relaxed">
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+              className="text-base sm:text-lg font-normal text-slate-300 mt-5 max-w-2xl leading-relaxed"
+            >
               {forecast.summary}
-            </p>
+            </motion.p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-6 mt-12 pt-6 border-t border-slate-700/60 text-xs font-mono text-slate-400">
-            <span>SYNC TIMESTAMP: <strong className="text-white">{lastSync}</strong></span>
-            <span>•</span>
-            <span>MODEL GENERALIZATION: <strong className="text-blue-400">5-FOLD TimeSeriesSplit</strong></span>
-            <span>•</span>
-            <span>BENCHMARK LEADER R²: <strong className="text-white">0.9988</strong></span>
+          <div className="flex flex-wrap items-center gap-6 mt-12 pt-6 border-t border-white/[0.06] text-xs font-mono text-slate-400">
+            <span>SYNC: <strong className="text-white">{lastSync}</strong></span>
+            <span className="text-white/20">/</span>
+            <span>CV: <strong className="text-cyan-400">5-FOLD TimeSeriesSplit</strong></span>
+            <span className="text-white/20">/</span>
+            <span>R²: <strong className="text-white">0.9988</strong></span>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Right Column (4 cols): Architectural Telemetry Block with Precision Blue Action */}
-        <div className="col-span-12 lg:col-span-4 flex flex-col justify-between p-6 rounded-2xl border border-slate-700/50 bg-slate-800/40 backdrop-blur-xl shadow-2xl">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-700/50">
+        {/* Right Column: AQI Card with 3D depth */}
+        <motion.div
+          initial={{ opacity: 0, x: 30, rotateY: -8 }}
+          animate={{ opacity: 1, x: 0, rotateY: 0 }}
+          transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          whileHover={{ scale: 1.02, rotateY: 2, rotateX: -1 }}
+          className="col-span-12 lg:col-span-4 relative flex flex-col justify-between p-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl shadow-2xl overflow-hidden group"
+          style={{ transformStyle: 'preserve-3d' }}
+        >
+          {/* Ambient glow */}
+          <div className={`absolute -top-20 -right-20 w-60 h-60 rounded-full blur-3xl opacity-20 transition-opacity duration-700 group-hover:opacity-40 ${
+            forecast.current_aqi > 150 ? 'bg-rose-500' : forecast.current_aqi > 100 ? 'bg-amber-500' : 'bg-cyan-500'
+          }`} />
+
+          <div className="relative z-10 flex items-center justify-between pb-4 border-b border-white/[0.06]">
             <span className="text-xs font-mono font-medium text-slate-400">INDEX READING</span>
-            <span className={`px-2 py-0.5 rounded text-[11px] font-mono font-semibold ${
+            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
               forecast.current_aqi > 150
-                ? 'bg-rose-900/50 text-rose-300 border border-rose-500/30'
+                ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30 shadow-[0_0_10px_rgba(244,63,94,0.15)]'
                 : forecast.current_aqi > 100
-                ? 'bg-amber-900/50 text-amber-300 border border-amber-500/30'
-                : 'bg-emerald-900/50 text-emerald-300 border border-emerald-500/30'
+                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-[0_0_10px_rgba(52,211,153,0.15)]'
             }`}>
               {forecast.current_level.toUpperCase()}
             </span>
           </div>
 
-          <div className="py-8 flex flex-col items-start">
-            <div className="text-7xl font-semibold tracking-tighter text-white font-mono leading-none drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+          <div className="relative z-10 py-8 flex flex-col items-start">
+            <motion.div
+              key={forecast.current_aqi}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+              className={`text-7xl font-bold tracking-tighter font-mono leading-none ${
+                forecast.current_aqi > 150
+                  ? 'text-rose-300 drop-shadow-[0_0_30px_rgba(244,63,94,0.4)]'
+                  : forecast.current_aqi > 100
+                  ? 'text-amber-200 drop-shadow-[0_0_30px_rgba(251,191,36,0.3)]'
+                  : 'text-white drop-shadow-[0_0_25px_rgba(255,255,255,0.15)]'
+              }`}
+            >
               <SpringNumberCounter target={forecast.current_aqi} />
-            </div>
-            <span className="text-xs font-mono text-slate-400 mt-2">
-              MICROGRAMS / M³ COMPOSITE EQUIVALENT
+            </motion.div>
+            <span className="text-[10px] font-mono text-slate-500 mt-2 tracking-wide">
+              COMPOSITE AQI &bull; REAL-TIME
             </span>
           </div>
 
-          <div className="pt-4 border-t border-slate-700/50 flex flex-col gap-3">
-            <button
+          <div className="relative z-10 pt-4 border-t border-white/[0.06] flex flex-col gap-3">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => syncData(activeModel)}
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold tracking-wide transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 active:scale-[0.98]"
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold tracking-wide transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 disabled:opacity-50"
             >
-              <span>{loading ? 'CALIBRATING TELEMETRY...' : 'REFRESH STATION DATA'}</span>
-            </button>
-            <span className="text-[10px] font-mono text-center text-slate-400">
-              Direct telemetry stream via Render containerized engine
+              <span>{loading ? 'CALIBRATING...' : 'REFRESH STATION DATA'}</span>
+            </motion.button>
+            <span className="text-[10px] font-mono text-center text-slate-500">
+              Telemetry via Render containerized engine
             </span>
           </div>
-        </div>
+        </motion.div>
       </motion.div>
 
       {/* Feature 1: Causal Policy Simulator */}
@@ -285,17 +327,25 @@ export default function EditorialHomePage() {
         initial={{ opacity: 0, y: 14 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="flex flex-col md:flex-row items-center justify-between p-6 rounded-2xl border border-slate-700/50 bg-slate-800/40 backdrop-blur-xl shadow-2xl mb-12"
+        whileHover={{ scale: 1.01, y: -2 }}
+        transition={{ duration: 0.3 }}
+        className="relative flex flex-col md:flex-row items-center justify-between p-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl shadow-2xl mb-12 overflow-hidden group"
       >
-        <div>
-          <h3 className="text-lg font-semibold text-white tracking-tight">LIME Interpretability Matrix</h3>
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/[0.03] to-purple-500/[0.03] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="relative z-10">
+          <h3 className="text-lg font-bold text-white tracking-tight">LIME Interpretability Matrix</h3>
           <p className="text-sm text-slate-400 mt-1 max-w-xl leading-relaxed">
             Dive deeper into the local decision boundaries. Our LIME explainer isolates and ranks the most influential real-time atmospheric features driving the current forecast.
           </p>
         </div>
-        <a href="/explainability" className="mt-4 md:mt-0 px-6 py-2.5 rounded-lg bg-blue-600/10 border border-blue-500/30 text-sm font-semibold text-blue-400 hover:bg-blue-600/20 hover:text-blue-300 transition-colors shadow-sm whitespace-nowrap">
+        <motion.a
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          href="/explainability"
+          className="relative z-10 mt-4 md:mt-0 px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600/10 to-purple-600/10 border border-blue-500/30 text-sm font-bold text-blue-400 hover:text-blue-300 hover:border-blue-400/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] transition-all whitespace-nowrap"
+        >
           View LIME Analysis
-        </a>
+        </motion.a>
       </motion.div>
     </div>
   );
