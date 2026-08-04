@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: '30 */6 * * *'  # Every 6 hours at :30
   workflow_dispatch:
+  push:
 
 env:
   API_URL: ${{ vars.API_URL || 'https://pearls-aqi-api.onrender.com' }}
