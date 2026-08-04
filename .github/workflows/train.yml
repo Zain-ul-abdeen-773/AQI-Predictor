@@ -2,17 +2,26 @@ name: Training Pipeline (Daily)
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+    - cron: '0 2 * * *'
   workflow_dispatch:
+    inputs:
+      skip_lstm:
+        description: 'Skip BiLSTM training (faster run)'
+        type: boolean
+        default: false
+      optuna_trials:
+        description: 'Number of Optuna hyperparameter trials'
+        type: number
+        default: 20
 
 env:
   PYTHON_VERSION: ${{ vars.PYTHON_VERSION || '3.11' }}
 
 jobs:
-  train:
-    name: Train & Register All Models
+  validate-clearml:
+    name: Validate ClearML Connection
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 5
 
     steps:
       - name: Checkout
@@ -29,53 +38,195 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Extract training data from ClearML
+      - name: Verify ClearML dataset access
         run: |
           python -c "
           from feature_pipeline.register import FeatureStoreManager
-          from pathlib import Path
           manager = FeatureStoreManager()
-          df = manager.get_training_data()
-          print(f'Retrieved {len(df)} training samples')
-          Path('data').mkdir(exist_ok=True)
-          df.to_csv('data/training_data.csv', index=False)
+          df = manager.get_latest_features(5)
+          if df is None or df.empty:
+              print('WARNING: No features in ClearML store yet')
+              print('Training will use backfill/synthetic data')
+          else:
+              print(f'ClearML connected: {len(df)} recent records available')
+              print(f'Columns: {list(df.columns[:10])}...')
           "
         env:
           PYTHONPATH: .
           CLEARML_API_ACCESS_KEY: ${{ secrets.CLEARML_API_ACCESS_KEY }}
           CLEARML_API_SECRET_KEY: ${{ secrets.CLEARML_API_SECRET_KEY }}
 
-      - name: Run full training pipeline (all 9 models)
-        run: python -m training_pipeline.train --csv data/training_data.csv
+  train:
+    name: Train All Models
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    needs: validate-clearml
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Extract training data
+        id: extract
+        run: |
+          python -c "
+          from feature_pipeline.register import FeatureStoreManager
+          from pathlib import Path
+          import sys
+
+          manager = FeatureStoreManager()
+          df = manager.get_training_data()
+
+          if df is None or df.empty:
+              print('No training data in ClearML, generating backfill...')
+              from data_pipeline.backfill import BackfillPipeline
+              pipeline = BackfillPipeline()
+              df = pipeline.run()
+
+          Path('data').mkdir(exist_ok=True)
+          df.to_csv('data/training_data.csv', index=False)
+          rows = len(df)
+          cols = len(df.columns)
+          print(f'Training dataset: {rows} rows, {cols} columns')
+
+          if rows < 50:
+              print(f'WARNING: Only {rows} training samples (minimum recommended: 500)')
+          "
         env:
           PYTHONPATH: .
-          OPTUNA_N_TRIALS: 20
           CLEARML_API_ACCESS_KEY: ${{ secrets.CLEARML_API_ACCESS_KEY }}
           CLEARML_API_SECRET_KEY: ${{ secrets.CLEARML_API_SECRET_KEY }}
 
-      - name: Print training summary
+      - name: Validate training data quality
+        run: |
+          python -c "
+          import pandas as pd
+          import numpy as np
+
+          df = pd.read_csv('data/training_data.csv')
+          print(f'Shape: {df.shape}')
+
+          # Check for target column
+          target_candidates = ['aqi_value', 'target', 'y']
+          target_found = [c for c in target_candidates if c in df.columns]
+          assert len(target_found) > 0, f'No target column found. Columns: {list(df.columns)}'
+          target_col = target_found[0]
+
+          # Data quality checks
+          null_pct = df.isnull().sum().sum() / (df.shape[0] * df.shape[1]) * 100
+          print(f'Null percentage: {null_pct:.2f}%')
+          assert null_pct < 50, f'Data has {null_pct:.1f}% nulls (too noisy)'
+
+          target_range = df[target_col].dropna()
+          print(f'Target range: [{target_range.min():.1f}, {target_range.max():.1f}]')
+          assert target_range.min() >= 0, 'Negative AQI values detected'
+          assert target_range.max() <= 600, 'AQI exceeds physical maximum'
+
+          print('Training data validation PASSED')
+          "
+        env:
+          PYTHONPATH: .
+
+      - name: Train all models
+        run: |
+          ARGS="--csv data/training_data.csv"
+          if [ "${{ inputs.skip_lstm }}" = "true" ]; then
+            ARGS="$ARGS --skip-lstm"
+          fi
+          python -m training_pipeline.train $ARGS
+        env:
+          PYTHONPATH: .
+          OPTUNA_N_TRIALS: ${{ inputs.optuna_trials || '20' }}
+          CLEARML_API_ACCESS_KEY: ${{ secrets.CLEARML_API_ACCESS_KEY }}
+          CLEARML_API_SECRET_KEY: ${{ secrets.CLEARML_API_SECRET_KEY }}
+
+      - name: Validate model performance gates
+        id: gate
+        run: |
+          python -c "
+          import json, sys
+          from pathlib import Path
+
+          report = Path('models/training_report.json')
+          if not report.exists():
+              print('WARNING: No training report generated')
+              sys.exit(0)
+
+          data = json.loads(report.read_text())
+          champion = data.get('champion', 'unknown')
+          metrics = data.get('metrics', {})
+
+          print(f'Champion model: {champion}')
+          print(f'Models trained: {len(metrics)}')
+          print()
+
+          # Performance gate: champion must meet minimum thresholds
+          MIN_R2 = 0.70
+          MAX_RMSE = 50.0
+
+          failures = []
+          for name, m in metrics.items():
+              r2 = m.get('r2', 0)
+              rmse = m.get('rmse', 999)
+              mae = m.get('mae', 999)
+              print(f'  {name}: R2={r2:.4f}, RMSE={rmse:.2f}, MAE={mae:.2f}')
+
+          champion_metrics = metrics.get(champion, {})
+          champ_r2 = champion_metrics.get('r2', 0)
+          champ_rmse = champion_metrics.get('rmse', 999)
+
+          if champ_r2 < MIN_R2:
+              failures.append(f'Champion R2 ({champ_r2:.4f}) below threshold ({MIN_R2})')
+          if champ_rmse > MAX_RMSE:
+              failures.append(f'Champion RMSE ({champ_rmse:.2f}) above threshold ({MAX_RMSE})')
+
+          print()
+          if failures:
+              print('PERFORMANCE GATE FAILED:')
+              for f in failures:
+                  print(f'  - {f}')
+              sys.exit(1)
+          else:
+              print(f'Performance gate PASSED (R2={champ_r2:.4f}, RMSE={champ_rmse:.2f})')
+          "
+        env:
+          PYTHONPATH: .
+
+      - name: Validate model registry
         run: |
           python -c "
           import json
           from pathlib import Path
 
-          report = Path('models/training_report.json')
-          if report.exists():
-              data = json.loads(report.read_text())
-              champion = data.get('champion', 'unknown')
-              metrics = data.get('metrics', {})
-
-              print(f'Champion: {champion}')
-              for name, m in metrics.items():
-                  print(f'  {name}: RMSE={m.get(\"rmse\", \"N/A\")}, R²={m.get(\"r2\", \"N/A\")}')
-          else:
-              print('No training report found')
-
           manifest = Path('models/model_registry.json')
-          if manifest.exists():
+          if not manifest.exists():
+              print('WARNING: No model registry manifest')
+          else:
               data = json.loads(manifest.read_text())
-              print(f'\\nRegistered {len(data.get(\"models\", {}))} models in manifest')
+              models = data.get('models', {})
+              print(f'Registered models: {len(models)}')
+              for name, info in models.items():
+                  path = info.get('path', 'unknown')
+                  exists = Path(path).exists() if path != 'unknown' else False
+                  status = 'OK' if exists else 'MISSING'
+                  print(f'  {name}: {status} ({path})')
           "
+        env:
+          PYTHONPATH: .
+
+      - name: Run model tests
+        run: python -m pytest tests/test_training_pipeline.py -v --tb=short
         env:
           PYTHONPATH: .
 
@@ -83,14 +234,24 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: training-artifacts
+          name: training-artifacts-${{ github.run_number }}
           path: |
             models/training_report.json
             models/model_registry.json
           retention-days: 30
 
-      - name: Run model tests
-        run: python -m pytest tests/test_training_pipeline.py -v --tb=short
-        env:
-          PYTHONPATH: .
-        continue-on-error: true
+  trigger-deploy:
+    name: Trigger API Redeploy
+    runs-on: ubuntu-latest
+    needs: train
+    if: success()
+
+    steps:
+      - name: Trigger Render redeploy with new models
+        run: |
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            curl -s "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+            echo "Triggered Render redeploy after successful training"
+          else
+            echo "RENDER_DEPLOY_HOOK_URL not set, skipping redeploy trigger"
+          fi

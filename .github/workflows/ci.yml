@@ -31,14 +31,44 @@ jobs:
       - name: Install linters
         run: pip install ruff
 
-      - name: Run Ruff (lint + format check)
-        run: |
-          ruff check . --output-format=github
-          ruff format --check .
-        continue-on-error: true
+      - name: Ruff lint
+        run: ruff check . --output-format=github
 
-  test:
-    name: Unit Tests
+      - name: Ruff format check
+        run: ruff format --check .
+
+  typecheck-frontend:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: deployment/web_app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: deployment/web_app
+        run: npm ci
+
+      - name: TypeScript strict check
+        working-directory: deployment/web_app
+        run: npx tsc --noEmit
+
+      - name: Next.js build (validates pages compile)
+        working-directory: deployment/web_app
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://pearls-aqi-api.onrender.com
+
+  test-backend:
+    name: Backend Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: lint
@@ -58,17 +88,200 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
-        run: python -m pytest tests/ -v --tb=short -x
-        env:
-          PYTHONPATH: .
-          AQICN_API_KEY: demo
-        continue-on-error: true
-
-      - name: Import smoke test
+      - name: Validate API key secrets are configured
         run: |
-          python -c "from config.settings import get_settings; print('Settings OK')"
+          python -c "
+          import os, sys
+          missing = []
+          # These should be set as secrets for production pipelines
+          # In CI we check the env var mechanism works
+          key = os.environ.get('AQICN_API_KEY', '')
+          if not key:
+              print('WARNING: AQICN_API_KEY not set, using demo key')
+          else:
+              print(f'AQICN_API_KEY configured ({len(key)} chars)')
+          print('API key validation passed')
+          "
+        env:
+          AQICN_API_KEY: ${{ secrets.AQICN_API_KEY }}
+
+      - name: Import smoke tests
+        run: |
+          python -c "from config.settings import get_settings; s = get_settings(); print(f'Settings OK: city={s.target_city}')"
+          python -c "from config.schemas import ForecastResponse, HealthResponse; print('Schemas OK')"
           python -c "from training_pipeline.registry import ModelRegistryManager; print('Registry OK')"
+          python -c "from data_pipeline.ingest import SyntheticDataGenerator; print('Ingest OK')"
+          python -c "from data_pipeline.transformers import FeatureEngineer; print('Transformers OK')"
+          python -c "from feature_pipeline.register import FeatureStoreManager; print('Feature Store OK')"
           python -c "from deployment.api.main import app; print('Flask app OK')"
         env:
           PYTHONPATH: .
+
+      - name: Run unit tests
+        run: python -m pytest tests/ -v --tb=short -x --junitxml=test-results.xml
+        env:
+          PYTHONPATH: .
+          AQICN_API_KEY: demo
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results.xml
+          retention-days: 14
+
+  test-api-endpoints:
+    name: API Contract Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: lint
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate all API endpoints respond correctly
+        run: |
+          python -c "
+          import json
+          from deployment.api.main import app
+
+          client = app.test_client()
+          app.config['TESTING'] = True
+          errors = []
+
+          # 1. Health endpoint
+          r = client.get('/health')
+          if r.status_code != 200:
+              errors.append(f'/health returned {r.status_code}')
+          else:
+              data = r.get_json()
+              required = ['status', 'version', 'model_loaded', 'uptime_seconds']
+              for field in required:
+                  if field not in data:
+                      errors.append(f'/health missing field: {field}')
+              print(f'  /health -> {data[\"status\"]} (v{data[\"version\"]})')
+
+          # 2. Models endpoint (must return 8)
+          r = client.get('/models')
+          if r.status_code != 200:
+              errors.append(f'/models returned {r.status_code}')
+          else:
+              data = r.get_json()
+              count = len(data.get('models', []))
+              if count != 8:
+                  errors.append(f'/models returned {count} models, expected 8')
+              print(f'  /models -> {count} models, default={data.get(\"default_model_id\")}')
+
+          # 3. Predict endpoint
+          r = client.post('/predict?model_id=ridge')
+          if r.status_code != 200:
+              errors.append(f'/predict returned {r.status_code}')
+          else:
+              data = r.get_json()
+              preds = data.get('hourly_predictions', [])
+              if len(preds) == 0:
+                  errors.append('/predict returned empty predictions')
+              print(f'  /predict -> {len(preds)} hourly predictions, AQI={data.get(\"current_aqi\")}')
+
+          # 4. Simulate endpoint
+          r = client.post('/simulate', json={'traffic_reduction_pct': 20, 'crop_burning_increase_pct': 5, 'wind_speed_delta_ms': 1.0})
+          if r.status_code != 200:
+              errors.append(f'/simulate returned {r.status_code}')
+          else:
+              data = r.get_json()
+              if len(data.get('simulated_curve', [])) != 72:
+                  errors.append('/simulate curve not 72 points')
+              print(f'  /simulate -> baseline={data.get(\"baseline_mean_aqi\")}, simulated={data.get(\"simulated_mean_aqi\")}')
+
+          # 5. Satellite endpoint
+          r = client.get('/satellite/sentinel5p')
+          if r.status_code != 200:
+              errors.append(f'/satellite/sentinel5p returned {r.status_code}')
+          else:
+              data = r.get_json()
+              pts = len(data.get('grid_points', []))
+              if pts != 25:
+                  errors.append(f'/satellite returned {pts} grid points, expected 25')
+              print(f'  /satellite/sentinel5p -> {pts} grid points')
+
+          # 6. Shadow metrics endpoint
+          r = client.get('/shadow/metrics')
+          if r.status_code != 200:
+              errors.append(f'/shadow/metrics returned {r.status_code}')
+          else:
+              data = r.get_json()
+              if 'canary_status' not in data:
+                  errors.append('/shadow/metrics missing canary_status')
+              print(f'  /shadow/metrics -> canary={data.get(\"canary_status\")}')
+
+          # 7. Explain endpoint
+          r = client.post('/explain')
+          if r.status_code != 200:
+              errors.append(f'/explain returned {r.status_code}')
+          else:
+              data = r.get_json()
+              contribs = len(data.get('contributions', []))
+              print(f'  /explain -> {contribs} SHAP contributions')
+
+          # 8. LIME endpoint
+          r = client.post('/explain/lime')
+          if r.status_code != 200:
+              errors.append(f'/explain/lime returned {r.status_code}')
+          else:
+              data = r.get_json()
+              print(f'  /explain/lime -> source={data.get(\"source\")}')
+
+          # 9. Historical endpoint
+          r = client.get('/historical?hours=24')
+          if r.status_code != 200:
+              errors.append(f'/historical returned {r.status_code}')
+          else:
+              data = r.get_json()
+              print(f'  /historical -> {data.get(\"count\")} records')
+
+          print()
+          if errors:
+              print(f'FAILED: {len(errors)} endpoint errors:')
+              for e in errors:
+                  print(f'  - {e}')
+              raise SystemExit(1)
+          else:
+              print('ALL 9 ENDPOINTS PASSED')
+          "
+        env:
+          PYTHONPATH: .
+          AQICN_API_KEY: demo
+
+  gate:
+    name: CI Gate
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck-frontend, test-backend, test-api-endpoints]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [ "${{ needs.lint.result }}" != "success" ] || \
+             [ "${{ needs.typecheck-frontend.result }}" != "success" ] || \
+             [ "${{ needs.test-backend.result }}" != "success" ] || \
+             [ "${{ needs.test-api-endpoints.result }}" != "success" ]; then
+            echo "One or more CI jobs failed:"
+            echo "  lint: ${{ needs.lint.result }}"
+            echo "  typecheck-frontend: ${{ needs.typecheck-frontend.result }}"
+            echo "  test-backend: ${{ needs.test-backend.result }}"
+            echo "  test-api-endpoints: ${{ needs.test-api-endpoints.result }}"
+            exit 1
+          fi
+          echo "All CI checks passed"

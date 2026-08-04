@@ -2,17 +2,87 @@ name: Feature Pipeline (Hourly)
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Every hour
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 env:
   PYTHON_VERSION: ${{ vars.PYTHON_VERSION || '3.11' }}
 
 jobs:
+  validate-secrets:
+    name: Validate API Keys
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Check required secrets exist
+        run: |
+          MISSING=""
+
+          if [ -z "${{ secrets.AQICN_API_KEY }}" ]; then
+            MISSING="$MISSING AQICN_API_KEY"
+          fi
+          if [ -z "${{ secrets.OPENWEATHER_API_KEY }}" ]; then
+            MISSING="$MISSING OPENWEATHER_API_KEY"
+          fi
+          if [ -z "${{ secrets.CLEARML_API_ACCESS_KEY }}" ]; then
+            MISSING="$MISSING CLEARML_API_ACCESS_KEY"
+          fi
+          if [ -z "${{ secrets.CLEARML_API_SECRET_KEY }}" ]; then
+            MISSING="$MISSING CLEARML_API_SECRET_KEY"
+          fi
+
+          if [ -n "$MISSING" ]; then
+            echo "FATAL: Missing secrets:$MISSING"
+            exit 1
+          fi
+          echo "All required secrets are configured"
+
+  test-api-connectivity:
+    name: Test External API Connectivity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: validate-secrets
+
+    steps:
+      - name: Test AQICN API
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://api.waqi.info/feed/geo:32.08;72.67/?token=${{ secrets.AQICN_API_KEY }}" 2>/dev/null)
+          if [ "$STATUS" = "200" ]; then
+            echo "AQICN API reachable (HTTP $STATUS)"
+          else
+            echo "WARNING: AQICN API returned HTTP $STATUS"
+          fi
+
+      - name: Test OpenWeather API
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://api.openweathermap.org/data/2.5/weather?lat=32.08&lon=72.67&appid=${{ secrets.OPENWEATHER_API_KEY }}" 2>/dev/null)
+          if [ "$STATUS" = "200" ]; then
+            echo "OpenWeather API reachable (HTTP $STATUS)"
+          else
+            echo "WARNING: OpenWeather API returned HTTP $STATUS (key may be invalid)"
+          fi
+
+      - name: Test ClearML API
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CLEARML_API_ACCESS_KEY }}" \
+            "https://api.clear.ml/auth.login" 2>/dev/null)
+          echo "ClearML API connectivity check: HTTP $STATUS"
+          # ClearML uses different auth flow, just verify network reachability
+          if [ "$STATUS" = "000" ]; then
+            echo "FATAL: Cannot reach ClearML API"
+            exit 1
+          fi
+          echo "ClearML API network reachable"
+
   ingest-features:
     name: Ingest & Push Features
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: test-api-connectivity
 
     steps:
       - name: Checkout
@@ -29,35 +99,103 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run feature ingestion
-        run: python -m data_pipeline.ingest
+      - name: Run data ingestion
+        id: ingest
+        run: |
+          python -c "
+          from data_pipeline.ingest import DataIngestionOrchestrator
+          import asyncio, json
+
+          async def run():
+              orch = DataIngestionOrchestrator()
+              payload = await orch.fetch_current()
+              await orch.close()
+
+              print(f'Source: {payload.source.value}')
+              print(f'AQI Value: {payload.aqi_value}')
+              print(f'Pollutants: {len(payload.pollutants)}')
+              print(f'Weather: {\"present\" if payload.weather else \"missing\"}')
+
+              # Validate data quality
+              assert payload.aqi_value is not None, 'AQI value is None'
+              assert 0 <= payload.aqi_value <= 500, f'AQI {payload.aqi_value} out of valid range'
+              assert len(payload.pollutants) >= 1, 'No pollutant readings'
+
+              return payload
+
+          payload = asyncio.run(run())
+          print('Data ingestion PASSED')
+          "
         env:
           PYTHONPATH: .
           AQICN_API_KEY: ${{ secrets.AQICN_API_KEY }}
           OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
 
-      - name: Push to ClearML Feature Store
+      - name: Transform features and validate quality
+        run: |
+          python -c "
+          from data_pipeline.ingest import DataIngestionOrchestrator
+          from data_pipeline.transformers import FeatureEngineer
+          import asyncio
+          import numpy as np
+
+          async def run():
+              orch = DataIngestionOrchestrator()
+              payload = await orch.fetch_current()
+              await orch.close()
+
+              engineer = FeatureEngineer()
+              fv = engineer.transform(payload)
+              flat = fv.to_flat_dict()
+
+              # Quality gates
+              print(f'Feature vector fields: {len(flat)}')
+              assert len(flat) >= 10, f'Too few features: {len(flat)}'
+
+              # Check for NaN contamination
+              nan_count = sum(1 for v in flat.values() if v is None or (isinstance(v, float) and np.isnan(v)))
+              print(f'NaN fields: {nan_count}/{len(flat)}')
+              assert nan_count < len(flat) * 0.5, f'Too many NaN fields: {nan_count}'
+
+              # Validate timestamp exists
+              assert 'timestamp' in flat or 'hour_sin' in flat, 'Missing temporal features'
+              print('Feature transformation PASSED')
+
+          asyncio.run(run())
+          "
+        env:
+          PYTHONPATH: .
+          AQICN_API_KEY: ${{ secrets.AQICN_API_KEY }}
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+
+      - name: Push features to ClearML
+        id: push
         run: |
           python -c "
           from feature_pipeline.register import FeatureStoreManager
           from data_pipeline.ingest import DataIngestionOrchestrator
           from data_pipeline.transformers import FeatureEngineer
           import asyncio
+          import pandas as pd
 
           async def run():
-              orchestrator = DataIngestionOrchestrator()
-              payload = await orchestrator.fetch_current()
-              await orchestrator.close()
+              orch = DataIngestionOrchestrator()
+              payload = await orch.fetch_current()
+              await orch.close()
 
               engineer = FeatureEngineer()
               fv = engineer.transform(payload)
-
-              import pandas as pd
               df = pd.DataFrame([fv.to_flat_dict()])
 
               manager = FeatureStoreManager()
               manager.insert_features(df)
-              print(f'Pushed {len(df)} rows to ClearML feature store')
+              print(f'Pushed {len(df)} row(s) to ClearML feature store')
+
+              # Verify we can read back
+              latest = manager.get_latest_features(1)
+              assert latest is not None and not latest.empty, 'Read-back verification failed'
+              print(f'Read-back verification: {len(latest)} rows retrieved')
+              print('ClearML push PASSED')
 
           asyncio.run(run())
           "
@@ -72,10 +210,11 @@ jobs:
         run: python -m pytest tests/test_data_pipeline.py -v --tb=short
         env:
           PYTHONPATH: .
-        continue-on-error: true
 
-      - name: Report status
+      - name: Pipeline summary
         if: always()
         run: |
-          echo "Feature pipeline completed at $(date -u)"
+          echo "========================================="
+          echo "Feature Pipeline Run: $(date -u '+%Y-%m-%d %H:%M UTC')"
           echo "Status: ${{ job.status }}"
+          echo "========================================="
