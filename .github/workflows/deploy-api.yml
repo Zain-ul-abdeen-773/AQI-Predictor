@@ -14,11 +14,103 @@ on:
       - 'render.yaml'
   workflow_dispatch:
 
+env:
+  PYTHON_VERSION: ${{ vars.PYTHON_VERSION || '3.11' }}
+  API_URL: ${{ vars.API_URL || 'https://pearls-aqi-api.onrender.com' }}
+
 jobs:
+  pre-deploy-tests:
+    name: Pre-Deploy Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install deploy dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-deploy.txt
+
+      - name: Verify requirements-deploy.txt installs cleanly
+        run: |
+          python -c "
+          import flask, flask_cors, numpy, pandas, sklearn, lightgbm, xgboost
+          print('All deploy dependencies importable')
+          print(f'  flask={flask.__version__}')
+          print(f'  numpy={numpy.__version__}')
+          print(f'  sklearn={sklearn.__version__}')
+          print(f'  lightgbm={lightgbm.__version__}')
+          print(f'  xgboost={xgboost.__version__}')
+          "
+
+      - name: Validate render.yaml syntax
+        run: |
+          pip install pyyaml 2>/dev/null || true
+          python -c "
+          import yaml
+          with open('render.yaml') as f:
+              data = yaml.safe_load(f)
+          svc = data['services'][0]
+          assert svc.get('type') == 'web', 'Service type must be web'
+          assert 'startCommand' in svc, 'Missing startCommand'
+          assert 'healthCheckPath' in svc, 'Missing healthCheckPath'
+          start_cmd = svc['startCommand']
+          assert 'PORT' in start_cmd, f'startCommand must use PORT variable: {start_cmd}'
+          print(f'Service: {svc[\"name\"]} ({svc[\"runtime\"]}, {svc[\"plan\"]})')
+          print(f'Start: {start_cmd}')
+          print(f'Health: {svc[\"healthCheckPath\"]}')
+          print('render.yaml validation PASSED')
+          "
+
+      - name: Test Flask app boots without crash
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          from deployment.api.main import app
+          client = app.test_client()
+
+          # Quick endpoint sweep
+          endpoints = [
+              ('GET', '/health', 200),
+              ('GET', '/models', 200),
+              ('GET', '/satellite/sentinel5p', 200),
+              ('GET', '/shadow/metrics', 200),
+              ('GET', '/historical?hours=5', 200),
+              ('POST', '/simulate', 200),
+              ('POST', '/explain', 200),
+              ('POST', '/explain/lime', 200),
+          ]
+
+          for method, path, expected in endpoints:
+              if method == 'GET':
+                  r = client.get(path)
+              else:
+                  r = client.post(path, json={})
+              status = r.status_code
+              icon = 'OK' if status == expected else 'FAIL'
+              print(f'  [{icon}] {method} {path} -> {status}')
+              assert status == expected, f'{path} returned {status}, expected {expected}'
+
+          print('Pre-deploy endpoint validation PASSED')
+          "
+        env:
+          PYTHONPATH: .
+          AQICN_API_KEY: demo
+
   deploy:
     name: Deploy to Render
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: pre-deploy-tests
 
     steps:
       - name: Trigger Render deploy
@@ -27,28 +119,93 @@ jobs:
             curl -s "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
             echo "Render deploy hook triggered"
           else
-            echo "RENDER_DEPLOY_HOOK_URL not set – Render auto-deploys from GitHub"
-            echo "Skipping manual trigger (Render watches the repo directly)"
+            echo "RENDER_DEPLOY_HOOK_URL not set - Render auto-deploys from GitHub"
           fi
 
-      - name: Wait for deployment
-        run: sleep 30
-
-      - name: Health check
+      - name: Wait for Render cold start
         run: |
-          API_URL="${{ vars.API_URL || 'https://pearls-aqi-api.onrender.com' }}"
-          echo "Checking health at $API_URL/health..."
-          
-          for i in 1 2 3 4 5; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/health" 2>/dev/null || echo "000")
+          echo "Waiting 60s for Render to build and spin up..."
+          sleep 60
+
+  post-deploy-verification:
+    name: Post-Deploy Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: deploy
+
+    steps:
+      - name: Health check with retries
+        id: health
+        run: |
+          API_URL="${{ env.API_URL }}"
+          echo "Verifying deployment at $API_URL"
+
+          for i in 1 2 3 4 5 6 7 8; do
+            RESPONSE=$(curl -s -w "\n%{http_code}" "$API_URL/health" 2>/dev/null || echo -e "\n000")
+            BODY=$(echo "$RESPONSE" | head -n -1)
+            STATUS=$(echo "$RESPONSE" | tail -1)
+
             if [ "$STATUS" = "200" ]; then
-              echo "✅ API is healthy (HTTP $STATUS)"
-              curl -s "$API_URL/health" | python3 -m json.tool 2>/dev/null || true
-              exit 0
+              echo "Health check passed (attempt $i)"
+              echo "$BODY" | python3 -m json.tool 2>/dev/null || echo "$BODY"
+              echo "health_ok=true" >> $GITHUB_OUTPUT
+              break
             fi
-            echo "Attempt $i: HTTP $STATUS – retrying in 15s..."
-            sleep 15
+            echo "Attempt $i: HTTP $STATUS - retrying in 20s..."
+            sleep 20
           done
-          
-          echo "⚠️  API health check did not return 200 (may still be spinning up on free tier)"
-        continue-on-error: true
+
+          if [ "$STATUS" != "200" ]; then
+            echo "health_ok=false" >> $GITHUB_OUTPUT
+            echo "WARNING: Health check did not pass (free tier may need longer spin-up)"
+          fi
+
+      - name: Verify /models endpoint returns 8 models
+        if: steps.health.outputs.health_ok == 'true'
+        run: |
+          API_URL="${{ env.API_URL }}"
+          BODY=$(curl -s "$API_URL/models")
+          COUNT=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('models',[])))" 2>/dev/null || echo "0")
+          echo "Models endpoint returned $COUNT models"
+          if [ "$COUNT" != "8" ]; then
+            echo "WARNING: Expected 8 models, got $COUNT"
+          fi
+
+      - name: Verify /predict endpoint
+        if: steps.health.outputs.health_ok == 'true'
+        run: |
+          API_URL="${{ env.API_URL }}"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API_URL/predict?model_id=ridge" \
+            -H "Content-Type: application/json" 2>/dev/null)
+          echo "/predict -> HTTP $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "Predict endpoint working"
+          else
+            echo "WARNING: Predict endpoint returned $STATUS"
+          fi
+
+      - name: Verify /simulate endpoint
+        if: steps.health.outputs.health_ok == 'true'
+        run: |
+          API_URL="${{ env.API_URL }}"
+          BODY=$(curl -s -X POST "$API_URL/simulate" \
+            -H "Content-Type: application/json" \
+            -d '{"traffic_reduction_pct":20,"crop_burning_increase_pct":5,"wind_speed_delta_ms":1}')
+          STATUS_CHECK=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
+          if [ "$STATUS_CHECK" = "success" ]; then
+            echo "/simulate -> working"
+          else
+            echo "WARNING: /simulate returned unexpected response"
+          fi
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "========================================="
+          echo "Deployment Summary"
+          echo "========================================="
+          echo "API URL: ${{ env.API_URL }}"
+          echo "Health: ${{ steps.health.outputs.health_ok || 'pending' }}"
+          echo "Triggered by: ${{ github.event_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "========================================="

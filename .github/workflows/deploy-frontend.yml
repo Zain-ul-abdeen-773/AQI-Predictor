@@ -8,9 +8,12 @@ on:
       - 'vercel.json'
   workflow_dispatch:
 
+env:
+  FRONTEND_URL: ${{ vars.FRONTEND_URL || '' }}
+
 jobs:
-  verify:
-    name: Verify Vercel Deployment
+  pre-deploy-check:
+    name: Pre-Deploy Build Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -18,33 +21,113 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check Next.js build
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: deployment/web_app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: deployment/web_app
+        run: npm ci
+
+      - name: TypeScript check
+        working-directory: deployment/web_app
+        run: npx tsc --noEmit
+
+      - name: Production build
+        working-directory: deployment/web_app
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.API_URL || 'https://pearls-aqi-api.onrender.com' }}
+
+      - name: Validate build output
         working-directory: deployment/web_app
         run: |
-          if [ -f "package.json" ]; then
-            echo "Next.js project found"
-            node -e "const pkg = require('./package.json'); console.log('Name:', pkg.name, 'Version:', pkg.version || 'N/A')"
+          if [ -d ".next" ]; then
+            echo "Build output exists"
+            echo "Pages:"
+            find .next/server -name "*.html" -o -name "*.js" 2>/dev/null | head -20
+          else
+            echo "FATAL: .next directory missing after build"
+            exit 1
           fi
 
-      - name: Wait for Vercel deployment
+      - name: Validate vercel.json schema
         run: |
-          echo "Vercel auto-deploys from GitHub on push to main."
-          echo "Waiting 60s for deployment to propagate..."
-          sleep 60
+          python3 -c "
+          import json
+          with open('vercel.json') as f:
+              data = json.load(f)
+
+          # These fields should NOT be in vercel.json (they go in dashboard)
+          invalid_fields = ['rootDirectory', 'buildCommand', 'outputDirectory', 'installCommand']
+          found = [f for f in invalid_fields if f in data]
+          if found:
+              print(f'ERROR: vercel.json contains dashboard-only fields: {found}')
+              print('Move these to Vercel Project Settings instead')
+              raise SystemExit(1)
+
+          print(f'vercel.json valid: {json.dumps(data, indent=2)}')
+          "
+
+  verify-deployment:
+    name: Verify Live Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: pre-deploy-check
+
+    steps:
+      - name: Wait for Vercel to deploy
+        run: |
+          echo "Vercel auto-deploys from GitHub push."
+          echo "Waiting 90s for build + propagation..."
+          sleep 90
 
       - name: Smoke test frontend
+        if: env.FRONTEND_URL != ''
         run: |
-          FRONTEND_URL="${{ vars.FRONTEND_URL || '' }}"
-          if [ -z "$FRONTEND_URL" ]; then
-            echo "FRONTEND_URL variable not set – skipping smoke test"
-            echo "Set it via: gh variable set FRONTEND_URL --body 'https://your-app.vercel.app'"
-            exit 0
+          URL="${{ env.FRONTEND_URL }}"
+          echo "Testing $URL..."
+
+          # Check main page loads
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL" 2>/dev/null || echo "000")
+          if [ "$STATUS" = "200" ]; then
+            echo "Homepage: OK (HTTP $STATUS)"
+          else
+            echo "WARNING: Homepage returned HTTP $STATUS"
           fi
 
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL" 2>/dev/null || echo "000")
-          if [ "$STATUS" = "200" ]; then
-            echo "✅ Frontend is live (HTTP $STATUS)"
+          # Check analytics page
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL/analytics" 2>/dev/null || echo "000")
+          echo "Analytics page: HTTP $STATUS"
+
+          # Check explainability page
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL/explainability" 2>/dev/null || echo "000")
+          echo "Explainability page: HTTP $STATUS"
+
+          # Verify it returns HTML (not error page)
+          BODY=$(curl -s "$URL" 2>/dev/null | head -c 500)
+          if echo "$BODY" | grep -qi "atmospheric\|aqi\|sargodha"; then
+            echo "Content validation: PASSED (app content detected)"
           else
-            echo "⚠️  Frontend returned HTTP $STATUS (may still be deploying)"
+            echo "WARNING: Page content does not match expected app"
           fi
-        continue-on-error: true
+
+      - name: Skip notice
+        if: env.FRONTEND_URL == ''
+        run: |
+          echo "FRONTEND_URL not configured - skipping live smoke test"
+          echo "Set it: gh variable set FRONTEND_URL --body 'https://your-app.vercel.app'"
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "========================================="
+          echo "Frontend Deploy Summary"
+          echo "========================================="
+          echo "URL: ${{ env.FRONTEND_URL || 'not configured' }}"
+          echo "Trigger: ${{ github.event_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "========================================="

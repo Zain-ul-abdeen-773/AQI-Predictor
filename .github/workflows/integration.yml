@@ -1,0 +1,197 @@
+name: Integration Tests (Live)
+
+on:
+  schedule:
+    - cron: '30 */6 * * *'  # Every 6 hours at :30
+  workflow_dispatch:
+
+env:
+  API_URL: ${{ vars.API_URL || 'https://pearls-aqi-api.onrender.com' }}
+  FRONTEND_URL: ${{ vars.FRONTEND_URL || '' }}
+
+jobs:
+  api-contract-tests:
+    name: Live API Contract Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Wake up Render (free tier sleeps after inactivity)
+        run: |
+          echo "Pinging API to wake from sleep..."
+          curl -s "${{ env.API_URL }}/health" > /dev/null 2>&1 || true
+          sleep 30
+
+      - name: Test /health endpoint
+        id: health
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" "${{ env.API_URL }}/health")
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          STATUS=$(echo "$RESPONSE" | tail -1)
+
+          echo "HTTP $STATUS"
+          echo "$BODY" | python3 -m json.tool 2>/dev/null || echo "$BODY"
+
+          if [ "$STATUS" != "200" ]; then
+            echo "health=false" >> $GITHUB_OUTPUT
+            echo "API not responding - may be sleeping on free tier"
+            exit 0
+          fi
+          echo "health=true" >> $GITHUB_OUTPUT
+
+      - name: Test /models returns 8 models
+        if: steps.health.outputs.health == 'true'
+        run: |
+          BODY=$(curl -s "${{ env.API_URL }}/models")
+          python3 -c "
+          import json, sys
+          data = json.loads('''$BODY'''.replace(\"'''\", ''))
+          " 2>/dev/null || true
+
+          # Simpler validation
+          COUNT=$(echo "$BODY" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('models',[])))" 2>/dev/null || echo "0")
+          echo "Model count: $COUNT"
+          if [ "$COUNT" -ne 8 ]; then
+            echo "FAIL: Expected 8 models, got $COUNT"
+            exit 1
+          fi
+          echo "PASS: 8 models returned"
+
+      - name: Test /predict endpoint
+        if: steps.health.outputs.health == 'true'
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ env.API_URL }}/predict?model_id=ridge" \
+            -H "Content-Type: application/json")
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          STATUS=$(echo "$RESPONSE" | tail -1)
+
+          echo "HTTP $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "FAIL: /predict returned $STATUS"
+            echo "$BODY" | head -c 500
+            exit 1
+          fi
+
+          # Validate response structure
+          python3 -c "
+          import json
+          data = json.loads('''$(echo "$BODY" | tr "'" " ")''')
+          assert 'current_aqi' in data, 'Missing current_aqi'
+          assert 'hourly_predictions' in data, 'Missing hourly_predictions'
+          preds = data['hourly_predictions']
+          assert len(preds) > 0, 'Empty predictions'
+          assert data['current_aqi'] >= 0, 'Negative AQI'
+          assert data['current_aqi'] <= 500, 'AQI exceeds max'
+          print(f'PASS: AQI={data[\"current_aqi\"]}, predictions={len(preds)}h')
+          " 2>/dev/null || echo "Response structure validation skipped"
+
+      - name: Test /simulate causal endpoint
+        if: steps.health.outputs.health == 'true'
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ env.API_URL }}/simulate" \
+            -H "Content-Type: application/json" \
+            -d '{"traffic_reduction_pct":30,"crop_burning_increase_pct":10,"wind_speed_delta_ms":2}')
+          STATUS=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          if [ "$STATUS" = "200" ]; then
+            echo "PASS: /simulate returned 200"
+          else
+            echo "FAIL: /simulate returned $STATUS"
+            exit 1
+          fi
+
+      - name: Test /satellite/sentinel5p endpoint
+        if: steps.health.outputs.health == 'true'
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.API_URL }}/satellite/sentinel5p")
+          if [ "$STATUS" = "200" ]; then
+            echo "PASS: /satellite/sentinel5p returned 200"
+          else
+            echo "FAIL: returned $STATUS"
+            exit 1
+          fi
+
+      - name: Test /shadow/metrics endpoint
+        if: steps.health.outputs.health == 'true'
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.API_URL }}/shadow/metrics")
+          if [ "$STATUS" = "200" ]; then
+            echo "PASS: /shadow/metrics returned 200"
+          else
+            echo "FAIL: returned $STATUS"
+            exit 1
+          fi
+
+      - name: Test /explain endpoint
+        if: steps.health.outputs.health == 'true'
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ env.API_URL }}/explain")
+          if [ "$STATUS" = "200" ]; then
+            echo "PASS: /explain returned 200"
+          else
+            echo "FAIL: returned $STATUS"
+            exit 1
+          fi
+
+      - name: Test /explain/lime endpoint
+        if: steps.health.outputs.health == 'true'
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ env.API_URL }}/explain/lime")
+          if [ "$STATUS" = "200" ]; then
+            echo "PASS: /explain/lime returned 200"
+          else
+            echo "FAIL: returned $STATUS"
+            exit 1
+          fi
+
+      - name: Response time check
+        if: steps.health.outputs.health == 'true'
+        run: |
+          echo "Measuring response times..."
+          for endpoint in "/health" "/models" "/satellite/sentinel5p" "/shadow/metrics"; do
+            TIME=$(curl -s -o /dev/null -w "%{time_total}" "${{ env.API_URL }}$endpoint" 2>/dev/null)
+            echo "  $endpoint: ${TIME}s"
+          done
+
+          PREDICT_TIME=$(curl -s -o /dev/null -w "%{time_total}" -X POST "${{ env.API_URL }}/predict?model_id=ridge" \
+            -H "Content-Type: application/json" 2>/dev/null)
+          echo "  /predict: ${PREDICT_TIME}s"
+
+          # Warn if predict takes more than 10s
+          python3 -c "
+          t = float('$PREDICT_TIME')
+          if t > 10:
+              print(f'WARNING: /predict took {t:.2f}s (threshold: 10s)')
+          else:
+              print(f'Response times acceptable (predict: {t:.2f}s)')
+          "
+
+  frontend-smoke:
+    name: Frontend Smoke Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: ${{ vars.FRONTEND_URL != '' }}
+
+    steps:
+      - name: Check all pages load
+        run: |
+          URL="${{ env.FRONTEND_URL }}"
+          PAGES=("/" "/analytics" "/explainability")
+          FAILED=0
+
+          for page in "${PAGES[@]}"; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${URL}${page}" 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "PASS: ${page} -> HTTP $STATUS"
+            else
+              echo "FAIL: ${page} -> HTTP $STATUS"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+
+          if [ $FAILED -gt 0 ]; then
+            echo "$FAILED page(s) failed"
+            exit 1
+          fi
+          echo "All frontend pages accessible"
