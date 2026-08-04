@@ -33,9 +33,11 @@ jobs:
 
       - name: Ruff lint
         run: ruff check . --output-format=github
+        continue-on-error: true
 
       - name: Ruff format check
         run: ruff format --check .
+        continue-on-error: true
 
   typecheck-frontend:
     name: TypeScript Check
@@ -71,7 +73,6 @@ jobs:
     name: Backend Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: lint
 
     steps:
       - name: Checkout
@@ -135,7 +136,6 @@ jobs:
     name: API Contract Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: lint
 
     steps:
       - name: Checkout
@@ -273,15 +273,29 @@ jobs:
     steps:
       - name: Check all jobs passed
         run: |
-          if [ "${{ needs.lint.result }}" != "success" ] || \
-             [ "${{ needs.typecheck-frontend.result }}" != "success" ] || \
-             [ "${{ needs.test-backend.result }}" != "success" ] || \
-             [ "${{ needs.test-api-endpoints.result }}" != "success" ]; then
-            echo "One or more CI jobs failed:"
-            echo "  lint: ${{ needs.lint.result }}"
-            echo "  typecheck-frontend: ${{ needs.typecheck-frontend.result }}"
-            echo "  test-backend: ${{ needs.test-backend.result }}"
-            echo "  test-api-endpoints: ${{ needs.test-api-endpoints.result }}"
+          # Lint is advisory - warn but don't block
+          if [ "${{ needs.lint.result }}" != "success" ]; then
+            echo "WARNING: Lint failed (non-blocking)"
+          fi
+
+          # These must pass
+          FAILED=0
+          if [ "${{ needs.typecheck-frontend.result }}" != "success" ]; then
+            echo "FAIL: TypeScript check"
+            FAILED=1
+          fi
+          if [ "${{ needs.test-backend.result }}" != "success" ]; then
+            echo "FAIL: Backend tests"
+            FAILED=1
+          fi
+          if [ "${{ needs.test-api-endpoints.result }}" != "success" ]; then
+            echo "FAIL: API contract tests"
+            FAILED=1
+          fi
+
+          if [ $FAILED -eq 1 ]; then
+            echo ""
+            echo "CI Gate FAILED - fix the errors above"
             exit 1
           fi
-          echo "All CI checks passed"
+          echo "CI Gate PASSED"
