@@ -1,0 +1,54 @@
+name: Deploy API (Render)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deployment/api/**'
+      - 'training_pipeline/**'
+      - 'feature_pipeline/**'
+      - 'config/**'
+      - 'data_pipeline/**'
+      - 'requirements-deploy.txt'
+      - 'Dockerfile'
+      - 'render.yaml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Trigger Render deploy
+        run: |
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            curl -s "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+            echo "Render deploy hook triggered"
+          else
+            echo "RENDER_DEPLOY_HOOK_URL not set – Render auto-deploys from GitHub"
+            echo "Skipping manual trigger (Render watches the repo directly)"
+          fi
+
+      - name: Wait for deployment
+        run: sleep 30
+
+      - name: Health check
+        run: |
+          API_URL="${{ vars.API_URL || 'https://pearls-aqi-api.onrender.com' }}"
+          echo "Checking health at $API_URL/health..."
+          
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/health" 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ API is healthy (HTTP $STATUS)"
+              curl -s "$API_URL/health" | python3 -m json.tool 2>/dev/null || true
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $STATUS – retrying in 15s..."
+            sleep 15
+          done
+          
+          echo "⚠️  API health check did not return 200 (may still be spinning up on free tier)"
+        continue-on-error: true

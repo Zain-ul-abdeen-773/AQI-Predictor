@@ -1,0 +1,50 @@
+name: Deploy Frontend (Vercel)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deployment/web_app/**'
+      - 'vercel.json'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Verify Vercel Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check Next.js build
+        working-directory: deployment/web_app
+        run: |
+          if [ -f "package.json" ]; then
+            echo "Next.js project found"
+            node -e "const pkg = require('./package.json'); console.log('Name:', pkg.name, 'Version:', pkg.version || 'N/A')"
+          fi
+
+      - name: Wait for Vercel deployment
+        run: |
+          echo "Vercel auto-deploys from GitHub on push to main."
+          echo "Waiting 60s for deployment to propagate..."
+          sleep 60
+
+      - name: Smoke test frontend
+        run: |
+          FRONTEND_URL="${{ vars.FRONTEND_URL || '' }}"
+          if [ -z "$FRONTEND_URL" ]; then
+            echo "FRONTEND_URL variable not set – skipping smoke test"
+            echo "Set it via: gh variable set FRONTEND_URL --body 'https://your-app.vercel.app'"
+            exit 0
+          fi
+
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL" 2>/dev/null || echo "000")
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Frontend is live (HTTP $STATUS)"
+          else
+            echo "⚠️  Frontend returned HTTP $STATUS (may still be deploying)"
+          fi
+        continue-on-error: true

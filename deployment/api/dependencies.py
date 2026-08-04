@@ -330,6 +330,36 @@ class ModelService:
         """Get list of all 8 models sorted by highest R2 metric."""
         return list(self.models_metadata.values())
 
+    @staticmethod
+    def _infer_category(model_id: str) -> str:
+        """Infer model category from its ID."""
+        categories = {
+            "ridge": "Baseline", "elastic_net": "Baseline",
+            "random_forest": "Ensemble Trees", "extra_trees": "Ensemble Trees",
+            "gradient_boosting": "Ensemble Trees",
+            "xgboost": "Tree Ensemble", "lightgbm": "Tree Ensemble",
+            "svr": "Kernel Methods",
+            "bilstm_attention": "Deep Learning", "bi_l_s_t_m": "Deep Learning",
+        }
+        return categories.get(model_id, "Unknown")
+
+    @staticmethod
+    def _get_model_description(model_id: str) -> str:
+        """Return a human-readable description for a model ID."""
+        descriptions = {
+            "ridge": "L2 regularized linear regression pipeline with robust quantile outlier scaling.",
+            "elastic_net": "Combined L1/L2 regularized regression.",
+            "gradient_boosting": "Sequential additive decision tree ensemble focusing on minimizing residual errors.",
+            "extra_trees": "Extremely randomized decision tree forest with random split thresholds.",
+            "xgboost": "Extreme gradient boosting trees with L1/L2 regularization.",
+            "lightgbm": "Gradient boosted trees optimized via Bayesian hyperparameter search.",
+            "random_forest": "Bagged ensemble of randomized decision trees.",
+            "svr": "RBF kernel support vector machine.",
+            "bilstm_attention": "Deep bidirectional recurrent neural network with attention.",
+            "bi_l_s_t_m": "Deep bidirectional recurrent neural network with attention.",
+        }
+        return descriptions.get(model_id, "Trained model.")
+
     @property
     def is_loaded(self) -> bool:
         """Check if model is loaded and ready for inference."""
