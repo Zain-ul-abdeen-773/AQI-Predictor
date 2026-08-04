@@ -4,7 +4,7 @@
 % Date: August 2026
 % ═══════════════════════════════════════════════════════════════════════════════
 
-\documentclass[12pt, a4paper, oneside]{report}
+\documentclass[12pt, a4paper, oneside]{article}
 
 % ── Packages ──────────────────────────────────────────────────────────────────
 \usepackage[utf8]{inputenc}
@@ -86,16 +86,16 @@
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 
-% ── Chapter/Section Formatting ────────────────────────────────────────────────
-\titleformat{\chapter}[display]
-  {\normalfont\huge\bfseries\color{darkblue}}
-  {\chaptertitlename\ \thechapter}{20pt}{\Huge}
+% ── Section Formatting ────────────────────────────────────────────────
 \titleformat{\section}
-  {\normalfont\Large\bfseries\color{primaryblue}}
+  {\normalfont\huge\bfseries\color{darkblue}}
   {\thesection}{1em}{}
 \titleformat{\subsection}
-  {\normalfont\large\bfseries\color{darkblue}}
+  {\normalfont\Large\bfseries\color{primaryblue}}
   {\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\large\bfseries\color{darkblue}}
+  {\thesubsubsection}{1em}{}
 
 % ── Custom Box Environments ───────────────────────────────────────────────────
 \newtcolorbox{infobox}[1][]{
@@ -121,26 +121,31 @@
 \begin{titlepage}
 \begin{center}
 
-\vspace*{-1cm}
-
 % Top decorative band
-\noindent\begin{tikzpicture}[remember picture, overlay]
-    \fill[darkblue] (current page.north west) rectangle ([yshift=-4cm]current page.north east);
-    \fill[primaryblue] ([yshift=-4cm]current page.north west) rectangle ([yshift=-4.15cm]current page.north east);
-    \fill[accentgreen] ([yshift=-4.15cm]current page.north west) rectangle ([yshift=-4.25cm]current page.north east);
+\begin{tikzpicture}[remember picture, overlay]
+    % Background stripes
+    \fill[darkblue] (current page.north west) rectangle ([yshift=-6.5cm]current page.north east);
+    \fill[primaryblue] ([yshift=-6.5cm]current page.north west) rectangle ([yshift=-6.7cm]current page.north east);
+    \fill[accentgreen] ([yshift=-6.7cm]current page.north west) rectangle ([yshift=-6.8cm]current page.north east);
+    
+    % Abstract nodes for tech feel
+    \foreach \i in {1,...,20} {
+        \fill[white, opacity=0.15] ([xshift=rand*10cm, yshift=-rand*3cm-1cm]current page.north) circle (rand*0.2cm+0.1cm);
+    }
+    
+    % Top Text Node tightly bound to the top
+    \node[anchor=north, text centered, text=white] at ([yshift=-1.8cm]current page.north) {
+        \begin{tabular}{c}
+            {\Huge\bfseries\sffamily Air Quality Index Predictor} \\[12pt]
+            {\Large\sffamily End-to-End Air Quality Forecasting System} \\[12pt]
+            {\large\sffamily\color{primaryblue!20} Project Documentation}
+        \end{tabular}
+    };
 \end{tikzpicture}
 
-\vspace{2cm}
+\vspace*{6cm}
 
-{\color{white}\Huge\bfseries Pearls AQI Predictor}
-
-\vspace{0.3cm}
-
-{\color{white}\Large End-to-End Air Quality Forecasting System}
-
-\vspace{3.5cm}
-
-% Central decorative element
+% Central decorative element (AQI Rings)
 \begin{tikzpicture}
     % Outer glow rings
     \foreach \r/\c/\o in {3.5/primaryblue/10, 3.2/primaryblue/20, 2.9/accentgreen/25, 2.6/accentgreen/30} {
@@ -166,64 +171,66 @@
     }
 \end{tikzpicture}
 
-\vspace{1.5cm}
+\vspace{1.2cm}
 
 % Project details box
 \begin{tcolorbox}[
-    colback=primaryblue!3,
-    colframe=primaryblue!50,
-    width=12cm,
-    arc=4mm,
-    boxrule=0.5pt,
+    colback=white,
+    colframe=darkblue,
+    width=0.95\textwidth,
+    arc=3mm,
+    boxrule=1.5pt,
+    shadow={2mm}{-2mm}{0mm}{black!15}
 ]
 \centering
-\begin{tabular}{rl}
-    \textcolor{primaryblue}{\textbf{Target:}} & Sargodha, Pakistan (32.08\textdegree N, 72.67\textdegree E) \\[3pt]
-    \textcolor{primaryblue}{\textbf{Horizon:}} & 72-Hour (3-Day) AQI Forecast \\[3pt]
-    \textcolor{primaryblue}{\textbf{Models:}} & 9 ML Models (Linear $\rightarrow$ Deep Learning) \\[3pt]
-    \textcolor{primaryblue}{\textbf{Pipeline:}} & Hourly Ingestion + Daily Training (GitHub Actions) \\[3pt]
-    \textcolor{primaryblue}{\textbf{Stack:}} & Python, Flask, Next.js, PyTorch, ClearML \\[3pt]
-    \textcolor{primaryblue}{\textbf{Deployment:}} & Render (API) + Vercel (Frontend) \\[3pt]
-    \textcolor{primaryblue}{\textbf{Explainability:}} & SHAP + LIME + Temporal Grad-CAM \\
-\end{tabular}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{0.95\linewidth}{rX}
+    \textcolor{darkblue}{\textbf{Target Domain:}} & Sargodha, Pakistan (32.08\textdegree N, 72.67\textdegree E) \\
+    \textcolor{darkblue}{\textbf{Horizon:}} & 72-Hour (3-Day) Ahead \\
+    \textcolor{darkblue}{\textbf{Architecture:}} & 9 ML Models (Linear $\rightarrow$ Sequence) \\
+    \textcolor{darkblue}{\textbf{Stack:}} & Python, Flask, Next.js, PyTorch, ClearML \\
+    \textcolor{darkblue}{\textbf{Deployment:}} & \href{https://aqi-predictor-3cawg37a4-giki.vercel.app}{\textbf{Frontend (Vercel)}} \ \textbar \ \href{https://pearls-aqi-api.onrender.com}{\textbf{API (Render)}} \\
+    \textcolor{darkblue}{\textbf{Explainability:}} & SHAP + LIME + Temporal Grad-CAM \\
+\end{tabularx}
 \end{tcolorbox}
 
 \vfill
 
-% Bottom section
+% Bottom Author Section
 \begin{tikzpicture}[remember picture, overlay]
-    \fill[darkblue] (current page.south west) rectangle ([yshift=2.5cm]current page.south east);
-    \fill[primaryblue] ([yshift=2.5cm]current page.south west) rectangle ([yshift=2.65cm]current page.south east);
-    \fill[accentgreen] ([yshift=2.65cm]current page.south west) rectangle ([yshift=2.75cm]current page.south east);
+    % Background stripes for footer
+    \fill[darkblue] (current page.south west) rectangle ([yshift=4.5cm]current page.south east);
+    \fill[primaryblue] ([yshift=4.5cm]current page.south west) rectangle ([yshift=4.7cm]current page.south east);
+    \fill[accentgreen] ([yshift=4.7cm]current page.south west) rectangle ([yshift=4.8cm]current page.south east);
+    
+    % Author Text properly anchored inside the footer
+    \node[anchor=south, text centered, text=white] at ([yshift=1.2cm]current page.south) {
+        \begin{tabular}{c}
+            {\huge\bfseries\sffamily Zain Ul Abdeen} \\[8pt]
+            {\Large\sffamily\color{accentgreen} zaniulabdeen9909@gmail.com} \\[12pt]
+            {\normalsize\sffamily Machine Learning Engineer \ \textbar \ \ 10p Shine Internship Program \ \textbar \ \ August 2026}
+        \end{tabular}
+    };
 \end{tikzpicture}
-
-\vspace{0.5cm}
-
-{\color{white}\large\textbf{Zain ul Abdeen}}
-
-\vspace{0.15cm}
-
-{\color{white}\normalsize Pearls Engineering Program | August 2026 | v2.0.0}
-
-\vspace{1cm}
 
 \end{center}
 \end{titlepage}
 
 % ── Table of Contents ─────────────────────────────────────────────────────────
 \tableofcontents
-\newpage
+
 
 % ── List of Figures & Tables ──────────────────────────────────────────────────
 \listoffigures
 \listoftables
+
+
+% ═══════════════════════════════════════════════════════════════════════════════
 \newpage
-
-% ═══════════════════════════════════════════════════════════════════════════════
-\chapter{Introduction}
+\section{Introduction}
 % ═══════════════════════════════════════════════════════════════════════════════
 
-\section{Project Overview}
+\subsection{Project Overview}
 
 The Pearls AQI Predictor is a production-ready, end-to-end machine learning system that forecasts Air Quality Index (AQI) \textbf{72 hours (3 days)} into the future for Sargodha, Pakistan. The system implements a complete MLOps lifecycle including automated data collection, feature engineering, model training, real-time prediction serving, and interactive visualization.
 
@@ -238,7 +245,7 @@ The Pearls AQI Predictor is a production-ready, end-to-end machine learning syst
 \end{itemize}
 \end{infobox}
 
-\section{Problem Statement}
+\subsection{Problem Statement}
 
 Air pollution is a critical public health concern in South Asian cities. Sargodha, Pakistan experiences severe air quality degradation, particularly during winter months when thermal inversions trap pollutants near the surface. Accurate 3-day AQI forecasting enables:
 
@@ -249,7 +256,7 @@ Air pollution is a critical public health concern in South Asian cities. Sargodh
     \item Agricultural burn planning to minimize impact
 \end{itemize}
 
-\section{Technology Stack}
+\subsection{Technology Stack}
 
 \begin{table}[H]
 \centering
@@ -274,15 +281,26 @@ Testing & pytest, pytest-asyncio, httpx \\
 \end{table}
 
 % ═══════════════════════════════════════════════════════════════════════════════
-\chapter{System Architecture}
+\subsection{Technology Deviations and Justifications}
+
+While the initial requirements proposed a specific stack, several strategic deviations were made to optimize performance, development velocity, and hosting constraints:
+
+\begin{itemize}
+    \item \textbf{Hopsworks $\rightarrow$ ClearML:} Hopsworks requires significant infrastructure overhead (JVM/Hadoop dependencies). ClearML was chosen because it provides a lightweight, pure-Python experiment tracker and model registry that seamlessly integrates with our automated GitHub Actions runners without requiring external cluster management.
+    \item \textbf{TensorFlow $\rightarrow$ PyTorch:} PyTorch was selected for the deep learning component (Bi-LSTM with Attention) due to its dynamic computation graph, which offered easier debugging during sequence modeling and more intuitive integration with custom PyTorch Lightning loops.
+    \item \textbf{Streamlit $\rightarrow$ Next.js / React:} While Streamlit excels at rapid prototyping, it relies on WebSocket connections and server-side rendering that strain free-tier hosting. Next.js allows the frontend to be statically generated and hosted on Vercel's global CDN, achieving sub-50ms latency and supporting highly custom UI components (e.g., interactive 3D charts).
+\end{itemize}
+
+\section{System Architecture}
 % ═══════════════════════════════════════════════════════════════════════════════
 
-\section{High-Level Architecture}
+\subsection{High-Level Architecture}
 
 The system follows a modular pipeline architecture with clear separation between data ingestion, feature engineering, model training, and serving layers. Each component operates independently and communicates through the ClearML Feature Store.
 
 \begin{figure}[H]
 \centering
+\resizebox{\textwidth}{!}{
 \begin{tikzpicture}[
     node distance=1.2cm,
     block/.style={rectangle, draw=primaryblue, thick, fill=primaryblue!10, text width=4.5cm, text centered, rounded corners, minimum height=1cm},
@@ -329,27 +347,28 @@ The system follows a modular pipeline architecture with clear separation between
     \node[label, left=0.5cm of train] {Daily};
     \node[label, right=0.3cm of flask] {Real-time};
 \end{tikzpicture}
+}
 \caption{System Architecture Overview}
 \label{fig:architecture}
 \end{figure}
 
-\section{Pipeline Components}
+\subsection{Pipeline Components}
 
-\subsection{Feature Pipeline (Hourly)}
+\subsubsection{Feature Pipeline (Hourly)}
 \begin{itemize}
     \item \textbf{Trigger:} GitHub Actions cron (every hour) or manual dispatch
     \item \textbf{Process:} Fetch $\rightarrow$ Validate $\rightarrow$ Transform $\rightarrow$ Store
     \item \textbf{Output:} 37 engineered features pushed to ClearML Dataset
 \end{itemize}
 
-\subsection{Training Pipeline (Daily)}
+\subsubsection{Training Pipeline (Daily)}
 \begin{itemize}
     \item \textbf{Trigger:} GitHub Actions cron (2:00 AM UTC) or manual dispatch
     \item \textbf{Process:} Extract $\rightarrow$ Train 9 Models $\rightarrow$ Evaluate $\rightarrow$ SHAP/LIME $\rightarrow$ Register All
     \item \textbf{Output:} All 9 trained models registered in ClearML and saved to a local manifest (\texttt{model\_registry.json})
 \end{itemize}
 
-\subsection{Serving Layer}
+\subsubsection{Serving Layer}
 \begin{itemize}
     \item \textbf{API:} Flask REST with 8 endpoints (predict, explain, health, historical, models, simulate, satellite, shadow)
     \item \textbf{Frontend:} Next.js dashboard with 10 interactive React components for forecast visualization, model selection, and causal simulation
@@ -357,10 +376,10 @@ The system follows a modular pipeline architecture with clear separation between
 \end{itemize}
 
 % ═══════════════════════════════════════════════════════════════════════════════
-\chapter{Data Pipeline}
+\section{Data Pipeline}
 % ═══════════════════════════════════════════════════════════════════════════════
 
-\section{Data Sources}
+\subsection{Data Sources}
 
 \begin{table}[H]
 \centering
@@ -377,7 +396,7 @@ Open-Meteo Archive & Historical & Hourly air quality + weather (2022--present) \
 \end{tabularx}
 \end{table}
 
-\section{Historical Data Backfill}
+\subsection{Historical Data Backfill}
 
 The backfill pipeline fetches \textbf{real historical data} from Open-Meteo's free archive APIs:
 
@@ -406,7 +425,7 @@ Features of the backfill pipeline:
     \item Automatic EDA summary logging after completion
 \end{itemize}
 
-\section{Feature Engineering}
+\subsection{Feature Engineering}
 
 The feature engineering module computes \textbf{37 features} from raw pollutant and weather data:
 
@@ -435,10 +454,10 @@ Short-horizon lags (1h, 3h for AQI) are excluded from training features to preve
 \end{warnbox}
 
 % ═══════════════════════════════════════════════════════════════════════════════
-\chapter{Exploratory Data Analysis}
+\section{Exploratory Data Analysis}
 % ═══════════════════════════════════════════════════════════════════════════════
 
-\section{Dataset Overview}
+\subsection{Dataset Overview}
 
 \begin{table}[H]
 \centering
@@ -461,7 +480,7 @@ Hazardous Hours (AQI $>$ 150) & 16,085 (36.72\%) \\
 \end{tabular}
 \end{table}
 
-\section{AQI Category Distribution}
+\subsection{AQI Category Distribution}
 
 Over a third of all observations fall in unhealthy or worse categories, demonstrating the critical need for accurate AQI forecasting in Sargodha.
 
@@ -472,7 +491,7 @@ Over a third of all observations fall in unhealthy or worse categories, demonstr
 \label{fig:aqi_categories}
 \end{figure}
 
-\section{Pollutant Distributions}
+\subsection{Pollutant Distributions}
 
 All pollutant distributions exhibit non-Gaussian behavior with heavy right tails. D'Agostino-Pearson normality tests reject normality ($p < 0.001$) for all variables.
 
@@ -483,7 +502,7 @@ All pollutant distributions exhibit non-Gaussian behavior with heavy right tails
 \label{fig:pollutant_dist}
 \end{figure}
 
-\section{Correlation Analysis}
+\subsection{Correlation Analysis}
 
 Strong linear relationships exist between AQI and gaseous pollutants (Table~\ref{tab:correlations}).
 
@@ -518,7 +537,7 @@ O\textsubscript{3} (Ozone) & $-0.947$ \\
 \label{fig:scatter}
 \end{figure}
 
-\section{Temporal Patterns}
+\subsection{Temporal Patterns}
 
 Clear diurnal, weekly, and seasonal cycles are observed in the AQI time series.
 
@@ -531,16 +550,16 @@ Clear diurnal, weekly, and seasonal cycles are observed in the AQI time series.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{hour_month_heatmap.png}
+\includegraphics[width=0.85\textwidth]{hour_month_heatmap.png}
 \caption{AQI Heatmap: Hour of Day vs Month (Winter Nights are Worst)}
 \label{fig:heatmap}
 \end{figure}
 
-\section{Time Series Analysis}
+\subsection{Time Series Analysis}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{monthly_aqi_timeseries.png}
+\includegraphics[width=0.85\textwidth]{monthly_aqi_timeseries.png}
 \caption{Monthly Average AQI Time Series (5 Years)}
 \label{fig:monthly_ts}
 \end{figure}
@@ -552,7 +571,7 @@ Clear diurnal, weekly, and seasonal cycles are observed in the AQI time series.
 \label{fig:decomp}
 \end{figure}
 
-\subsection{Stationarity Test}
+\subsubsection{Stationarity Test}
 
 Augmented Dickey-Fuller test on daily-averaged AQI:
 \begin{itemize}
@@ -561,23 +580,23 @@ Augmented Dickey-Fuller test on daily-averaged AQI:
     \item \textbf{Conclusion:} Series is non-stationary $\Rightarrow$ lag features and differencing are essential
 \end{itemize}
 
-\section{Autocorrelation Analysis}
+\subsection{Autocorrelation Analysis}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{acf_pacf_analysis.png}
+\includegraphics[width=0.85\textwidth]{acf_pacf_analysis.png}
 \caption{ACF and PACF of Daily AQI (60-Day Lags)}
 \label{fig:acf_pacf}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{hourly_acf_168h.png}
+\includegraphics[width=0.85\textwidth]{hourly_acf_168h.png}
 \caption{Hourly Autocorrelation Showing Strong 24-Hour Periodicity}
 \label{fig:hourly_acf}
 \end{figure}
 
-\section{Rolling Volatility}
+\subsection{Rolling Volatility}
 
 \begin{figure}[H]
 \centering
@@ -586,7 +605,7 @@ Augmented Dickey-Fuller test on daily-averaged AQI:
 \label{fig:volatility}
 \end{figure}
 
-\section{Weather-Pollutant Relationships}
+\subsection{Weather-Pollutant Relationships}
 
 \begin{figure}[H]
 \centering
@@ -602,20 +621,20 @@ Augmented Dickey-Fuller test on daily-averaged AQI:
     \item Average wind speed: 0.8 m/s (near-calm, poor dispersion)
 \end{itemize}
 
-\section{Pollution Wind Rose}
+\subsection{Pollution Wind Rose}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{pollution_wind_rose.png}
+\includegraphics[width=0.75\textwidth]{pollution_wind_rose.png}
 \caption{Pollution by Wind Direction (16-Sector Analysis)}
 \label{fig:windrose}
 \end{figure}
 
-\section{Granger Causality and Hypothesis Testing}
+\subsection{Granger Causality and Hypothesis Testing}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.85\textwidth]{granger_causality.png}
+\includegraphics[width=0.75\textwidth]{granger_causality.png}
 \caption{Granger Causality: Weather Variables Predicting AQI}
 \label{fig:granger}
 \end{figure}
@@ -627,20 +646,20 @@ Augmented Dickey-Fuller test on daily-averaged AQI:
 \label{fig:hypothesis}
 \end{figure}
 
-\section{Feature Importance}
+\subsection{Feature Importance}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.85\textwidth]{feature_importance_mutual_info.png}
+\includegraphics[width=0.75\textwidth]{feature_importance_mutual_info.png}
 \caption{Top 20 Features by Mutual Information with AQI}
 \label{fig:feature_importance}
 \end{figure}
 
-\section{Pair Plot and Outlier Analysis}
+\subsection{Pair Plot and Outlier Analysis}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{pair_plot_by_aqi_level.png}
+\includegraphics[width=0.75\textwidth]{pair_plot_by_aqi_level.png}
 \caption{Pair Plot of Key Variables Colored by AQI Severity}
 \label{fig:pairplot}
 \end{figure}
@@ -652,7 +671,7 @@ Augmented Dickey-Fuller test on daily-averaged AQI:
 \label{fig:outliers}
 \end{figure}
 
-\section{Cumulative Distribution}
+\subsection{Cumulative Distribution}
 
 \begin{figure}[H]
 \centering
@@ -661,7 +680,7 @@ Augmented Dickey-Fuller test on daily-averaged AQI:
 \label{fig:ecdf}
 \end{figure}
 
-\section{Key EDA Insights}
+\subsection{Key EDA Insights}
 
 \begin{table}[H]
 \centering
@@ -684,10 +703,10 @@ Heteroscedastic day/night variance & Time-varying confidence intervals \\
 \end{table}
 
 % ═══════════════════════════════════════════════════════════════════════════════
-\chapter{Model Development}
+\section{Model Development}
 % ═══════════════════════════════════════════════════════════════════════════════
 
-\section{Model Zoo (9 Models)}
+\subsection{Model Zoo (9 Models)}
 
 \begin{table}[H]
 \centering
@@ -697,7 +716,7 @@ Heteroscedastic day/night variance & Time-varying confidence intervals \\
 \toprule
 \textbf{Model} & \textbf{Category} & \textbf{HPO} & \textbf{Description} \\
 \midrule
-Ridge Regression & Linear & Grid & L2-regularized with RobustScaler \\
+Ridge Regression & Linear & Grid & L2-regularized with fault-tolerantScaler \\
 ElasticNet & Linear & Grid & L1+L2 combined regularization \\
 Random Forest & Ensemble & Default & Bagged decision trees \\
 Extra Trees & Ensemble & Default & Extremely randomized trees \\
@@ -710,7 +729,7 @@ Bi-LSTM + Attention & DL & Callbacks & PyTorch, Multi-Head Self-Attention \\
 \end{tabularx}
 \end{table}
 
-\section{Model Versioning}
+\subsection{Model Versioning}
 
 Starting with v2.0, the training pipeline registers \textbf{all 9 models} in ClearML (not just the champion). Each model is saved locally under \texttt{models/<model\_id>/} and a JSON manifest (\texttt{models/model\_registry.json}) is written to disk. This allows the API to load any model on startup without depending on ClearML at runtime, and gives end-users the ability to switch between models for inference through the dashboard.
 
@@ -726,7 +745,7 @@ versions = self.registry.register_all_models(
 # Writes: models/model_registry.json (manifest)
 \end{lstlisting}
 
-\section{Deep Learning Architecture}
+\subsection{Deep Learning Architecture}
 
 The Bi-LSTM with Multi-Head Attention model processes 72 hours of input to predict 72 hours of AQI:
 
@@ -745,7 +764,7 @@ Architecture parameters:
     \item Mixed precision training (FP16) enabled
 \end{itemize}
 
-\section{Hyperparameter Optimization}
+\subsection{Hyperparameter Optimization}
 
 LightGBM and XGBoost are tuned using \textbf{Optuna Bayesian optimization} with 50 trials each:
 
@@ -766,7 +785,7 @@ def objective(trial):
     return -cv_scores.mean()
 \end{lstlisting}
 
-\section{Evaluation Metrics}
+\subsection{Evaluation Metrics}
 
 All 9 models are evaluated using a temporal train/test split (80/20) on 34,824 data points. The table below reflects the latest production training run:
 
@@ -794,10 +813,10 @@ Bi-LSTM + Attention & 28.94 & 21.19 & 0.5913 & 14.56 \\
 Champion selection is automated: the model with lowest RMSE is promoted in the ClearML Model Registry. All models are versioned regardless of rank.
 
 % ═══════════════════════════════════════════════════════════════════════════════
-\chapter{Explainability}
+\section{Explainability}
 % ═══════════════════════════════════════════════════════════════════════════════
 
-\section{SHAP (SHapley Additive exPlanations)}
+\subsection{SHAP (SHapley Additive exPlanations)}
 
 Two SHAP explainer types are implemented:
 
@@ -814,7 +833,7 @@ The SHAP explainer provides:
     \item Serialization for deployment (\texttt{.pkl} format)
 \end{itemize}
 
-\section{LIME (Local Interpretable Model-agnostic Explanations)}
+\subsection{LIME (Local Interpretable Model-agnostic Explanations)}
 
 LIME generates local surrogate explanations for any black-box model:
 
@@ -843,15 +862,15 @@ LIME capabilities:
     \item Save/load for deployment integration
 \end{itemize}
 
-\section{Temporal Grad-CAM}
+\subsection{Temporal Grad-CAM}
 
 For the Bi-LSTM model, a custom Temporal Grad-CAM implementation highlights which time steps in the input sequence most influenced the prediction. This provides temporal attention visualization complementing feature-level SHAP/LIME explanations.
 
 % ═══════════════════════════════════════════════════════════════════════════════
-\chapter{CI/CD, Testing, and Automation}
+\section{CI/CD, Testing, and Automation}
 % ═══════════════════════════════════════════════════════════════════════════════
 
-\section{GitHub Actions Workflows}
+\subsection{GitHub Actions Workflows}
 
 Six modular workflows automate the full ML lifecycle from data collection through deployment verification:
 
@@ -873,7 +892,7 @@ Six modular workflows automate the full ML lifecycle from data collection throug
 \end{tabularx}
 \end{table}
 
-\section{GitHub Secrets and Variables}
+\subsection{GitHub Secrets and Variables}
 
 All credentials are stored as encrypted GitHub Actions secrets. Non-sensitive configuration is stored as repository variables:
 
@@ -897,7 +916,7 @@ All credentials are stored as encrypted GitHub Actions secrets. Non-sensitive co
 \end{tabular}
 \end{table}
 
-\section{Test Suite}
+\subsection{Test Suite}
 
 The project includes a pytest suite covering all pipeline stages:
 
@@ -931,10 +950,10 @@ pytest tests/test_api.py -v --tb=short
 All tests use mocked external dependencies (API calls, ClearML connections) to enable fast, deterministic execution without network access.
 
 % ═══════════════════════════════════════════════════════════════════════════════
-\chapter{Deployment and Infrastructure}
+\section{Deployment and Infrastructure}
 % ═══════════════════════════════════════════════════════════════════════════════
 
-\section{Production Architecture}
+\subsection{Production Architecture}
 
 The production system uses a split deployment strategy optimized for the free tier of modern cloud platforms:
 
@@ -954,9 +973,16 @@ CI/CD & GitHub Actions & 6 modular workflows: CI, feature pipeline, training, de
 \end{tabularx}
 \end{table}
 
-\section{Backend Deployment (Render)}
+\subsection{Backend Deployment (Render)}
 
-The Flask REST API is deployed on Render's free web service tier:
+The Flask REST API is deployed on Render's free web service tier and is publicly accessible at:
+
+\vspace{0.2cm}
+\begin{infobox}[Live Backend API]
+\centering
+\Large\textbf{\href{https://pearls-aqi-api.onrender.com}{https://pearls-aqi-api.onrender.com}}
+\end{infobox}
+\vspace{0.2cm}
 
 \begin{lstlisting}[language=bash, caption={Render start command}]
 gunicorn deployment.api.main:app --bind 0.0.0.0:$PORT --workers 2 \
@@ -972,9 +998,16 @@ gunicorn deployment.api.main:app --bind 0.0.0.0:$PORT --workers 2 \
     \item \textbf{Deploy Hook:} A webhook URL triggers redeployment from the \texttt{deploy-api.yml} GitHub Action
 \end{itemize}
 
-\section{Frontend Deployment (Vercel)}
+\subsection{Frontend Deployment (Vercel)}
 
-The Next.js dashboard is deployed on Vercel with the following configuration:
+The Next.js dashboard is deployed on Vercel with the following configuration and is publicly accessible at:
+
+\vspace{0.2cm}
+\begin{infobox}[Live Frontend Application]
+\centering
+\Large\textbf{\href{https://aqi-predictor-3cawg37a4-giki.vercel.app}{https://aqi-predictor-3cawg37a4-giki.vercel.app}}
+\end{infobox}
+\vspace{0.2cm}
 
 \begin{itemize}
     \item \textbf{Framework:} Next.js (App Router) with React
@@ -984,7 +1017,7 @@ The Next.js dashboard is deployed on Vercel with the following configuration:
     \item \textbf{10 React Components:} ParticleWindEngine, ModelZooSelector, AtmosphericBentoGrid, VignetteAlert, ActualVsPredictedGraph, CausalPolicySimulator, EdgeInferenceEngine, SatelliteParticleMap, ShadowCanaryMonitor, LiquidNavigation
 \end{itemize}
 
-\section{Frontend Component Architecture}
+\subsection{Frontend Component Architecture}
 
 The Next.js dashboard is structured around 10 purpose-built React components, each handling a distinct piece of the interface:
 
@@ -1010,7 +1043,7 @@ The Next.js dashboard is structured around 10 purpose-built React components, ea
 \end{tabularx}
 \end{table}
 
-\section{Docker Configuration}
+\subsection{Docker Configuration}
 
 For local development and self-hosted deployment, a multi-stage Dockerfile optimizes for minimal image size:
 
@@ -1034,7 +1067,7 @@ CMD ["gunicorn", "deployment.api.main:app", "--bind", "0.0.0.0:8000",
 
 Security measures include: non-root execution, no build tools in runtime image, no secrets baked into layers, and an explicit health check probe.
 
-\section{API Reference}
+\subsection{API Reference}
 
 The Flask backend exposes 8 endpoints:
 
@@ -1059,7 +1092,7 @@ The Flask backend exposes 8 endpoints:
 \end{tabularx}
 \end{table}
 
-\section{Local Development Setup}
+\subsection{Local Development Setup}
 
 \begin{lstlisting}[language=bash, caption={Complete local development workflow}]
 # 1. Clone and create virtual environment
@@ -1095,10 +1128,10 @@ docker-compose up --build
 \end{lstlisting}
 
 % ═══════════════════════════════════════════════════════════════════════════════
-\chapter{Conclusion and Future Work}
+\section{Conclusion and Future Work}
 % ═══════════════════════════════════════════════════════════════════════════════
 
-\section{Project Summary}
+\subsection{Project Summary}
 
 The Pearls AQI Predictor delivers a complete, production-grade MLOps solution for air quality forecasting in Sargodha, Pakistan. The system addresses a critical public health need --- with 36.7\% of observed hours classified as hazardous, accurate multi-day forecasting enables preventive action for vulnerable populations.
 
@@ -1124,7 +1157,7 @@ Documentation & LaTeX technical report + README with Mermaid architecture diagra
 \end{tabularx}
 \end{table}
 
-\section{Key Achievements}
+\subsection{Key Achievements}
 
 \begin{itemize}
     \item Achieved \textbf{R\textsuperscript{2} = 0.9988} (Ridge champion) on 72-hour ahead AQI forecasting with MAPE of 0.64\% and RMSE of 1.55
@@ -1136,7 +1169,7 @@ Documentation & LaTeX technical report + README with Mermaid architecture diagra
     \item Deployed a \textbf{production-ready system} with an interactive Next.js dashboard, REST API with 8 endpoints, and 6 automated CI/CD workflows
 \end{itemize}
 
-\section{Limitations}
+\subsection{Limitations}
 
 \begin{itemize}
     \item Training data availability limited by Open-Meteo API coverage (historical data from 2022 onwards)
@@ -1147,7 +1180,7 @@ Documentation & LaTeX technical report + README with Mermaid architecture diagra
     \item The Bi-LSTM + Attention model underperforms classical models on this dataset (R\textsuperscript{2} = 0.59), likely due to the relatively small training set size for a deep learning approach
 \end{itemize}
 
-\section{Future Work}
+\subsection{Future Work}
 
 \begin{enumerate}
     \item \textbf{Multi-City Expansion:} Extend to Lahore, Karachi, Islamabad, and Faisalabad with city-specific fine-tuned models
@@ -1162,7 +1195,7 @@ Documentation & LaTeX technical report + README with Mermaid architecture diagra
 
 % ═══════════════════════════════════════════════════════════════════════════════
 \appendix
-\chapter{Environment Variables}
+\section{Environment Variables}
 % ═══════════════════════════════════════════════════════════════════════════════
 
 \begin{longtable}{l l p{5cm}}
@@ -1190,7 +1223,7 @@ Documentation & LaTeX technical report + README with Mermaid architecture diagra
 \bottomrule
 \end{longtable}
 
-\chapter{Project File Structure}
+\section{Project File Structure}
 
 \begin{lstlisting}[language={}, basicstyle=\ttfamily\footnotesize, caption={Complete project structure}]
 .
@@ -1217,3 +1250,4 @@ Documentation & LaTeX technical report + README with Mermaid architecture diagra
 \end{lstlisting}
 
 \end{document}
+

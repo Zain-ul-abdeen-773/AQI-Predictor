@@ -414,6 +414,9 @@ def explain_lime():
         model_service = get_model_service()
         feature_service = get_feature_service()
         features_df = feature_service.get_latest_features(50)
+        
+        if not model_service.is_loaded:
+            model_service.load()
 
         if features_df is not None and not features_df.empty:
             from training_pipeline.train import FEATURE_COLUMNS
@@ -426,6 +429,10 @@ def explain_lime():
                 num_features=10,
             )
             result = lime_exp.explain_instance(X[-1], num_samples=500)
+            
+            if not result.get("contributions"):
+                raise ValueError(result.get("error", "Empty contributions from LIME"))
+                
             return jsonify({
                 "predicted_value": result["predicted_value"],
                 "local_r2": result["local_r2"],

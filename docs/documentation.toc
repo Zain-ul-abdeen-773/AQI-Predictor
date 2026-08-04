@@ -1,0 +1,61 @@
+\contentsline {section}{\numberline {1}Introduction}{4}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Project Overview}{4}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Problem Statement}{4}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}Technology Stack}{5}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}Technology Deviations and Justifications}{5}{subsection.1.4}%
+\contentsline {section}{\numberline {2}System Architecture}{5}{section.2}%
+\contentsline {subsection}{\numberline {2.1}High-Level Architecture}{5}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Pipeline Components}{6}{subsection.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.1}Feature Pipeline (Hourly)}{6}{subsubsection.2.2.1}%
+\contentsline {subsubsection}{\numberline {2.2.2}Training Pipeline (Daily)}{6}{subsubsection.2.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.3}Serving Layer}{6}{subsubsection.2.2.3}%
+\contentsline {section}{\numberline {3}Data Pipeline}{7}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Data Sources}{7}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Historical Data Backfill}{7}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Feature Engineering}{8}{subsection.3.3}%
+\contentsline {section}{\numberline {4}Exploratory Data Analysis}{8}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Dataset Overview}{8}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}AQI Category Distribution}{8}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Pollutant Distributions}{9}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Correlation Analysis}{10}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Temporal Patterns}{11}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Time Series Analysis}{13}{subsection.4.6}%
+\contentsline {subsubsection}{\numberline {4.6.1}Stationarity Test}{13}{subsubsection.4.6.1}%
+\contentsline {subsection}{\numberline {4.7}Autocorrelation Analysis}{14}{subsection.4.7}%
+\contentsline {subsection}{\numberline {4.8}Rolling Volatility}{15}{subsection.4.8}%
+\contentsline {subsection}{\numberline {4.9}Weather-Pollutant Relationships}{16}{subsection.4.9}%
+\contentsline {subsection}{\numberline {4.10}Pollution Wind Rose}{17}{subsection.4.10}%
+\contentsline {subsection}{\numberline {4.11}Granger Causality and Hypothesis Testing}{17}{subsection.4.11}%
+\contentsline {subsection}{\numberline {4.12}Feature Importance}{18}{subsection.4.12}%
+\contentsline {subsection}{\numberline {4.13}Pair Plot and Outlier Analysis}{19}{subsection.4.13}%
+\contentsline {subsection}{\numberline {4.14}Cumulative Distribution}{20}{subsection.4.14}%
+\contentsline {subsection}{\numberline {4.15}Key EDA Insights}{20}{subsection.4.15}%
+\contentsline {section}{\numberline {5}Model Development}{20}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Model Zoo (9 Models)}{21}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Model Versioning}{21}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Deep Learning Architecture}{21}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Hyperparameter Optimization}{22}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}Evaluation Metrics}{23}{subsection.5.5}%
+\contentsline {section}{\numberline {6}Explainability}{23}{section.6}%
+\contentsline {subsection}{\numberline {6.1}SHAP (SHapley Additive exPlanations)}{23}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}LIME (Local Interpretable Model-agnostic Explanations)}{23}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Temporal Grad-CAM}{24}{subsection.6.3}%
+\contentsline {section}{\numberline {7}CI/CD, Testing, and Automation}{24}{section.7}%
+\contentsline {subsection}{\numberline {7.1}GitHub Actions Workflows}{24}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}GitHub Secrets and Variables}{25}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Test Suite}{25}{subsection.7.3}%
+\contentsline {section}{\numberline {8}Deployment and Infrastructure}{26}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Production Architecture}{26}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Backend Deployment (Render)}{27}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}Frontend Deployment (Vercel)}{27}{subsection.8.3}%
+\contentsline {subsection}{\numberline {8.4}Frontend Component Architecture}{28}{subsection.8.4}%
+\contentsline {subsection}{\numberline {8.5}Docker Configuration}{28}{subsection.8.5}%
+\contentsline {subsection}{\numberline {8.6}API Reference}{29}{subsection.8.6}%
+\contentsline {subsection}{\numberline {8.7}Local Development Setup}{29}{subsection.8.7}%
+\contentsline {section}{\numberline {9}Conclusion and Future Work}{30}{section.9}%
+\contentsline {subsection}{\numberline {9.1}Project Summary}{30}{subsection.9.1}%
+\contentsline {subsection}{\numberline {9.2}Key Achievements}{31}{subsection.9.2}%
+\contentsline {subsection}{\numberline {9.3}Limitations}{32}{subsection.9.3}%
+\contentsline {subsection}{\numberline {9.4}Future Work}{32}{subsection.9.4}%
+\contentsline {section}{\numberline {A}Environment Variables}{32}{appendix.A}%
+\contentsline {section}{\numberline {B}Project File Structure}{33}{appendix.B}%
