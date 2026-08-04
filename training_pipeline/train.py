@@ -444,7 +444,9 @@ class TrainingOrchestrator:
                 max_svr_samples = 5000
                 if len(X_train) > max_svr_samples:
                     logger.info("SVR: subsampling to %d samples", max_svr_samples)
-                    svr_idx = np.linspace(0, len(X_train) - 1, max_svr_samples, dtype=int)
+                    rng = np.random.default_rng(seed=42)
+                    svr_idx = rng.choice(len(X_train), size=max_svr_samples, replace=False)
+                    svr_idx.sort()  # Preserve temporal ordering
                     X_svr, y_svr = X_train[svr_idx], y_train[svr_idx]
                 else:
                     X_svr, y_svr = X_train, y_train

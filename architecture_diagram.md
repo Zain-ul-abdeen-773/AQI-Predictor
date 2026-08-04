@@ -1,93 +1,100 @@
 # System Architecture: AQI Predictor
 
-This diagram illustrates the end-to-end automated architecture of the AQI Predictor, showing how data flows, how the model is trained, and how the web dashboard is served.
+This diagram illustrates the end-to-end automated architecture of the AQI Predictor, showing how data flows, how models are trained, and how the web dashboard is served.
 
 ```mermaid
 flowchart TD
     %% Define Styles
-    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:white;
+    classDef render fill:#46E3B7,stroke:#232F3E,stroke-width:2px,color:black;
     classDef github fill:#181717,stroke:#fff,stroke-width:2px,color:white;
     classDef ext fill:#4285F4,stroke:#fff,stroke-width:2px,color:white;
-    classDef store fill:#13A89E,stroke:#fff,stroke-width:2px,color:white;
+    classDef store fill:#2D9CDB,stroke:#fff,stroke-width:2px,color:white;
     classDef client fill:#34A853,stroke:#fff,stroke-width:2px,color:white;
+    classDef vercel fill:#000000,stroke:#fff,stroke-width:2px,color:white;
 
     %% External Sources
     User((User / Browser)):::client
     AQICN([AQICN API]):::ext
     OpenWeather([OpenWeather API]):::ext
     GitHub([GitHub Repository]):::github
-    HopsworksFS[(Hopsworks Feature Store)]:::store
-    HopsworksMR[(Hopsworks Model Registry)]:::store
+    ClearMLFS[(ClearML Feature Store)]:::store
+    ClearMLMR[(ClearML Model Registry)]:::store
 
-    subgraph AWS Cloud Architecture
+    subgraph GitHub Actions
         direction TB
 
         subgraph CI/CD Pipeline
             direction LR
-            Pipeline(AWS CodePipeline):::aws
-            Build(AWS CodeBuild):::aws
-            ECR[(Amazon ECR)]:::aws
+            CI(CI: Lint + Tests + Build):::github
+            DeployAPI(Deploy API to Render):::github
+            DeployFE(Deploy Frontend to Vercel):::github
         end
 
         subgraph Automated Pipelines
-            CronHour([EventBridge: Hourly]):::aws
-            CronDay([EventBridge: Daily]):::aws
-            
-            FeatPipe[Lambda: Feature Pipeline]:::aws
-            TrainPipe[ECS Fargate: Training Pipeline]:::aws
-            
+            CronHour([Cron: Hourly]):::github
+            CronDay([Cron: Daily]):::github
+
+            FeatPipe[Feature Pipeline]:::github
+            TrainPipe[Training Pipeline]:::github
+
             CronHour -. triggers .-> FeatPipe
             CronDay -. triggers .-> TrainPipe
         end
+    end
 
-        subgraph Serving Layer
-            LambdaURL([Lambda Function URL]):::aws
-            APILambda[Lambda: API / Dashboard]:::aws
-        end
+    subgraph Serving Layer
+        FlaskAPI[Flask REST API<br/>Gunicorn]:::render
+        NextJS[Next.js Dashboard<br/>React + Tailwind]:::vercel
+    end
+
+    subgraph Cloud Hosting
+        Render[Render]:::render
+        Vercel[Vercel]:::vercel
     end
 
     %% CI/CD Flow
-    GitHub -- "Push to main" --> Pipeline
-    Pipeline -- "Triggers Build" --> Build
-    Build -- "Builds & Pushes Image" --> ECR
-    ECR -. "Provides latest image" .-> FeatPipe
-    ECR -. "Provides latest image" .-> TrainPipe
-    ECR -. "Provides latest image" .-> APILambda
+    GitHub -- "Push to main" --> CI
+    CI -- "On success" --> DeployAPI
+    CI -- "On success" --> DeployFE
+    DeployAPI --> Render
+    DeployFE --> Vercel
 
     %% Feature Pipeline Flow
     FeatPipe -- "Fetches Data" --> AQICN
     FeatPipe -- "Fetches Data" --> OpenWeather
-    FeatPipe -- "Writes Features" --> HopsworksFS
+    FeatPipe -- "Writes Features" --> ClearMLFS
 
     %% Training Pipeline Flow
-    TrainPipe -- "Reads Features" --> HopsworksFS
-    TrainPipe -- "Trains & Saves Model" --> HopsworksMR
+    TrainPipe -- "Reads Features" --> ClearMLFS
+    TrainPipe -- "Trains 9 Models + Registers" --> ClearMLMR
 
     %% Serving Flow
-    User -- "HTTP GET /" --> LambdaURL
-    LambdaURL -- "Invokes via Mangum" --> APILambda
-    APILambda -- "Reads Features" --> HopsworksFS
-    APILambda -- "Loads Model" --> HopsworksMR
+    User -- "HTTPS" --> NextJS
+    NextJS -- "API Calls" --> FlaskAPI
+    FlaskAPI -- "Reads Features" --> ClearMLFS
+    FlaskAPI -- "Loads Model" --> ClearMLMR
+    Render -- "Hosts" --> FlaskAPI
+    Vercel -- "Hosts" --> NextJS
 ```
 
 ### Architecture Breakdown
 
-1. **CI/CD Pipeline (Automated Deployments)**
-   - When you push code to GitHub, **AWS CodePipeline** automatically triggers.
-   - **AWS CodeBuild** builds the Docker image and pushes it to **Amazon ECR**.
-   - The Lambda functions and ECS tasks are configured to run this newly built image.
+1. **CI/CD Pipeline (GitHub Actions)**
+   - On push to `main`, the **CI workflow** runs linting (Ruff), unit tests (pytest with coverage), API contract tests, and TypeScript build checks.
+   - On success, **deploy workflows** trigger deployment to **Render** (backend) and **Vercel** (frontend).
 
 2. **Feature Pipeline (Hourly)**
-   - Triggered every hour by **AWS EventBridge**.
-   - Runs as an **AWS Lambda function**.
-   - Fetches live air quality data (AQICN) and weather data (OpenWeather) and stores them in the **Hopsworks Feature Store**.
+   - Triggered every hour by a **GitHub Actions cron** schedule.
+   - Fetches live air quality data from AQICN and weather data from OpenWeatherMap using async HTTP with exponential backoff retry.
+   - Applies 37 engineered features (cyclical encodings, wind-pollutant interactions, thermal inversion detection, lag features, rolling statistics).
+   - Pushes processed features to the **ClearML Feature Store** as Hive-partitioned Parquet.
 
 3. **Training Pipeline (Daily)**
-   - Triggered every day by **AWS EventBridge**.
-   - Runs as an **AWS ECS Fargate task** (since model training is compute-intensive and can take longer than Lambda's 15-minute limit).
-   - Pulls historical features from Hopsworks, trains the Machine Learning model, and uploads the new version to the **Hopsworks Model Registry**.
+   - Triggered daily by a **GitHub Actions cron** schedule.
+   - Pulls historical features from ClearML, trains 9 ML models (Ridge, ElasticNet, Random Forest, Extra Trees, Gradient Boosting, SVR, LightGBM, XGBoost, Bi-LSTM + Attention) with Optuna hyperparameter optimization.
+   - Evaluates models using temporal cross-validation (RMSE, MAE, R²) and generates SHAP/LIME explanations.
+   - Registers the best model in the **ClearML Model Registry**.
 
-4. **Serving Layer (Web Dashboard)**
-   - The user visits the **AWS Lambda Function URL**.
-   - The request hits the **API Lambda Function**, which runs your `FastAPI` app (adapted via `Mangum`).
-   - The API dynamically pulls the latest model and the latest live features from Hopsworks to serve the real-time predictions to the dashboard.
+4. **Serving Layer**
+   - **Flask REST API** (hosted on Render): Endpoints for prediction, explainability, historical data, model selection, counterfactual simulation, satellite data, and shadow model comparison.
+   - **Next.js Dashboard** (hosted on Vercel): Interactive frontend with model selection, forecast visualization, SHAP explanations, health advisories, and real-time monitoring.

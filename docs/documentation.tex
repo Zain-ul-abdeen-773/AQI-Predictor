@@ -1,7 +1,7 @@
 % ═══════════════════════════════════════════════════════════════════════════════
 % Pearls AQI Predictor - Technical Documentation
 % Author: Zain ul Abdeen
-% Date: July 2026
+% Date: August 2026
 % ═══════════════════════════════════════════════════════════════════════════════
 
 \documentclass[12pt, a4paper, oneside]{report}
@@ -182,8 +182,8 @@
     \textcolor{primaryblue}{\textbf{Horizon:}} & 72-Hour (3-Day) AQI Forecast \\[3pt]
     \textcolor{primaryblue}{\textbf{Models:}} & 9 ML Models (Linear $\rightarrow$ Deep Learning) \\[3pt]
     \textcolor{primaryblue}{\textbf{Pipeline:}} & Hourly Ingestion + Daily Training (GitHub Actions) \\[3pt]
-    \textcolor{primaryblue}{\textbf{Stack:}} & Python, Flask, Streamlit, PyTorch, ClearML \\[3pt]
-    \textcolor{primaryblue}{\textbf{Deployment:}} & HuggingFace Spaces (Docker SDK) \\[3pt]
+    \textcolor{primaryblue}{\textbf{Stack:}} & Python, Flask, Next.js, PyTorch, ClearML \\[3pt]
+    \textcolor{primaryblue}{\textbf{Deployment:}} & Render (API) + Vercel (Frontend) \\[3pt]
     \textcolor{primaryblue}{\textbf{Explainability:}} & SHAP + LIME + Temporal Grad-CAM \\
 \end{tabular}
 \end{tcolorbox}
@@ -203,7 +203,7 @@
 
 \vspace{0.15cm}
 
-{\color{white}\normalsize Pearls Engineering Program | July 2026 | v1.0.0}
+{\color{white}\normalsize Pearls Engineering Program | August 2026 | v2.0.0}
 
 \vspace{1cm}
 
@@ -229,12 +229,12 @@ The Pearls AQI Predictor is a production-ready, end-to-end machine learning syst
 
 \begin{infobox}[Key Objectives]
 \begin{itemize}[noitemsep]
-    \item Predict AQI for the next 3 days using a 100\% serverless stack
+    \item Predict AQI for the next 3 days using 9 distinct model architectures
     \item Automate data collection from AQICN and OpenWeatherMap APIs
-    \item Train and compare 9 ML models from statistical to deep learning
+    \item Train, version, and serve all 9 models through a dynamic model zoo
     \item Provide model explainability via SHAP and LIME
-    \item Deploy with CI/CD automation (hourly ingestion + daily training)
-    \item Serve predictions through Flask API + Streamlit dashboard
+    \item Deploy with CI/CD automation (hourly ingestion + daily training) on GitHub Actions
+    \item Serve predictions through a Flask REST API (Render) and a Next.js dashboard (Vercel)
 \end{itemize}
 \end{infobox}
 
@@ -260,15 +260,14 @@ Air pollution is a critical public health concern in South Asian cities. Sargodh
 \textbf{Layer} & \textbf{Technologies} \\
 \midrule
 API Backend & Python 3.11, Flask 3.0+, flask-cors, Gunicorn \\
-Dashboard & Streamlit 1.30+, Plotly 5.15+ \\
+Frontend UI & Next.js (App Router), React, Tailwind CSS, Framer Motion, Plotly \\
 ML/DL & scikit-learn, LightGBM, XGBoost, PyTorch 2.2+, Optuna \\
 Feature Store & ClearML 1.14+ (Dataset API) \\
 Experiment Tracking & ClearML (Task API, Model Registry) \\
 Explainability & SHAP 0.42+, LIME 0.2+, Custom Temporal Grad-CAM \\
 Data Engineering & Pandas, NumPy, SciPy, aiohttp, tenacity \\
-Infrastructure & Terraform, Docker, AWS (Lambda, ECS, ECR, EventBridge) \\
-Validation & LangGraph, LangChain, OPA/Rego, Checkov \\
-CI/CD & GitHub Actions, AWS CodePipeline/CodeBuild \\
+CI/CD & GitHub Actions (6 modular workflows) \\
+Hosting & Render (Backend API), Vercel (Frontend) \\
 Testing & pytest, pytest-asyncio, httpx \\
 \bottomrule
 \end{tabularx}
@@ -287,6 +286,7 @@ The system follows a modular pipeline architecture with clear separation between
 \begin{tikzpicture}[
     node distance=1.2cm,
     block/.style={rectangle, draw=primaryblue, thick, fill=primaryblue!10, text width=4.5cm, text centered, rounded corners, minimum height=1cm},
+    deploy/.style={rectangle, draw=accentgreen, thick, fill=accentgreen!10, text width=4.5cm, text centered, rounded corners, minimum height=1cm},
     arrow/.style={->, thick, primaryblue},
     label/.style={font=\small\itshape, text=gray}
 ]
@@ -301,11 +301,15 @@ The system follows a modular pipeline architecture with clear separation between
     % Training Pipeline
     \node[block, below=of store] (train) {Model Training\\(9 models + Optuna HPO)};
     \node[block, below=of train] (eval) {Evaluation + SHAP + LIME\\(RMSE, MAE, R\textsuperscript{2})};
-    \node[block, below=of eval] (registry) {ClearML Model Registry\\(Champion Promotion)};
+    \node[block, below=of eval] (registry) {Model Registry\\(All 9 models versioned)};
     
     % Serving
-    \node[block, right=3cm of registry] (flask) {Flask REST API\\(/predict, /explain)};
-    \node[block, above=of flask] (streamlit) {Streamlit Dashboard\\(Plotly interactive)};
+    \node[deploy, right=3cm of registry] (flask) {Flask REST API\\(8 endpoints)};
+    \node[deploy, above=of flask] (nextjs) {Next.js Dashboard\\(10 React components)};
+    
+    % Deployment
+    \node[deploy, right=3cm of flask] (render) {Render\\(Backend Host)};
+    \node[deploy, above=of render] (vercel) {Vercel\\(Frontend Host)};
     
     % Arrows
     \draw[arrow] (apis) -- (ingest);
@@ -315,8 +319,10 @@ The system follows a modular pipeline architecture with clear separation between
     \draw[arrow] (train) -- (eval);
     \draw[arrow] (eval) -- (registry);
     \draw[arrow] (registry) -- (flask);
-    \draw[arrow] (flask) -- (streamlit);
+    \draw[arrow] (flask) -- (nextjs);
     \draw[arrow, dashed] (store) -- ++(3,0) |- (flask);
+    \draw[arrow, accentgreen] (flask) -- (render);
+    \draw[arrow, accentgreen] (nextjs) -- (vercel);
     
     % Labels
     \node[label, left=0.5cm of ingest] {Hourly};
@@ -331,23 +337,23 @@ The system follows a modular pipeline architecture with clear separation between
 
 \subsection{Feature Pipeline (Hourly)}
 \begin{itemize}
-    \item \textbf{Trigger:} GitHub Actions cron (every hour) / AWS EventBridge
+    \item \textbf{Trigger:} GitHub Actions cron (every hour) or manual dispatch
     \item \textbf{Process:} Fetch $\rightarrow$ Validate $\rightarrow$ Transform $\rightarrow$ Store
     \item \textbf{Output:} 37 engineered features pushed to ClearML Dataset
 \end{itemize}
 
 \subsection{Training Pipeline (Daily)}
 \begin{itemize}
-    \item \textbf{Trigger:} GitHub Actions cron (2:00 AM UTC) / AWS ECS Fargate
-    \item \textbf{Process:} Extract $\rightarrow$ Train 9 Models $\rightarrow$ Evaluate $\rightarrow$ SHAP/LIME $\rightarrow$ Promote Champion
-    \item \textbf{Output:} Best model promoted in ClearML Model Registry
+    \item \textbf{Trigger:} GitHub Actions cron (2:00 AM UTC) or manual dispatch
+    \item \textbf{Process:} Extract $\rightarrow$ Train 9 Models $\rightarrow$ Evaluate $\rightarrow$ SHAP/LIME $\rightarrow$ Register All
+    \item \textbf{Output:} All 9 trained models registered in ClearML and saved to a local manifest (\texttt{model\_registry.json})
 \end{itemize}
 
 \subsection{Serving Layer}
 \begin{itemize}
-    \item \textbf{API:} Flask REST with 5 endpoints (predict, explain, health, historical, models)
-    \item \textbf{Dashboard:} Streamlit with Plotly for interactive 72-hour forecast visualization
-    \item \textbf{Deployment:} Docker container on AWS Lambda (Function URL)
+    \item \textbf{API:} Flask REST with 8 endpoints (predict, explain, health, historical, models, simulate, satellite, shadow)
+    \item \textbf{Frontend:} Next.js dashboard with 10 interactive React components for forecast visualization, model selection, and causal simulation
+    \item \textbf{Deployment:} Backend on Render (Python, Gunicorn), Frontend on Vercel (Next.js, CDN-cached)
 \end{itemize}
 
 % ═══════════════════════════════════════════════════════════════════════════════
@@ -704,6 +710,22 @@ Bi-LSTM + Attention & DL & Callbacks & PyTorch, Multi-Head Self-Attention \\
 \end{tabularx}
 \end{table}
 
+\section{Model Versioning}
+
+Starting with v2.0, the training pipeline registers \textbf{all 9 models} in ClearML (not just the champion). Each model is saved locally under \texttt{models/<model\_id>/} and a JSON manifest (\texttt{models/model\_registry.json}) is written to disk. This allows the API to load any model on startup without depending on ClearML at runtime, and gives end-users the ability to switch between models for inference through the dashboard.
+
+\begin{lstlisting}[caption={Multi-model registration in the training pipeline}]
+# In training_pipeline/train.py (step 8)
+versions = self.registry.register_all_models(
+    trained_models=trained_models,
+    results=results,
+    champion_name=champion_name,
+    explainer=explainer,
+)
+# Saves: models/<id>/model.pkl, metrics.json, explainer.pkl
+# Writes: models/model_registry.json (manifest)
+\end{lstlisting}
+
 \section{Deep Learning Architecture}
 
 The Bi-LSTM with Multi-Head Attention model processes 72 hours of input to predict 72 hours of AQI:
@@ -746,26 +768,30 @@ def objective(trial):
 
 \section{Evaluation Metrics}
 
-Models are evaluated using temporal train/test split (80/20):
+All 9 models are evaluated using a temporal train/test split (80/20) on 34,824 data points. The table below reflects the latest production training run:
 
 \begin{table}[H]
 \centering
-\caption{Model Performance (Latest Training Run)}
+\caption{Model Performance (Latest Training Run --- 27,859 train / 6,965 test samples)}
 \label{tab:performance}
 \begin{tabular}{lrrrr}
 \toprule
 \textbf{Model} & \textbf{RMSE} & \textbf{MAE} & \textbf{R\textsuperscript{2}} & \textbf{MAPE (\%)} \\
 \midrule
-\textbf{Ridge (Champion)} & \textbf{5.77} & \textbf{4.50} & \textbf{0.903} & \textbf{9.23} \\
-ElasticNet & 6.59 & 4.50 & 0.874 & 9.37 \\
-Random Forest & 7.58 & 5.18 & 0.833 & 10.33 \\
-Extra Trees & 7.37 & 5.24 & 0.843 & 10.45 \\
-Gradient Boosting & 8.10 & 6.30 & 0.810 & 13.89 \\
+\textbf{Ridge (Champion)} & \textbf{1.55} & \textbf{0.87} & \textbf{0.9988} & \textbf{0.64} \\
+Gradient Boosting & 1.69 & 0.87 & 0.9986 & 0.58 \\
+Extra Trees & 2.05 & 1.00 & 0.9979 & 0.67 \\
+XGBoost (Optuna) & 2.25 & 1.19 & 0.9975 & 0.77 \\
+LightGBM (Optuna) & 2.27 & 1.19 & 0.9975 & 0.76 \\
+Random Forest & 4.33 & 2.39 & 0.9908 & 1.51 \\
+SVR & 6.14 & 3.25 & 0.9815 & 2.04 \\
+ElasticNet & 18.73 & 14.97 & 0.8282 & 9.94 \\
+Bi-LSTM + Attention & 28.94 & 21.19 & 0.5913 & 14.56 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Champion selection is automated: the model with lowest RMSE is promoted in the ClearML Model Registry.
+Champion selection is automated: the model with lowest RMSE is promoted in the ClearML Model Registry. All models are versioned regardless of rank.
 
 % ═══════════════════════════════════════════════════════════════════════════════
 \chapter{Explainability}
@@ -827,7 +853,7 @@ For the Bi-LSTM model, a custom Temporal Grad-CAM implementation highlights whic
 
 \section{GitHub Actions Workflows}
 
-Three automated workflows provide continuous integration and delivery for the entire ML lifecycle:
+Six modular workflows automate the full ML lifecycle from data collection through deployment verification:
 
 \begin{table}[H]
 \centering
@@ -837,43 +863,56 @@ Three automated workflows provide continuous integration and delivery for the en
 \toprule
 \textbf{Workflow} & \textbf{Trigger} & \textbf{Actions} \\
 \midrule
-\texttt{feature\_pipeline\_cron.yml} & Every hour & Ingest real-time data from AQICN and OpenWeather APIs, apply 37-feature engineering transformations, push versioned dataset to ClearML Feature Store \\
-\texttt{training\_pipeline\_cron.yml} & Daily 2AM UTC & Extract latest training data, train all 9 models with cross-validation, compute SHAP/LIME explanations, evaluate metrics, promote champion model to ClearML registry, upload training artifacts \\
-\texttt{infra\_validation.yml} & PR on \texttt{infrastructure/**} & Execute LangGraph multi-agent validation pipeline (Linter $\rightarrow$ Security $\rightarrow$ Policy $\rightarrow$ Decision) to gate infrastructure changes \\
+\texttt{ci.yml} & PR / Push to \texttt{main} & Ruff linting, pytest unit tests, import smoke tests \\
+\texttt{feature-pipeline.yml} & Hourly cron & Ingest real-time data from AQICN and OpenWeather APIs, apply 37-feature engineering, push to ClearML Feature Store \\
+\texttt{train.yml} & Daily 2AM UTC & Extract training data, train all 9 models, compute SHAP/LIME, register all models, upload artifacts \\
+\texttt{deploy-api.yml} & Push to backend paths & Pre-deploy validation (endpoint sweep, \texttt{render.yaml} syntax check), trigger Render deploy hook, post-deploy health and endpoint verification \\
+\texttt{deploy-frontend.yml} & Push to \texttt{web\_app/} & Pre-deploy build check (TypeScript, ESLint, Next.js build), wait for Vercel auto-deploy, run HTTP smoke tests \\
+\texttt{integration.yml} & Every 6 hours & Live API contract validation against the production Render endpoint (health, models, predict, simulate, shadow) \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section{Infrastructure Validation (LangGraph Multi-Agent)}
+\section{GitHub Secrets and Variables}
 
-A sophisticated multi-agent system powered by LangGraph validates all infrastructure changes before they are merged. This prevents misconfigured or insecure Terraform from reaching production.
+All credentials are stored as encrypted GitHub Actions secrets. Non-sensitive configuration is stored as repository variables:
 
-\begin{enumerate}
-    \item \textbf{Linter Agent:} Validates Terraform HCL syntax, checks formatting with \texttt{terraform fmt}, and enforces naming conventions and module structure best practices.
-    \item \textbf{Security Agent:} Executes Checkov static analysis to identify security vulnerabilities including unencrypted storage, overly permissive IAM policies, and missing logging configurations.
-    \item \textbf{Policy Agent:} Evaluates custom OPA/Rego organizational policies defined in \texttt{infrastructure/validation\_agents/policies/aws\_compliance.rego} covering resource tagging, encryption requirements, and cost controls.
-    \item \textbf{Decision Agent:} Aggregates findings from all three agents, applies severity weighting, and issues a final pass/fail determination. On failure, generates actionable remediation suggestions.
-\end{enumerate}
-
-The validation pipeline runs automatically on any pull request that modifies files under the \texttt{infrastructure/} directory, providing immediate feedback to developers before code review.
+\begin{table}[H]
+\centering
+\caption{Repository Secrets and Variables}
+\label{tab:secrets}
+\begin{tabular}{l l l}
+\toprule
+\textbf{Name} & \textbf{Type} & \textbf{Purpose} \\
+\midrule
+\texttt{AQICN\_API\_KEY} & Secret & AQICN data platform token \\
+\texttt{OPENWEATHER\_API\_KEY} & Secret & OpenWeatherMap API key \\
+\texttt{CLEARML\_API\_ACCESS\_KEY} & Secret & ClearML access key \\
+\texttt{CLEARML\_API\_SECRET\_KEY} & Secret & ClearML secret key \\
+\texttt{RENDER\_DEPLOY\_HOOK\_URL} & Secret & Render deploy webhook URL \\
+\texttt{API\_URL} & Variable & \texttt{https://pearls-aqi-api.onrender.com} \\
+\texttt{FRONTEND\_URL} & Variable & Vercel deployment URL \\
+\texttt{PYTHON\_VERSION} & Variable & \texttt{3.11} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Test Suite}
 
-The project includes a comprehensive pytest test suite covering all pipeline stages:
+The project includes a pytest suite covering all pipeline stages:
 
 \begin{table}[H]
 \centering
 \caption{Test Modules and Coverage}
 \label{tab:tests}
-\begin{tabularx}{\textwidth}{l X l}
+\begin{tabularx}{\textwidth}{l X}
 \toprule
-\textbf{Module} & \textbf{Coverage Scope} & \textbf{Tests} \\
+\textbf{Module} & \textbf{Coverage Scope} \\
 \midrule
-\texttt{test\_api.py} & Flask endpoint correctness: health response structure, predict returns 72 hours, model selection works, historical data respects parameters & 6 \\
-\texttt{test\_data\_pipeline.py} & Data ingestion (API mocking), async retry logic, feature engineering output shape and column presence, null handling & 8 \\
-\texttt{test\_feature\_pipeline.py} & ClearML Dataset creation, Parquet write/read, feature store retrieval with time filtering & 5 \\
-\texttt{test\_training\_pipeline.py} & Model training runs to completion, metrics are finite, champion selection logic, model serialization round-trip & 7 \\
-\texttt{test\_validation.py} & LangGraph agent execution, Rego policy evaluation, end-to-end validation pipeline pass/fail & 4 \\
+\texttt{test\_api.py} & Flask endpoint correctness: health response structure, predict returns 72 hours, model selection, historical data respects parameters \\
+\texttt{test\_data\_pipeline.py} & Data ingestion (API mocking), async retry logic, feature engineering output shape and column presence, null handling \\
+\texttt{test\_feature\_pipeline.py} & ClearML Dataset creation, Parquet write/read, feature store retrieval with time filtering \\
+\texttt{test\_training\_pipeline.py} & Model training runs to completion, metrics are finite, champion selection logic, model serialization round-trip \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -907,42 +946,69 @@ The production system uses a split deployment strategy optimized for the free ti
 \toprule
 \textbf{Component} & \textbf{Platform} & \textbf{Details} \\
 \midrule
-Frontend (Next.js) & Vercel & React 19 + TypeScript + Tailwind CSS 4, automatic deploys on git push, global CDN, serverless functions \\
+Frontend (Next.js) & Vercel & React + TypeScript + Tailwind CSS, automatic deploys on git push, global CDN \\
 Backend (Flask API) & Render & Python 3.11, Gunicorn with 2 workers, automatic deploys from GitHub, free tier with auto-sleep \\
 Feature Store & ClearML & Dataset versioning with Parquet artifacts, experiment tracking, model registry \\
-CI/CD & GitHub Actions & Hourly feature pipeline, daily training pipeline, PR validation \\
+CI/CD & GitHub Actions & 6 modular workflows: CI, feature pipeline, training, deploy-api, deploy-frontend, integration tests \\
 \bottomrule
 \end{tabularx}
 \end{table}
-
-\section{Frontend Deployment (Vercel)}
-
-The Next.js 16 dashboard is deployed on Vercel with the following configuration:
-
-\begin{itemize}
-    \item \textbf{Framework:} Next.js 16 (App Router) with React 19
-    \item \textbf{Root Directory:} \texttt{deployment/web\_app}
-    \item \textbf{Build Command:} \texttt{npm run build}
-    \item \textbf{Environment Variable:} \texttt{NEXT\_PUBLIC\_API\_URL} pointing to Render backend
-    \item \textbf{Features:} Framer Motion animations, Plotly charts, model selector, SHAP/LIME visualization pages
-    \item \textbf{Performance:} Edge-cached static assets, ISR for dynamic pages, Lighthouse score $>$ 90
-\end{itemize}
 
 \section{Backend Deployment (Render)}
 
 The Flask REST API is deployed on Render's free web service tier:
 
 \begin{lstlisting}[language=bash, caption={Render start command}]
-gunicorn deployment.api.main:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+gunicorn deployment.api.main:app --bind 0.0.0.0:$PORT --workers 2 \
+  --timeout 120 --max-requests 1000 --max-requests-jitter 50
 \end{lstlisting}
 
 \begin{itemize}
-    \item \textbf{Runtime:} Python 3.11, auto-detected from \texttt{requirements.txt}
-    \item \textbf{Build:} \texttt{pip install -r requirements.txt}
-    \item \textbf{Health Check:} \texttt{GET /health} endpoint (30s interval)
+    \item \textbf{Runtime:} Python 3.11, auto-detected from \texttt{requirements-deploy.txt}
+    \item \textbf{Build:} \texttt{pip install -r requirements-deploy.txt} (lightweight subset excluding PyTorch/CUDA)
+    \item \textbf{Health Check:} \texttt{GET /health} endpoint (automatic monitoring)
     \item \textbf{Environment:} API keys injected via Render's encrypted environment variables
     \item \textbf{Cold Start:} Free tier sleeps after 15 minutes of inactivity; first request takes $\sim$30s
+    \item \textbf{Deploy Hook:} A webhook URL triggers redeployment from the \texttt{deploy-api.yml} GitHub Action
 \end{itemize}
+
+\section{Frontend Deployment (Vercel)}
+
+The Next.js dashboard is deployed on Vercel with the following configuration:
+
+\begin{itemize}
+    \item \textbf{Framework:} Next.js (App Router) with React
+    \item \textbf{Root Directory:} \texttt{deployment/web\_app}
+    \item \textbf{Build Command:} \texttt{npm run build}
+    \item \textbf{Environment Variable:} \texttt{NEXT\_PUBLIC\_API\_URL} pointing to the Render backend
+    \item \textbf{10 React Components:} ParticleWindEngine, ModelZooSelector, AtmosphericBentoGrid, VignetteAlert, ActualVsPredictedGraph, CausalPolicySimulator, EdgeInferenceEngine, SatelliteParticleMap, ShadowCanaryMonitor, LiquidNavigation
+\end{itemize}
+
+\section{Frontend Component Architecture}
+
+The Next.js dashboard is structured around 10 purpose-built React components, each handling a distinct piece of the interface:
+
+\begin{table}[H]
+\centering
+\caption{Frontend React Components}
+\label{tab:components}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Component} & \textbf{Responsibility} \\
+\midrule
+\texttt{ParticleWindEngine} & Animated particle background that adjusts density and color based on the current AQI reading \\
+\texttt{ModelZooSelector} & Dropdown allowing users to switch between all 9 registered models for inference \\
+\texttt{AtmosphericBentoGrid} & 72-hour bento-grid forecast with color-coded AQI levels per hour \\
+\texttt{VignetteAlert} & Full-screen red vignette overlay triggered when AQI exceeds the hazardous threshold \\
+\texttt{ActualVsPredictedGraph} & Plotly chart comparing model predictions against observed values \\
+\texttt{CausalPolicySimulator} & Counterfactual slider interface for simulating traffic reduction and crop-burning scenarios \\
+\texttt{EdgeInferenceEngine} & Client-side ONNX WebAssembly inference toggle for offline predictions \\
+\texttt{SatelliteParticleMap} & Simulated Sentinel-5P NO\textsubscript{2} column grid visualization \\
+\texttt{ShadowCanaryMonitor} & Champion vs.\ challenger shadow-traffic comparison dashboard \\
+\texttt{LiquidNavigation} & Animated navigation bar with smooth page transitions \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \section{Docker Configuration}
 
@@ -968,37 +1034,30 @@ CMD ["gunicorn", "deployment.api.main:app", "--bind", "0.0.0.0:8000",
 
 Security measures include: non-root execution, no build tools in runtime image, no secrets baked into layers, and an explicit health check probe.
 
-\section{Infrastructure as Code (Terraform)}
+\section{API Reference}
 
-For enterprise-scale deployment, Terraform configurations provision a fully serverless AWS architecture:
+The Flask backend exposes 8 endpoints:
 
 \begin{table}[H]
 \centering
-\caption{AWS Resources (Terraform-managed)}
-\label{tab:aws}
+\caption{REST API Endpoints}
+\label{tab:api}
 \begin{tabularx}{\textwidth}{l l X}
 \toprule
-\textbf{Service} & \textbf{Purpose} & \textbf{Configuration} \\
+\textbf{Method} & \textbf{Endpoint} & \textbf{Description} \\
 \midrule
-Lambda & Feature pipeline (hourly) & Container image, 512MB RAM, 5min timeout \\
-Lambda & API serving (Function URL) & Container image, 1GB RAM, 30s timeout \\
-ECS Fargate & Training pipeline (daily) & 2 vCPU, 4GB RAM, spot instances \\
-ECR & Container registry & Lifecycle: retain last 10 images \\
-EventBridge & Scheduling & Cron expressions for hourly/daily triggers \\
-SSM Parameter Store & Secrets management & Encrypted API keys (SecureString) \\
-CloudWatch & Observability & Log groups with 30-day retention, custom metrics \\
-CodePipeline & CI/CD & Source (GitHub) $\rightarrow$ Build (CodeBuild) $\rightarrow$ Deploy \\
+\texttt{GET} & \texttt{/health} & Liveness and readiness check (uptime, model status) \\
+\texttt{POST} & \texttt{/predict} & 72-hour AQI forecast with confidence intervals \\
+\texttt{POST} & \texttt{/explain} & SHAP feature contributions \\
+\texttt{POST} & \texttt{/explain/lime} & LIME local surrogate explanations \\
+\texttt{GET} & \texttt{/historical} & Historical AQI data (paginated) \\
+\texttt{GET} & \texttt{/models} & List all registered models with metrics \\
+\texttt{POST} & \texttt{/simulate} & Counterfactual policy simulation \\
+\texttt{GET} & \texttt{/satellite/sentinel5p} & Simulated Sentinel-5P grid data \\
+\texttt{GET} & \texttt{/shadow/metrics} & Shadow model comparison metrics \\
 \bottomrule
 \end{tabularx}
 \end{table}
-
-\begin{lstlisting}[language=bash, caption={Terraform provisioning}]
-cd infrastructure/terraform
-terraform init        # Initialize providers and backend
-terraform plan        # Preview resource changes
-terraform apply       # Provision infrastructure
-terraform output      # Display endpoint URLs and ARNs
-\end{lstlisting}
 
 \section{Local Development Setup}
 
@@ -1025,16 +1084,13 @@ python -m training_pipeline.train
 # 6. Launch Flask API backend
 flask --app deployment.api.main:app run --port 8000
 
-# 7. Launch Streamlit dashboard (separate terminal)
-streamlit run deployment/streamlit_app/app.py
-
-# 8. Launch Next.js frontend (separate terminal)
+# 7. Launch Next.js frontend (separate terminal)
 cd deployment/web_app && npm install && npm run dev
 
-# 9. Run tests
+# 8. Run tests
 pytest tests/ -v --cov=. --cov-report=term-missing
 
-# 10. Docker deployment (alternative to steps 6-8)
+# 9. Docker deployment (alternative to steps 6-7)
 docker-compose up --build
 \end{lstlisting}
 
@@ -1056,13 +1112,14 @@ The Pearls AQI Predictor delivers a complete, production-grade MLOps solution fo
 \midrule
 Data Pipeline & Real-time ingestion (AQICN + OpenWeather) + historical backfill (Open-Meteo), 43,801+ hourly observations \\
 Feature Engineering & 37 engineered features with leakage prevention, cyclical encoding, lag features, rolling statistics \\
-Model Development & 9 trained models spanning 4 paradigms with Optuna Bayesian HPO (50 trials) \\
+Model Development & 9 trained models spanning 4 paradigms with Optuna Bayesian HPO (50 trials), all versioned in ClearML \\
 Explainability & SHAP (TreeExplainer + GradientExplainer) + LIME (TabularExplainer) + Temporal Grad-CAM \\
 EDA & 19-stage analysis producing 20 visualizations and 26 statistical reports \\
-Automation & Hourly ingestion + daily retraining via GitHub Actions; LangGraph infra validation \\
-Deployment & Next.js frontend (Vercel) + Flask API (Render) + Docker + Terraform IaC \\
-Testing & 30+ pytest tests across 5 modules covering all pipeline stages \\
-Documentation & 40+ page LaTeX technical report + README with Mermaid architecture diagrams \\
+Automation & 6 GitHub Actions workflows: CI, hourly ingestion, daily training, deploy-api, deploy-frontend, live integration tests \\
+Frontend & Next.js dashboard with 10 interactive React components, model zoo selector, causal simulator, and particle engine \\
+Deployment & Backend on Render + Frontend on Vercel + Docker for local/self-hosted use \\
+Testing & pytest suite across 4 test modules covering all pipeline stages \\
+Documentation & LaTeX technical report + README with Mermaid architecture diagrams \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -1070,12 +1127,13 @@ Documentation & 40+ page LaTeX technical report + README with Mermaid architectu
 \section{Key Achievements}
 
 \begin{itemize}
-    \item Achieved \textbf{R\textsuperscript{2} = 0.903} (champion model) on 72-hour ahead AQI forecasting with MAPE of 9.23\%
+    \item Achieved \textbf{R\textsuperscript{2} = 0.9988} (Ridge champion) on 72-hour ahead AQI forecasting with MAPE of 0.64\% and RMSE of 1.55
+    \item Trained and versioned \textbf{all 9 models} --- users can select any model for inference through the frontend model zoo
     \item Built a fully automated pipeline requiring \textbf{zero manual intervention} for ongoing production operation
     \item Demonstrated \textbf{Granger causality} linking temperature, wind speed, and pressure to AQI --- validating the scientific basis for using meteorological features
     \item Identified \textbf{thermal inversions} (low wind + cool temperatures) as the primary driver of hazardous events in Sargodha through comprehensive EDA
     \item Implemented \textbf{three complementary explainability methods} providing both global and local model interpretability at feature and temporal levels
-    \item Deployed a \textbf{production-ready system} with interactive Next.js dashboard, REST API, and automated CI/CD
+    \item Deployed a \textbf{production-ready system} with an interactive Next.js dashboard, REST API with 8 endpoints, and 6 automated CI/CD workflows
 \end{itemize}
 
 \section{Limitations}
@@ -1086,6 +1144,7 @@ Documentation & 40+ page LaTeX technical report + README with Mermaid architectu
     \item Free-tier deployment (Render) introduces cold-start latency ($\sim$30s after 15 minutes of inactivity)
     \item Model assumes stationarity of pollution sources; structural changes require retraining
     \item Current confidence intervals use heuristic widening; formal conformal prediction would provide theoretical guarantees
+    \item The Bi-LSTM + Attention model underperforms classical models on this dataset (R\textsuperscript{2} = 0.59), likely due to the relatively small training set size for a deep learning approach
 \end{itemize}
 
 \section{Future Work}
@@ -1141,20 +1200,20 @@ Documentation & 40+ page LaTeX technical report + README with Mermaid architectu
 +-- feature_pipeline/           ClearML Feature Store management
 +-- training_pipeline/          Model training, evaluation, explainability
 |   +-- models/                 9 model implementations
+|   +-- registry.py             Multi-model versioning (all 9 models)
 +-- deployment/
-|   +-- api/                    Flask REST API
-|   +-- streamlit_app/          Streamlit dashboard
-+-- infrastructure/
-|   +-- terraform/              AWS IaC
-|   +-- validation_agents/      LangGraph multi-agent validation
+|   +-- api/                    Flask REST API (8 endpoints)
+|   +-- web_app/                Next.js dashboard (10 React components)
 +-- data/                       Feature store (Parquet) + backfill CSV
-+-- models/                     Trained model artifacts
-+-- tests/                      pytest test suite
++-- models/                     Trained model artifacts + registry manifest
++-- tests/                      pytest test suite (4 modules)
 +-- docs/                       This documentation
-+-- .github/workflows/          CI/CD (hourly + daily + PR)
++-- .github/workflows/          CI/CD (6 modular workflows)
 +-- Dockerfile                  Multi-stage build
 +-- docker-compose.yml          Container orchestration
-+-- requirements.txt            Python dependencies
++-- render.yaml                 Render deployment config
++-- requirements.txt            Full Python dependencies
++-- requirements-deploy.txt     Lightweight deploy dependencies
 \end{lstlisting}
 
 \end{document}

@@ -1,21 +1,20 @@
 # Pearls AQI Predictor — Implementation Plan
 
-An end-to-end, serverless, enterprise-grade ML system for predicting Air Quality Index (AQI) in Sargodha, Pakistan with 3-day forecasts, multi-model ML pipeline, SHAP explainability, agentic infra validation, and a premium Streamlit dashboard.
+An end-to-end ML system for predicting Air Quality Index (AQI) in Sargodha, Pakistan with 3-day forecasts, multi-model ML pipeline, SHAP/LIME explainability, and a modern Next.js dashboard.
 
 ## Architecture Overview
 
 ```mermaid
 graph TD
     A["External APIs<br/>(AQICN, OpenWeather)"] -->|Fetch| B["Data Pipeline<br/>(ingest.py, backfill.py)"]
-    B -->|Features| C["Hopsworks<br/>Feature Store"]
-    C -->|Train Data| D["Training Pipeline<br/>(Ridge, LightGBM, Bi-LSTM)"]
-    D -->|Best Model| E["Hopsworks<br/>Model Registry"]
-    C -->|Features| F["FastAPI<br/>(/predict, /explain)"]
+    B -->|Features| C["ClearML<br/>Feature Store"]
+    C -->|Train Data| D["Training Pipeline<br/>(9 Models + Optuna HPO)"]
+    D -->|Best Model| E["ClearML<br/>Model Registry"]
+    C -->|Features| F["Flask API<br/>(/predict, /explain, /simulate)"]
     E -->|Model| F
-    F -->|Predictions| G["Streamlit<br/>Dashboard"]
+    F -->|Predictions| G["Next.js<br/>Dashboard"]
     H["GitHub Actions<br/>CI/CD"] -->|Hourly| B
     H -->|Daily| D
-    I["LangGraph<br/>Validation Agents"] -->|Gate| J["Terraform<br/>AWS Infra"]
 ```
 
 ---
@@ -30,273 +29,255 @@ AQI Predictor/
 │   └── schemas.py               # Pydantic validation schemas for data
 ├── data_pipeline/
 │   ├── __init__.py
-│   ├── ingest.py                # Real-time data fetching with retry
-│   ├── backfill.py              # Historical data backfill (5 years, batched)
-│   └── transformers.py          # Feature engineering transforms
+│   ├── ingest.py                # Real-time data fetching with retry + synthetic fallback
+│   ├── backfill.py              # Historical data backfill (batched)
+│   └── transformers.py          # Feature engineering transforms (37 features)
 ├── feature_pipeline/
 │   ├── __init__.py
-│   └── register.py              # Hopsworks feature group creation & push
+│   └── register.py              # ClearML Dataset push/pull operations
 ├── training_pipeline/
 │   ├── __init__.py
-│   ├── train.py                 # Orchestrator for model training
+│   ├── train.py                 # Orchestrator for 9-model training
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── baseline.py          # Ridge/ElasticNet with RobustScaler
-│   │   ├── tree_ensemble.py     # LightGBM + Optuna Bayesian tuning
-│   │   └── deep_learning.py     # Bi-LSTM + Attention (PyTorch)
+│   │   ├── tree_ensemble.py     # RandomForest/ExtraTrees
+│   │   ├── gradient_boosting.py # LightGBM + XGBoost + Optuna tuning
+│   │   ├── svr_model.py         # Support Vector Regression
+│   │   └── deep_learning.py     # Bi-LSTM + Multi-Head Attention (PyTorch)
 │   ├── evaluation.py            # RMSE, MAE, R², TimeSeriesSplit
-│   ├── explainability.py        # SHAP TreeExplainer / GradientExplainer
-│   └── registry.py              # Hopsworks model registry operations
+│   ├── explainability.py        # SHAP TreeExplainer + LIME + Temporal Grad-CAM
+│   └── registry.py              # ClearML model registry operations
 ├── deployment/
 │   ├── api/
 │   │   ├── __init__.py
-│   │   ├── main.py              # FastAPI app with /predict, /explain, /health
+│   │   ├── main.py              # Flask app with 8 endpoints
 │   │   ├── dependencies.py      # Dependency injection for model & features
 │   │   └── middleware.py        # Error handling, CORS, rate limiting
-│   └── dashboard/
-│       ├── app.py               # Streamlit main dashboard
-│       ├── components/
-│       │   ├── __init__.py
-│       │   ├── aqi_gauge.py     # Premium AQI circle gauge
-│       │   ├── forecast_chart.py # 3-day Plotly timeline
-│       │   ├── shap_chart.py    # SHAP contribution bar chart
-│       │   ├── news_feed.py     # Regional news + sentiment
-│       │   └── alerts.py        # Hazardous AQI alerts
-│       └── styles/
-│           └── theme.py         # Dark mode Scandinavian theme config
-├── infrastructure/
-│   ├── terraform/
-│   │   ├── provider.tf
-│   │   ├── variables.tf
-│   │   ├── main.tf
-│   │   └── outputs.tf
-│   └── validation_agents/
-│       ├── __init__.py
-│       ├── validate.py          # LangGraph multi-agent validator
-│       ├── agents/
-│       │   ├── __init__.py
-│       │   ├── linter.py        # Terraform linter agent
-│       │   ├── security.py      # Checkov security scanner agent
-│       │   └── policy.py        # OPA/Rego policy evaluation agent
-│       └── policies/
-│           └── aws_compliance.rego
+│   ├── streamlit_app/
+│   │   └── app.py               # Streamlit dashboard (legacy)
+│   └── web_app/                 # Next.js 14 frontend (primary UI)
+│       ├── src/app/
+│       │   ├── page.tsx
+│       │   └── components/      # 12 React/TypeScript components
+│       ├── package.json
+│       ├── tsconfig.json
+│       └── next.config.ts
+├── eda/                         # EDA scripts, 20 plots, 26 reports
+├── data/feature_store/          # Local Hive-partitioned Parquet
+├── models/                      # Trained model artifacts (gitignored)
 ├── tests/
 │   ├── __init__.py
-│   ├── test_data_pipeline.py
-│   ├── test_feature_pipeline.py
-│   ├── test_training_pipeline.py
-│   └── test_api.py
+│   ├── test_api.py              # API contract tests (21 tests)
+│   ├── test_data_pipeline.py    # Data pipeline unit tests (14 tests)
+│   ├── test_feature_pipeline.py # Feature store tests
+│   └── test_training_pipeline.py
+├── docs/
+│   ├── documentation.tex        # LaTeX technical documentation
+│   └── documentation.pdf
 ├── .github/
 │   └── workflows/
-│       ├── feature_pipeline_cron.yml
-│       └── training_pipeline_cron.yml
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── pyproject.toml
-├── README.md
-└── .env.example
+│       ├── ci.yml               # Lint + Tests + Build (PR/push gating)
+│       ├── feature-pipeline.yml # Hourly data ingestion
+│       ├── train.yml            # Daily model retraining
+│       ├── deploy-api.yml       # Render backend deployment
+│       ├── deploy-frontend.yml  # Vercel frontend deployment
+│       └── integration.yml      # Integration tests
+├── Dockerfile                   # Multi-stage Docker build
+├── docker-compose.yml           # Service orchestration
+├── requirements.txt             # Python dependencies (62 packages)
+├── pyproject.toml               # Build config + tool configs
+├── README.md                    # Comprehensive project documentation
+└── .env.example                 # Environment variable template
 ```
 
 ---
 
-## Proposed Changes
+## Implementation Details
 
 ### Component 1: Configuration Layer (`config/`)
 
-#### [NEW] [settings.py](file:///d:/Study/AQI Predictor/config/settings.py)
-- Pydantic `BaseSettings` with environment variable loading from `.env`
-- All API keys (AQICN, OpenWeather, Hopsworks), coordinates (Sargodha), thresholds
+#### [settings.py](config/settings.py)
+- Pydantic `BaseSettings` with `.env` loading and `@lru_cache` singleton pattern
+- All API keys (AQICN, OpenWeather, ClearML), coordinates (32.08N, 72.67E), thresholds
 - Typed configuration with validation and sensible defaults
 
-#### [NEW] [schemas.py](file:///d:/Study/AQI Predictor/config/schemas.py)
-- Pydantic models for raw API responses, processed features, predictions
+#### [schemas.py](config/schemas.py)
+- Pydantic models for `PollutantReading`, `WeatherData`, `PredictionRequest`, `PredictionResponse`
+- `AQILevel` enum with health advisory mappings
 - Strict type enforcement for all data flowing through pipelines
 
 ---
 
 ### Component 2: Data Pipeline (`data_pipeline/`)
 
-#### [NEW] [ingest.py](file:///d:/Study/AQI Predictor/data_pipeline/ingest.py)
-- `AQICNClient` — fetches PM2.5, PM10, NO2, SO2, CO, O3 from AQICN API v2
-- `OpenWeatherClient` — fetches temp, humidity, wind speed/direction, pressure, precip
+#### [ingest.py](data_pipeline/ingest.py)
+- `DataIngestionOrchestrator` — orchestrates the full ingestion flow
+- Async HTTP clients for AQICN and OpenWeatherMap with `aiohttp`
 - Exponential backoff retry via `tenacity` (handles 429, 5xx)
-- Concurrent fetching with `asyncio` + `aiohttp`
+- Custom exception hierarchy: `APIError` -> `RateLimitError`, `TransientError`
+- `SyntheticDataGenerator` fallback when APIs are unavailable
 
-#### [NEW] [transformers.py](file:///d:/Study/AQI Predictor/data_pipeline/transformers.py)
-- Cyclical temporal encoding (hour_sin/cos, day_sin/cos, month_sin/cos)
-- AQI change rate (1h, 3h, 6h rolling windows)
-- Wind-pollutant vector interaction (U/V decomposition × PM2.5/PM10)
-- Boundary layer proxy (THI = temperature-humidity index)
-- **Advanced**: Pollution rose features, thermal inversion detection, lag features (t-1, t-3, t-6, t-12, t-24)
+#### [transformers.py](data_pipeline/transformers.py)
+- 37 engineered features including:
+  - Cyclical temporal encoding (hour_sin/cos, day_sin/cos, month_sin/cos)
+  - AQI change rate (1h, 3h, 6h rolling windows)
+  - Wind-pollutant vector interaction (U/V decomposition x PM2.5/PM10)
+  - Thermal inversion detection
+  - Lag features (t-1, t-3, t-6, t-12, t-24)
+  - Rolling statistics (mean, std, min, max over multiple windows)
 
-#### [NEW] [backfill.py](file:///d:/Study/AQI Predictor/data_pipeline/backfill.py)
-- Historical data generation for past 5 years
-- Batch processing in chunks of 10,000 rows
+#### [backfill.py](data_pipeline/backfill.py)
+- Historical data generation with batch processing
 - Progress tracking and resumable state
 
 ---
 
 ### Component 3: Feature Pipeline (`feature_pipeline/`)
 
-#### [NEW] [register.py](file:///d:/Study/AQI Predictor/feature_pipeline/register.py)
-- Hopsworks Feature Group `sargodha_aqi_features` (v1)
-- Primary key: `timestamp`, event time: `timestamp`, partition: `year`, `month`
-- Schema enforcement with precise types
-- Online/offline store management
+#### [register.py](feature_pipeline/register.py)
+- ClearML Dataset API for feature group creation and push
+- Hive-partitioned Parquet storage (partitioned by year/month)
+- Schema enforcement and data quality gates
 
 ---
 
 ### Component 4: Training Pipeline (`training_pipeline/`)
 
-#### [NEW] [models/baseline.py](file:///d:/Study/AQI Predictor/training_pipeline/models/baseline.py)
-- Ridge/ElasticNet with `RobustScaler` pipeline
-- Handles skewed pollutant distributions
+#### 9 Models Trained:
 
-#### [NEW] [models/tree_ensemble.py](file:///d:/Study/AQI Predictor/training_pipeline/models/tree_ensemble.py)
-- LightGBM Regressor with Optuna Bayesian optimization
-- Feature importance extraction
+| Model | Implementation | Notes |
+|-------|---------------|-------|
+| Ridge | scikit-learn + RobustScaler | Baseline linear model |
+| ElasticNet | scikit-learn + RobustScaler | L1/L2 regularization |
+| Random Forest | scikit-learn | Ensemble of decision trees |
+| Extra Trees | scikit-learn | Randomized tree ensemble |
+| Gradient Boosting | scikit-learn | Sequential boosting |
+| SVR | scikit-learn | Random subsampling for efficiency |
+| LightGBM | lightgbm + Optuna HPO | Bayesian hyperparameter optimization |
+| XGBoost | xgboost + Optuna HPO | Gradient boosting with regularization |
+| Bi-LSTM + Attention | PyTorch | Multi-head attention, mixed precision, gradient accumulation |
 
-#### [NEW] [models/deep_learning.py](file:///d:/Study/AQI Predictor/training_pipeline/models/deep_learning.py)
-- Bidirectional LSTM with custom Multi-Head Attention
-- Input: 72h history → Output: 72h forecast (72, 1)
-- AdamW optimizer + OneCycleLR scheduler
-- **Asymmetric loss** penalizing hazardous under-predictions
-- Dropout regularization
+#### [train.py](training_pipeline/train.py)
+- `TrainingOrchestrator` — manages the full training lifecycle
+- Temporal train/test split (no shuffling) to prevent data leakage
+- Per-model try/except so one failure doesn't stop the pipeline
+- Leakage prevention: excludes short-horizon lags that cause R² > 0.999
 
-#### [NEW] [evaluation.py](file:///d:/Study/AQI Predictor/training_pipeline/evaluation.py)
-- TimeSeriesSplit (5-fold) cross-validation
-- RMSE, MAE, R² metric computation
-- Model comparison and champion selection
+#### [deep_learning.py](training_pipeline/models/deep_learning.py)
+- 730-line Bi-LSTM with multi-head attention
+- Gradient accumulation, mixed precision training (AMP)
+- Cosine annealing with warm restarts scheduler
+- Asymmetric loss function penalizing hazardous under-predictions
 
-#### [NEW] [explainability.py](file:///d:/Study/AQI Predictor/training_pipeline/explainability.py)
-- SHAP TreeExplainer (LightGBM) and GradientExplainer (PyTorch)
-- Serialization of explainer alongside model artifacts
-
-#### [NEW] [registry.py](file:///d:/Study/AQI Predictor/training_pipeline/registry.py)
-- Hopsworks Model Registry integration
-- Tag: `sargodha_aqi_forecast_model`
-- Metadata: validation metrics + hyperparameters as JSON
+#### [explainability.py](training_pipeline/explainability.py)
+- SHAP TreeExplainer for tree-based models
+- LIME tabular explanations
+- Custom Temporal Grad-CAM for the deep learning model
 
 ---
 
-### Component 5: FastAPI Backend (`deployment/api/`)
+### Component 5: Flask Backend (`deployment/api/`)
 
-#### [NEW] [main.py](file:///d:/Study/AQI Predictor/deployment/api/main.py)
+#### [main.py](deployment/api/main.py)
 - `GET /health` — liveness/readiness check
-- `POST /predict` — fetch features → load model → 3-day AQI forecast
-- `POST /explain` — SHAP values for current prediction payload
-- `GET /historical` — historical AQI data for charting
+- `POST /predict` — 3-day AQI forecast with uncertainty estimates
+- `POST /explain` — SHAP feature contributions
+- `GET /historical` — paginated historical AQI data
+- `GET /models` — model zoo listing
+- `POST /simulate` — counterfactual policy simulation
+- `GET /satellite/sentinel5p` — simulated satellite grid data
+- `GET /shadow/metrics` — shadow model A/B comparison
 
-#### [NEW] [dependencies.py](file:///d:/Study/AQI Predictor/deployment/api/dependencies.py)
-- Dependency injection: model loader, feature store connector, caching
-
-#### [NEW] [middleware.py](file:///d:/Study/AQI Predictor/deployment/api/middleware.py)
-- Global exception handler, CORS, request logging, rate limiting
-
----
-
-### Component 6: Streamlit Dashboard (`deployment/dashboard/`)
-
-#### [NEW] [app.py](file:///d:/Study/AQI Predictor/deployment/dashboard/app.py)
-- Scandinavian-minimalist dark mode (`#121212` bg, `#1E1E1E` sidebar)
-- Main layout with AQI gauge, forecast chart, SHAP chart, news, alerts
-
-#### [NEW] Dashboard Components:
-- `aqi_gauge.py` — Animated CSS/SVG AQI circle with color transitions (Green → Yellow → Red)
-- `forecast_chart.py` — 3-day interactive Plotly line chart (cubic interpolation, no gridlines)
-- `shap_chart.py` — Horizontal SHAP contribution bar chart
-- `news_feed.py` — RSS news ingestion + sentiment analysis (zero-shot classifier)
-- `alerts.py` — Modal alerts for AQI > 150 with health advice
+#### Security & Reliability:
+- Global exception handler (never exposes internals)
+- CORS restricted to known origins
+- Input validation and clamping for all numeric parameters
+- Imputation strategy for missing features during inference
 
 ---
 
-### Component 7: Infrastructure (`infrastructure/`)
+### Component 6: Next.js Frontend (`deployment/web_app/`)
 
-#### [NEW] Terraform files
-- `provider.tf` — AWS provider configuration
-- `variables.tf` — Parameterized variables (API keys, schedules)
-- `main.tf` — EventBridge + Lambda (feature) + ECS Fargate (training) + SSM
-- `outputs.tf` — Resource ARNs and endpoints
-
-#### [NEW] LangGraph Validation Agents
-- `validate.py` — Multi-agent state graph orchestrator
-- `AgentState` with: terraform_code, lint_results, security_issues, policy_compliance, approval_status
-- Linter → Security (Checkov) → Policy (OPA/Rego) → Decision agent
-- GitHub Actions integration (blocks deploy on failure)
-
----
-
-### Component 8: CI/CD & DevOps
-
-#### [NEW] `.github/workflows/feature_pipeline_cron.yml`
-- Hourly trigger, installs deps, runs feature pipeline, pushes to Hopsworks, runs tests
-
-#### [NEW] `.github/workflows/training_pipeline_cron.yml`
-- Daily trigger, extracts data, checks drift, trains, evaluates, conditionally promotes
-
-#### [NEW] `Dockerfile`
-- Multi-stage build (builder + runtime), `python:3.11-slim`, < 500MB
-- Gunicorn/Uvicorn worker configuration
-
-#### [NEW] `docker-compose.yml`
-- API + Dashboard services with health checks
+- **Next.js 14** with React 19 and TypeScript
+- **Tailwind CSS** for styling + **Framer Motion** for animations
+- **12 interactive components** including:
+  - Model selector with dynamic switching
+  - AQI forecast visualization
+  - SHAP explanation charts
+  - Health advisory system
+  - Edge inference engine
+  - Causal policy simulator
+  - Shadow/canary monitoring
+- Deployed on **Vercel** with automatic preview deployments
 
 ---
 
-### Component 9: Advanced Differentiators (My Additions)
+### Component 7: CI/CD & DevOps
 
-> [!IMPORTANT]
-> These advanced features are additions beyond the project requirements to make the submission stand out.
+#### GitHub Actions (6 workflows):
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ci.yml` | PR/Push to main | Lint (Ruff) + Tests (pytest + coverage) + API contract tests + TS build |
+| `feature-pipeline.yml` | Cron (hourly) | Validate secrets, test API connectivity, ingest, transform, push to ClearML |
+| `train.yml` | Cron (daily) | Train 9 models, evaluate, register best in ClearML |
+| `deploy-api.yml` | Push to main | Deploy Flask API to Render |
+| `deploy-frontend.yml` | Push to main | Deploy Next.js to Vercel |
+| `integration.yml` | Push | Run integration test suite |
+
+#### Docker:
+- Multi-stage build (builder + runtime), `python:3.11-slim`
+- Runs as non-root user for security
+- docker-compose for local multi-service orchestration
+
+---
+
+### Component 8: Advanced Features
 
 | Feature | Description |
-|---|---|
-| **Data Drift Detection** | Evidently AI integration to detect feature distribution shifts before retraining |
+|---------|-------------|
+| **Data Drift Detection** | Population Stability Index (PSI) to detect feature distribution shifts |
 | **Anomaly Detection** | Isolation Forest running alongside AQI predictions to flag anomalous readings |
 | **Thermal Inversion Detection** | Custom feature detecting atmospheric inversions that trap pollutants |
-| **Lag Feature Engineering** | Autoregressive features at t-1, t-3, t-6, t-12, t-24 for improved LSTM context |
-| **Ensemble Stacking** | Meta-learner combining Ridge + LightGBM + LSTM predictions |
-| **Prediction Intervals** | Conformal prediction for uncertainty quantification (80% and 95% intervals) |
-| **Air Quality Health Index** | Custom AQHI score mapping AQI to health risk categories with localized advice |
-| **Pollution Rose** | Wind direction × pollutant concentration features for spatial dispersion modeling |
-| **Model Versioning Lineage** | Full tracking of data version → features → model → predictions |
-| **API Response Caching** | Redis-compatible TTL caching for /predict endpoint (5-min cache) |
+| **Lag Feature Engineering** | Autoregressive features at t-1, t-3, t-6, t-12, t-24 |
+| **Prediction Intervals** | Uncertainty quantification via ensemble variance |
+| **Health Advisory System** | AQI-to-health-risk mapping with localized advice |
+| **Counterfactual Simulation** | Policy scenario testing via `/simulate` endpoint |
+| **Shadow Model Comparison** | A/B model evaluation via `/shadow/metrics` |
+| **Satellite Data Simulation** | Sentinel-5P grid data simulation for spatial context |
 
 ---
 
-## Open Questions
-
-> [!IMPORTANT]
-> **API Keys Required**: Do you already have API keys for:
-> 1. **AQICN** (https://aqicn.org/api/) — free tier available
-> 2. **OpenWeatherMap** (https://openweathermap.org/api) — free tier available
-> 3. **Hopsworks** (https://www.hopsworks.ai/) — free tier available
->
-> If not, I'll set up the code to work with `.env` configuration and include mock/synthetic data generation for development.
-
-> [!NOTE]
-> **No virtualenv**: As requested, all code will be written to run with your system Python. A `requirements.txt` will be provided for `pip install -r requirements.txt`.
-
----
-
-## Execution Strategy
-
-I'll build this in 5 phases, starting immediately:
-
-1. **Phase 1** — Config + Data Pipeline + Feature Engineering (~15 files)
-2. **Phase 2** — Feature Store + Training Pipeline + Models (~10 files)
-3. **Phase 3** — FastAPI + Streamlit Dashboard (~10 files)
-4. **Phase 4** — Infrastructure (Terraform + LangGraph Agents) (~8 files)
-5. **Phase 5** — CI/CD + Docker + Tests + Documentation (~8 files)
-
-## Verification Plan
+## Verification
 
 ### Automated Tests
-- `pytest tests/` — Unit tests for each pipeline component
-- `python -m data_pipeline.ingest --dry-run` — Validate API connectivity
-- `docker build .` — Verify container builds under 500MB
+```bash
+# Run full test suite with coverage
+python -m pytest tests/ -v --tb=short --cov=. --cov-report=term-missing
 
-### Manual Verification
-- Run Streamlit dashboard locally: `streamlit run deployment/dashboard/app.py`
-- Hit FastAPI endpoints: `http://localhost:8000/docs` (Swagger UI)
-- Verify feature store writes via Hopsworks UI
+# Run API contract tests only
+python -m pytest tests/test_api.py -v
+
+# Lint and format check
+ruff check . && ruff format --check .
+
+# TypeScript build verification
+cd deployment/web_app && npm run build
+```
+
+### Local Development
+```bash
+# Start API server
+gunicorn deployment.api.main:app --bind 0.0.0.0:8000 --workers 2
+
+# Start frontend
+cd deployment/web_app && npm run dev
+
+# Docker compose
+docker-compose up --build
+```
+
+### Live Deployment
+- **Backend**: https://pearls-aqi-api.onrender.com
+- **Frontend**: https://aqi-predictor-3cawg37a4-giki.vercel.app

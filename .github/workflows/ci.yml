@@ -35,7 +35,6 @@ jobs:
         run: |
           ruff check . --output-format=github
           ruff format --check .
-        continue-on-error: true
 
   test:
     name: Unit Tests
@@ -67,11 +66,10 @@ jobs:
           PYTHONPATH: .
 
       - name: Run tests
-        run: python -m pytest tests/ -v --tb=short
+        run: python -m pytest tests/ -v --tb=short --cov=. --cov-report=term-missing --cov-report=xml
         env:
           PYTHONPATH: .
           AQICN_API_KEY: demo
-        continue-on-error: true
 
   api-contract:
     name: API Contract Tests
@@ -99,7 +97,6 @@ jobs:
         env:
           PYTHONPATH: .
           AQICN_API_KEY: demo
-        continue-on-error: true
 
   typecheck-frontend:
     name: TypeScript & Build
@@ -131,3 +128,7 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: https://pearls-aqi-api.onrender.com
+
+      - name: Run frontend tests
+        working-directory: deployment/web_app
+        run: npx vitest run

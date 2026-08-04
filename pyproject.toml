@@ -18,8 +18,29 @@ keywords = ["aqi", "air-quality", "machine-learning", "forecasting", "lstm", "li
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --cov=. --cov-report=term-missing --cov-config=pyproject.toml"
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["config", "data_pipeline", "feature_pipeline", "training_pipeline", "deployment"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/eda/*",
+    "deployment/web_app/*",
+    "deployment/streamlit_app/*",
+]
+
+[tool.coverage.report]
+fail_under = 60
+show_missing = true
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
 
 [tool.mypy]
 python_version = "3.11"
