@@ -54,20 +54,14 @@ class ShadowLoggerService:
     def get_metrics_summary(self) -> Dict[str, Any]:
         """Compute metrics comparing champion vs challenger models."""
         if not self._records:
-            # Return realistic initial state if no active records yet
             return {
-                "total_shadow_requests": 42,
-                "champion_id": "bilstm_attention",
-                "canary_status": "HEALTHY",
-                "recommended_challenger": "lightgbm",
-                "challengers": {
-                    "lightgbm": {"avg_divergence_from_champion": 3.2, "avg_latency_ms": 4.1, "sample_count": 42, "ready_for_promotion": True},
-                    "xgboost": {"avg_divergence_from_champion": 4.8, "avg_latency_ms": 5.2, "sample_count": 42, "ready_for_promotion": True},
-                    "random_forest": {"avg_divergence_from_champion": 7.1, "avg_latency_ms": 12.4, "sample_count": 42, "ready_for_promotion": False},
-                },
-                "recent_records": [
-                    {"timestamp": datetime.now(timezone.utc).isoformat(), "champion_pred": 94.2, "challenger_preds": {"lightgbm": 97.1, "xgboost": 99.0}},
-                ],
+                "total_shadow_requests": 0,
+                "champion_id": "ridge",
+                "canary_status": "NO_DATA",
+                "recommended_challenger": None,
+                "challengers": {},
+                "recent_records": [],
+                "note": "No shadow inference recorded yet. Metrics populate as prediction requests are served.",
             }
 
         champion_preds = [r.champion_prediction for r in self._records]

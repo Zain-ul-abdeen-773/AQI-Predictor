@@ -6,14 +6,14 @@ import ParticleWindEngine from '../../components/ParticleWindEngine';
 import ActualVsPredictedGraph from '../../components/ActualVsPredictedGraph';
 
 const LEADERBOARD_ZOO = [
-  { rank: 1, name: 'Bi-LSTM + Attention', r2: 0.945, rmse: 5.82, mae: 4.12, color: 'from-[#0066FF] to-[#38BDF8]', best: true },
-  { rank: 2, name: 'LightGBM (Optuna Tuned)', r2: 0.931, rmse: 6.45, mae: 4.88, color: 'from-[#0284C7] to-[#0066FF]' },
-  { rank: 3, name: 'XGBoost (Optuna Tuned)', r2: 0.928, rmse: 6.71, mae: 5.02, color: 'from-[#0369A1] to-[#0284C7]' },
-  { rank: 4, name: 'Gradient Boosting Regressor', r2: 0.912, rmse: 7.34, mae: 5.62, color: 'from-[#075985] to-[#0369A1]' },
-  { rank: 5, name: 'Random Forest Ensemble', r2: 0.895, rmse: 8.12, mae: 6.15, color: 'from-slate-500 to-slate-400' },
-  { rank: 6, name: 'Extra Trees Ensemble', r2: 0.887, rmse: 8.45, mae: 6.41, color: 'from-slate-600 to-slate-500' },
-  { rank: 7, name: 'Ridge Linear Regression', r2: 0.842, rmse: 10.15, mae: 7.82, color: 'from-amber-600 to-amber-400' },
-  { rank: 8, name: 'Support Vector Regression (RBF)', r2: 0.835, rmse: 10.42, mae: 8.11, color: 'from-rose-600 to-rose-400' },
+  { rank: 1, name: 'Ridge + RobustScaler (Champion)', r2: 0.9988, rmse: 1.54, mae: 0.87, color: 'from-[#0066FF] to-[#38BDF8]', best: true },
+  { rank: 2, name: 'Gradient Boosting Regressor', r2: 0.9986, rmse: 1.68, mae: 0.87, color: 'from-[#0284C7] to-[#0066FF]' },
+  { rank: 3, name: 'Extra Trees Regressor', r2: 0.9979, rmse: 2.05, mae: 1.00, color: 'from-[#0369A1] to-[#0284C7]' },
+  { rank: 4, name: 'XGBoost (Optuna Tuned)', r2: 0.9975, rmse: 2.25, mae: 1.18, color: 'from-[#075985] to-[#0369A1]' },
+  { rank: 5, name: 'LightGBM (Optuna Tuned)', r2: 0.9975, rmse: 2.26, mae: 1.19, color: 'from-slate-500 to-slate-400' },
+  { rank: 6, name: 'Random Forest Ensemble', r2: 0.9908, rmse: 4.33, mae: 2.39, color: 'from-slate-600 to-slate-500' },
+  { rank: 7, name: 'Support Vector Regression (RBF)', r2: 0.9815, rmse: 6.13, mae: 3.25, color: 'from-amber-600 to-amber-400' },
+  { rank: 8, name: 'Bi-LSTM + Attention', r2: 0.5913, rmse: 28.94, mae: 21.19, color: 'from-rose-600 to-rose-400' },
 ];
 
 const DIURNAL_CYCLE = [
@@ -55,7 +55,7 @@ export default function EditorialAnalyticsPage() {
 
         <div className="flex flex-col items-start md:items-end p-4 rounded-md border border-slate-700/50 bg-slate-800/40 text-xs font-mono text-slate-300">
           <span className="text-blue-400 font-semibold text-sm">
-            BENCHMARK LEADER: R² 0.945
+            BENCHMARK LEADER: R² 0.9988
           </span>
           <span className="mt-0.5 text-slate-400">5-Fold TimeSeriesSplit Rigor</span>
         </div>

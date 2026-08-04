@@ -23,15 +23,16 @@ interface PredictionPayload {
   alert: boolean;
 }
 
-const MODEL_ZOO: ModelZooEntry[] = [
-  { id: 'bilstm_attention', name: 'Bi-LSTM + Attention', category: 'Deep Learning', r2: 0.945, rmse: 5.82, mae: 4.12, is_default: true },
-  { id: 'lightgbm', name: 'LightGBM (Optuna)', category: 'Gradient Boosting', r2: 0.931, rmse: 6.45, mae: 4.88, is_default: false },
-  { id: 'xgboost', name: 'XGBoost (Optuna)', category: 'Gradient Boosting', r2: 0.928, rmse: 6.71, mae: 5.02, is_default: false },
-  { id: 'gradient_boosting', name: 'Gradient Boosting', category: 'Ensemble', r2: 0.912, rmse: 7.34, mae: 5.62, is_default: false },
-  { id: 'random_forest', name: 'Random Forest', category: 'Ensemble', r2: 0.895, rmse: 8.12, mae: 6.15, is_default: false },
-  { id: 'extra_trees', name: 'Extra Trees', category: 'Ensemble', r2: 0.887, rmse: 8.45, mae: 6.41, is_default: false },
-  { id: 'ridge', name: 'Ridge Regression', category: 'Linear', r2: 0.842, rmse: 10.15, mae: 7.82, is_default: false },
-  { id: 'svr', name: 'SVR (RBF Kernel)', category: 'Kernel', r2: 0.835, rmse: 10.42, mae: 8.11, is_default: false },
+// Fallback model list matching backend metadata (used only until API responds)
+const FALLBACK_MODELS: ModelZooEntry[] = [
+  { id: 'ridge', name: 'Ridge + RobustScaler', category: 'Baseline', r2: 0.9988, rmse: 1.54, mae: 0.87, is_default: true },
+  { id: 'gradient_boosting', name: 'Gradient Boosting', category: 'Ensemble Trees', r2: 0.9986, rmse: 1.68, mae: 0.87, is_default: false },
+  { id: 'extra_trees', name: 'Extra Trees', category: 'Ensemble Trees', r2: 0.9979, rmse: 2.05, mae: 1.00, is_default: false },
+  { id: 'xgboost', name: 'XGBoost (Optuna)', category: 'Tree Ensemble', r2: 0.9975, rmse: 2.25, mae: 1.18, is_default: false },
+  { id: 'lightgbm', name: 'LightGBM (Optuna)', category: 'Tree Ensemble', r2: 0.9975, rmse: 2.26, mae: 1.19, is_default: false },
+  { id: 'random_forest', name: 'Random Forest', category: 'Ensemble Trees', r2: 0.9908, rmse: 4.33, mae: 2.39, is_default: false },
+  { id: 'svr', name: 'SVR (RBF Kernel)', category: 'Kernel Methods', r2: 0.9815, rmse: 6.13, mae: 3.25, is_default: false },
+  { id: 'bilstm_attention', name: 'Bi-LSTM + Attention', category: 'Deep Learning', r2: 0.5913, rmse: 28.94, mae: 21.19, is_default: false },
 ];
 
 function buildDeterministicForecast(): PredictionPayload {
@@ -77,17 +78,17 @@ function SpringNumberCounter({ target }: { target: number }) {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export default function EditorialHomePage() {
-  const [models, setModels] = useState<ModelZooEntry[]>(MODEL_ZOO);
-  const [activeModel, setActiveModel] = useState('bilstm_attention');
+  const [models, setModels] = useState<ModelZooEntry[]>(FALLBACK_MODELS);
+  const [activeModel, setActiveModel] = useState('ridge');
   const [forecast, setForecast] = useState<PredictionPayload>(DEFAULT_FORECAST);
   const [loading, setLoading] = useState(false);
   const [lastSync, setLastSync] = useState('Just now');
+  const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/models`)
       .then(r => r.json())
       .then(data => {
-        // API returns { models: [...], default_model_id: "..." }
         const list: ModelZooEntry[] = Array.isArray(data) ? data : (data?.models ?? []);
         if (list.length > 0) {
           setModels(list);
@@ -96,8 +97,9 @@ export default function EditorialHomePage() {
             setActiveModel(champion.id);
           }
         }
+        setApiError(null);
       })
-      .catch(err => console.error('Failed to fetch models from local API:', err));
+      .catch(() => setApiError('Backend API unavailable. Showing cached data.'));
   }, []);
 
   const syncData = useCallback(async (modelId: string) => {
@@ -111,12 +113,13 @@ export default function EditorialHomePage() {
         if (data?.hourly_predictions) {
           setForecast(data);
           setLastSync(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+          setApiError(null);
           return;
         }
       }
 
       // Out-of-sample simulation reflecting distinct model generalization (Ground-Truth EPA Observation = 88 AQI)
-      const model = models.find((m) => m.id === modelId) || MODEL_ZOO[0];
+      const model = models.find((m) => m.id === modelId) || FALLBACK_MODELS[0];
       const modelDivergenceMap: Record<string, number> = {
         bilstm_attention: 6,      // 94 AQI (+6 residual vs 88 ground truth)
         lightgbm: 9,              // 97 AQI (+9 residual)
@@ -166,6 +169,13 @@ export default function EditorialHomePage() {
     <div className="relative z-10 flex flex-col gap-14">
       <ParticleWindEngine aqiValue={forecast.current_aqi} />
       <VignetteAlert currentAqi={forecast.current_aqi} isTriggered={forecast.alert} />
+
+      {/* Error banner */}
+      {apiError && (
+        <div className="px-4 py-3 rounded-lg border border-amber-500/40 bg-amber-900/20 text-amber-300 text-xs font-mono">
+          {apiError}
+        </div>
+      )}
 
       {/* Feature 2: Offline Edge Inference Switcher */}
       <EdgeInferenceEngine

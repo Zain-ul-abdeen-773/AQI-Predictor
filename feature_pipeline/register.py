@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
+import time
 from datetime import datetime
 from typing import Any, Dict, Optional
 from pathlib import Path
@@ -36,6 +37,9 @@ class FeatureStoreManager:
 
     def __init__(self, settings: Optional[Settings] = None) -> None:
         self.settings = settings or get_settings()
+        self._cache: Optional[pd.DataFrame] = None
+        self._cache_ts: float = 0.0
+        self._cache_ttl: float = float(self.settings.cache_ttl_seconds)
 
     def insert_features(
         self,
@@ -61,8 +65,12 @@ class FeatureStoreManager:
                 if df["timestamp"].dt.tz is not None:
                     df["timestamp"] = df["timestamp"].dt.tz_localize(None)
 
-            # Fill NaNs
-            df = df.fillna(0.0)
+            # Forward-fill then use column median for remaining NaNs
+            # Avoids the misleading fillna(0) pattern
+            numeric_cols = df.select_dtypes(include=["number"]).columns
+            df[numeric_cols] = df[numeric_cols].ffill()
+            col_medians = df[numeric_cols].median()
+            df[numeric_cols] = df[numeric_cols].fillna(col_medians)
 
             # Save locally to temp file
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -101,6 +109,10 @@ class FeatureStoreManager:
                 dataset.upload()
                 dataset.finalize()
                 
+            # Invalidate local cache after new insert
+            self._cache = None
+            self._cache_ts = 0.0
+
             logger.info("Inserted %d total rows into ClearML dataset", len(df))
         except ImportError:
             logger.error("ClearML package not installed.")
@@ -161,13 +173,24 @@ class FeatureStoreManager:
     def get_latest_features(self, n_hours: int = 72) -> pd.DataFrame:
         """Retrieve the most recent N hours of features for inference.
 
+        Uses an in-memory cache with TTL to avoid downloading
+        the full dataset from ClearML on every request.
+
         Args:
             n_hours: Number of recent hours to retrieve.
 
         Returns:
             pd.DataFrame: Recent feature vectors.
         """
-        df = self.get_training_data()
-        if not df.empty:
-            df = df.sort_values("timestamp").tail(n_hours)
-        return df
+        now = time.time()
+        cache_expired = (now - self._cache_ts) > self._cache_ttl
+
+        if self._cache is None or cache_expired:
+            self._cache = self.get_training_data()
+            self._cache_ts = now
+            if not self._cache.empty:
+                logger.info("Feature cache refreshed: %d total rows", len(self._cache))
+
+        if self._cache is not None and not self._cache.empty:
+            return self._cache.sort_values("timestamp").tail(n_hours).copy()
+        return pd.DataFrame()
