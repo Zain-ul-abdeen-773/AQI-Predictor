@@ -182,7 +182,7 @@ jobs:
           FAILED=0
 
           for page in "${PAGES[@]}"; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${URL}${page}" 2>/dev/null || echo "000")
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L "${URL}${page}" 2>/dev/null || echo "000")
             if [ "$STATUS" = "200" ]; then
               echo "PASS: ${page} -> HTTP $STATUS"
             else
