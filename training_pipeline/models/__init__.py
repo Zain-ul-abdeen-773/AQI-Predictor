@@ -9,7 +9,6 @@ Exports all model classes for easy import:
 """
 
 from training_pipeline.models.baseline import BaselineRegressor
-from training_pipeline.models.deep_learning import BiLSTMAttention
 from training_pipeline.models.ensemble_trees import (
     ExtraTreesModel,
     GradientBoostingModel,
@@ -17,6 +16,12 @@ from training_pipeline.models.ensemble_trees import (
     SVRModel,
 )
 from training_pipeline.models.tree_ensemble import LightGBMOptimized
+
+# Conditionally import PyTorch-dependent models
+try:
+    from training_pipeline.models.deep_learning import BiLSTMAttention
+except ImportError:
+    BiLSTMAttention = None  # type: ignore
 
 # Conditionally import XGBoost (requires xgboost package)
 try:

@@ -16,8 +16,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import torch
-
 from config.settings import Settings, get_settings
 from training_pipeline.evaluation import EvaluationMetrics
 
@@ -238,6 +236,7 @@ class ModelRegistryManager:
                     for p in export_dir.glob("*.pt"):
                         shutil.copy(p, model_path)
             else:
+                import torch
                 torch.save(model.state_dict(), model_path)
         else:
             if hasattr(model, "save"):

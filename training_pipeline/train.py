@@ -36,7 +36,6 @@ from training_pipeline.evaluation import (
 )
 from training_pipeline.explainability import SHAPExplainer
 from training_pipeline.models.baseline import BaselineRegressor
-from training_pipeline.models.deep_learning import BiLSTMAttention
 from training_pipeline.models.ensemble_trees import (
     ExtraTreesModel,
     GradientBoostingModel,
@@ -47,6 +46,17 @@ from training_pipeline.models.tree_ensemble import LightGBMOptimized
 from training_pipeline.registry import ModelRegistryManager
 
 logger = logging.getLogger(__name__)
+
+# Lazy import for BiLSTMAttention to avoid requiring torch at module load time
+BiLSTMAttention: Any = None
+
+
+def _get_bilstm_class():
+    global BiLSTMAttention
+    if BiLSTMAttention is None:
+        from training_pipeline.models.deep_learning import BiLSTMAttention as _cls
+        BiLSTMAttention = _cls
+    return BiLSTMAttention
 
 
 # --- Feature columns - Split into categories for leakage control ---
@@ -264,7 +274,7 @@ class TrainingOrchestrator:
         X: np.ndarray,
         y: np.ndarray,
         feature_names: list[str],
-    ) -> tuple[BiLSTMAttention, EvaluationMetrics]:
+    ) -> tuple[Any, EvaluationMetrics]:
         """Train and evaluate the Bi-LSTM with Attention model.
 
         Creates sequences from the flat feature matrix and trains
@@ -283,11 +293,13 @@ class TrainingOrchestrator:
         logger.info("TRAINING: Bi-LSTM with Multi-Head Attention")
         logger.info("=" * 60)
 
+        _BiLSTMAttention = _get_bilstm_class()
+
         lookback = self.settings.lookback_window_hours
         horizon = self.settings.forecast_horizon_hours
 
         # Create sequences
-        X_seq, y_seq = BiLSTMAttention.create_sequences(X, y, lookback, horizon)
+        X_seq, y_seq = _BiLSTMAttention.create_sequences(X, y, lookback, horizon)
 
         if len(X_seq) < 100:
             logger.warning(
@@ -304,7 +316,7 @@ class TrainingOrchestrator:
         # Checkpoint directory
         checkpoint_dir = self.settings.models_dir / "checkpoints"
 
-        model = BiLSTMAttention(
+        model = _BiLSTMAttention(
             input_size=X.shape[1],
             hidden_size=self.settings.lstm_hidden_size,
             num_layers=self.settings.lstm_num_layers,
