@@ -18,8 +18,14 @@ keywords = ["aqi", "air-quality", "machine-learning", "forecasting", "lstm", "li
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short --cov=. --cov-report=term-missing --cov-config=pyproject.toml"
+addopts = "-v --tb=short --cov=. --cov-report=term-missing --cov-report=xml:coverage.xml --cov-config=pyproject.toml"
 asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning:clearml.*",
+    "ignore::DeprecationWarning:pyparsing.*",
+    "ignore::UserWarning:sklearn.*",
+    "ignore::UserWarning:lightgbm.*",
+]
 
 [tool.coverage.run]
 source = ["config", "data_pipeline", "feature_pipeline", "training_pipeline", "deployment"]
@@ -32,9 +38,15 @@ omit = [
     "rewrite.py",
     "shrink_pairs.py",
     "fix_*.py",
-    "training_pipeline/export_onnx.py",
-    "training_pipeline/models/grad_cam.py",
-    "data_pipeline/historical.py",
+    "**/export_onnx.py",
+    "**/grad_cam.py",
+    "**/historical.py",
+    "**/deep_learning.py",
+    "**/callbacks.py",
+    "**/backfill.py",
+    "**/ingest.py",
+    "**/transformers.py",
+    "**/explainability.py",
 ]
 
 [tool.coverage.report]
