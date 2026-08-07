@@ -311,7 +311,6 @@ class ModelService:
                 RandomForestModel,
                 SVRModel,
             )
-            from training_pipeline.models.tree_ensemble import LightGBMOptimized
             from training_pipeline.train import FEATURE_COLUMNS, TARGET_COLUMN
 
             manager = FeatureStoreManager(settings)
@@ -349,20 +348,20 @@ class ModelService:
             else:
                 y = df["aqi_value"].fillna(100.0).values.astype(np.float32)[:5]
 
-            # Train only lightweight models (no Optuna, no LSTM)
+            # Train only lightweight models with minimal memory footprint (Render 512MB limit)
             m_ridge = BaselineRegressor(model_type="ridge")
             m_ridge.fit(X, y, feature_names=available_cols)
             self.models["ridge"] = m_ridge
 
-            m_gb = GradientBoostingModel()
+            m_gb = GradientBoostingModel(n_estimators=50)
             m_gb.fit(X, y, feature_names=available_cols)
             self.models["gradient_boosting"] = m_gb
 
-            m_rf = RandomForestModel()
+            m_rf = RandomForestModel(n_estimators=50)
             m_rf.fit(X, y, feature_names=available_cols)
             self.models["random_forest"] = m_rf
 
-            m_et = ExtraTreesModel()
+            m_et = ExtraTreesModel(n_estimators=50)
             m_et.fit(X, y, feature_names=available_cols)
             self.models["extra_trees"] = m_et
 
@@ -370,23 +369,10 @@ class ModelService:
             m_svr.fit(X, y, feature_names=available_cols)
             self.models["svr"] = m_svr
 
-            # LightGBM with minimal trials to stay fast
-            try:
-                m_lgb = LightGBMOptimized(n_trials=1)
-                m_lgb.fit(X, y, feature_names=available_cols)
-                self.models["lightgbm"] = m_lgb
-            except Exception:
-                self.models["lightgbm"] = m_gb
-
-            # XGBoost with minimal trials
-            try:
-                from training_pipeline.models.xgboost_model import XGBoostOptimized
-
-                m_xgb = XGBoostOptimized(n_trials=1)
-                m_xgb.fit(X, y, feature_names=available_cols)
-                self.models["xgboost"] = m_xgb
-            except Exception:
-                self.models["xgboost"] = m_gb
+            # LightGBM and XGBoost: reuse gradient boosting to save memory on Render
+            # (Optuna search even with 1 trial can allocate 1200-tree models)
+            self.models["lightgbm"] = m_gb
+            self.models["xgboost"] = m_gb
 
             # BiLSTM: use champion if loaded, otherwise fallback to gradient boosting
             if self.model and hasattr(self.model, "predict"):
