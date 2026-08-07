@@ -9,18 +9,17 @@ Outputs:
   - eda/plots/    : PNG visualizations
 """
 
-import os
-import sys
 import json
 import warnings
 from pathlib import Path
 
+import matplotlib
 import numpy as np
 import pandas as pd
-import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
 
@@ -64,10 +63,9 @@ def dataset_overview(df: pd.DataFrame):
     # Missing values
     missing = df.isnull().sum()
     missing_pct = (missing / len(df) * 100).round(2)
-    missing_report = pd.DataFrame({
-        "missing_count": missing,
-        "missing_pct": missing_pct
-    }).sort_values("missing_pct", ascending=False)
+    missing_report = pd.DataFrame(
+        {"missing_count": missing, "missing_pct": missing_pct}
+    ).sort_values("missing_pct", ascending=False)
     missing_report = missing_report[missing_report["missing_count"] > 0]
 
     info["columns_with_missing"] = int(len(missing_report))
@@ -107,7 +105,9 @@ def distribution_analysis(df: pd.DataFrame):
 
     # AQI distribution
     fig, axes = plt.subplots(2, 3, figsize=(16, 10))
-    fig.suptitle("Distribution of Key Pollutants - Sargodha, Pakistan", fontsize=14, fontweight="bold")
+    fig.suptitle(
+        "Distribution of Key Pollutants - Sargodha, Pakistan", fontsize=14, fontweight="bold"
+    )
 
     pollutants = ["aqi_value", "pm25", "pm10", "no2", "so2", "o3"]
     colors = ["#e74c3c", "#8e44ad", "#2980b9", "#27ae60", "#f39c12", "#1abc9c"]
@@ -126,8 +126,16 @@ def distribution_analysis(df: pd.DataFrame):
             # Normality test (D'Agostino-Pearson)
             if len(data) > 20:
                 _, p_val = stats.normaltest(data.sample(min(5000, len(data)), random_state=42))
-                ax.text(0.95, 0.95, f"Normal p={p_val:.2e}", transform=ax.transAxes,
-                        ha="right", va="top", fontsize=8, style="italic")
+                ax.text(
+                    0.95,
+                    0.95,
+                    f"Normal p={p_val:.2e}",
+                    transform=ax.transAxes,
+                    ha="right",
+                    va="top",
+                    fontsize=8,
+                    style="italic",
+                )
 
     plt.tight_layout()
     plt.savefig(PLOTS_DIR / "pollutant_distributions.png", dpi=150, bbox_inches="tight")
@@ -143,13 +151,18 @@ def distribution_analysis(df: pd.DataFrame):
     cat_pct = (cat_counts / len(df_temp) * 100).round(1)
 
     colors_cat = ["#00e400", "#ffff00", "#ff7e00", "#ff0000", "#8f3f97", "#7e0023"]
-    bars = ax.bar(cat_pct.index.astype(str), cat_pct.values, color=colors_cat[:len(cat_pct)])
+    bars = ax.bar(cat_pct.index.astype(str), cat_pct.values, color=colors_cat[: len(cat_pct)])
     ax.set_title("AQI Category Distribution", fontsize=13, fontweight="bold")
     ax.set_ylabel("Percentage (%)")
     ax.set_xlabel("AQI Category")
     for bar, pct in zip(bars, cat_pct.values):
-        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                f"{pct:.1f}%", ha="center", fontsize=10)
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.5,
+            f"{pct:.1f}%",
+            ha="center",
+            fontsize=10,
+        )
     plt.tight_layout()
     plt.savefig(PLOTS_DIR / "aqi_category_distribution.png", dpi=150, bbox_inches="tight")
     plt.close()
@@ -157,27 +170,52 @@ def distribution_analysis(df: pd.DataFrame):
     # Save category report
     cat_report = pd.DataFrame({"count": cat_counts, "percentage": cat_pct})
     cat_report.to_csv(REPORTS_DIR / "aqi_category_distribution.csv")
-    print(f"  Saved distribution plots and category analysis")
+    print("  Saved distribution plots and category analysis")
 
 
 def correlation_analysis(df: pd.DataFrame):
     """Compute and visualize correlation matrix."""
     print("[5/10] Correlation analysis...")
 
-    key_cols = ["aqi_value", "pm25", "pm10", "no2", "so2", "co", "o3",
-                "temperature_c", "humidity_pct", "wind_speed_ms",
-                "pressure_hpa", "precipitation_mm"]
+    key_cols = [
+        "aqi_value",
+        "pm25",
+        "pm10",
+        "no2",
+        "so2",
+        "co",
+        "o3",
+        "temperature_c",
+        "humidity_pct",
+        "wind_speed_ms",
+        "pressure_hpa",
+        "precipitation_mm",
+    ]
     key_cols = [c for c in key_cols if c in df.columns]
     corr_matrix = df[key_cols].corr()
 
     # Full heatmap
     fig, ax = plt.subplots(figsize=(12, 10))
     mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
-    sns.heatmap(corr_matrix, mask=mask, annot=True, fmt=".2f", cmap="RdBu_r",
-                center=0, vmin=-1, vmax=1, square=True, linewidths=0.5, ax=ax,
-                cbar_kws={"shrink": 0.8})
-    ax.set_title("Correlation Matrix: Pollutants & Weather Features\n(Sargodha, Pakistan)",
-                 fontsize=13, fontweight="bold")
+    sns.heatmap(
+        corr_matrix,
+        mask=mask,
+        annot=True,
+        fmt=".2f",
+        cmap="RdBu_r",
+        center=0,
+        vmin=-1,
+        vmax=1,
+        square=True,
+        linewidths=0.5,
+        ax=ax,
+        cbar_kws={"shrink": 0.8},
+    )
+    ax.set_title(
+        "Correlation Matrix: Pollutants & Weather Features\n(Sargodha, Pakistan)",
+        fontsize=13,
+        fontweight="bold",
+    )
     plt.tight_layout()
     plt.savefig(PLOTS_DIR / "correlation_heatmap.png", dpi=150, bbox_inches="tight")
     plt.close()
@@ -196,7 +234,9 @@ def correlation_analysis(df: pd.DataFrame):
     for ax, feat in zip(axes.flat, top_features):
         ax.scatter(df[feat], df["aqi_value"], alpha=0.1, s=5, color="#3498db")
         # Regression line
-        slope, intercept, r_val, _, _ = stats.linregress(df[feat].dropna(), df["aqi_value"].dropna())
+        slope, intercept, r_val, _, _ = stats.linregress(
+            df[feat].dropna(), df["aqi_value"].dropna()
+        )
         x_line = np.linspace(df[feat].min(), df[feat].max(), 100)
         ax.plot(x_line, slope * x_line + intercept, color="red", lw=2, label=f"R={r_val:.3f}")
         ax.set_xlabel(feat)
@@ -227,8 +267,13 @@ def temporal_trends(df: pd.DataFrame):
     hourly = df_t.groupby("hour")["aqi_value"].agg(["mean", "std", "median"]).reset_index()
     ax = axes[0, 0]
     ax.plot(hourly["hour"], hourly["mean"], "o-", color="#e74c3c", lw=2, markersize=6)
-    ax.fill_between(hourly["hour"], hourly["mean"] - hourly["std"],
-                    hourly["mean"] + hourly["std"], alpha=0.2, color="#e74c3c")
+    ax.fill_between(
+        hourly["hour"],
+        hourly["mean"] - hourly["std"],
+        hourly["mean"] + hourly["std"],
+        alpha=0.2,
+        color="#e74c3c",
+    )
     ax.set_xlabel("Hour of Day")
     ax.set_ylabel("AQI")
     ax.set_title("Diurnal AQI Pattern (Mean +/- Std)")
@@ -240,8 +285,14 @@ def temporal_trends(df: pd.DataFrame):
     days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     daily = df_t.groupby("day_of_week")["aqi_value"].agg(["mean", "std"]).reset_index()
     ax = axes[0, 1]
-    bars = ax.bar(daily["day_of_week"], daily["mean"], yerr=daily["std"],
-                  color=["#3498db"]*5 + ["#e74c3c"]*2, alpha=0.8, capsize=4)
+    bars = ax.bar(
+        daily["day_of_week"],
+        daily["mean"],
+        yerr=daily["std"],
+        color=["#3498db"] * 5 + ["#e74c3c"] * 2,
+        alpha=0.8,
+        capsize=4,
+    )
     ax.set_xticks(range(7))
     ax.set_xticklabels(days)
     ax.set_xlabel("Day of Week")
@@ -251,11 +302,11 @@ def temporal_trends(df: pd.DataFrame):
     # --- Monthly pattern ---
     monthly = df_t.groupby("month")["aqi_value"].agg(["mean", "std", "median"]).reset_index()
     ax = axes[1, 0]
-    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     ax.bar(monthly["month"], monthly["mean"], color="#27ae60", alpha=0.8, edgecolor="white")
-    ax.errorbar(monthly["month"], monthly["mean"], yerr=monthly["std"],
-                fmt="none", color="black", capsize=3)
+    ax.errorbar(
+        monthly["month"], monthly["mean"], yerr=monthly["std"], fmt="none", color="black", capsize=3
+    )
     ax.set_xticks(range(1, 13))
     ax.set_xticklabels(months, rotation=45)
     ax.set_xlabel("Month")
@@ -267,8 +318,13 @@ def temporal_trends(df: pd.DataFrame):
     yearly = df_t.groupby("year")["aqi_value"].agg(["mean", "std", "count"]).reset_index()
     ax = axes[1, 1]
     ax.plot(yearly["year"], yearly["mean"], "s-", color="#8e44ad", lw=2, markersize=8)
-    ax.fill_between(yearly["year"], yearly["mean"] - yearly["std"],
-                    yearly["mean"] + yearly["std"], alpha=0.2, color="#8e44ad")
+    ax.fill_between(
+        yearly["year"],
+        yearly["mean"] - yearly["std"],
+        yearly["mean"] + yearly["std"],
+        alpha=0.2,
+        color="#8e44ad",
+    )
     ax.set_xlabel("Year")
     ax.set_ylabel("Mean AQI")
     ax.set_title("Yearly AQI Trend")
@@ -319,8 +375,9 @@ def seasonality_decomposition(df: pd.DataFrame):
     decomposition = seasonal_decompose(df_daily, model="additive", period=period)
 
     fig, axes = plt.subplots(4, 1, figsize=(16, 12), sharex=True)
-    fig.suptitle("AQI Time Series Decomposition (Additive, Period=365 days)",
-                 fontsize=13, fontweight="bold")
+    fig.suptitle(
+        "AQI Time Series Decomposition (Additive, Period=365 days)", fontsize=13, fontweight="bold"
+    )
 
     axes[0].plot(decomposition.observed, color="#2c3e50", lw=0.8)
     axes[0].set_ylabel("Observed")
@@ -351,13 +408,16 @@ def seasonality_decomposition(df: pd.DataFrame):
         "num_observations": int(adf_result[3]),
         "critical_values": {k: round(v, 4) for k, v in adf_result[4].items()},
         "is_stationary": bool(adf_result[1] < 0.05),
-        "interpretation": "Series is stationary (reject null)" if adf_result[1] < 0.05
-                          else "Series is non-stationary (fail to reject null)"
+        "interpretation": "Series is stationary (reject null)"
+        if adf_result[1] < 0.05
+        else "Series is non-stationary (fail to reject null)",
     }
     with open(REPORTS_DIR / "stationarity_test.json", "w") as f:
         json.dump(stationarity_report, f, indent=2)
 
-    print(f"  ADF test p-value: {stationarity_report['p_value']} -> {stationarity_report['interpretation']}")
+    print(
+        f"  ADF test p-value: {stationarity_report['p_value']} -> {stationarity_report['interpretation']}"
+    )
 
 
 def weather_pollutant_relationships(df: pd.DataFrame):
@@ -366,22 +426,35 @@ def weather_pollutant_relationships(df: pd.DataFrame):
 
     # Temperature vs AQI by season
     df_temp = df.copy()
-    df_temp["season"] = df_temp["month"].map({
-        12: "Winter", 1: "Winter", 2: "Winter",
-        3: "Spring", 4: "Spring", 5: "Spring",
-        6: "Summer", 7: "Summer", 8: "Summer",
-        9: "Autumn", 10: "Autumn", 11: "Autumn"
-    })
+    df_temp["season"] = df_temp["month"].map(
+        {
+            12: "Winter",
+            1: "Winter",
+            2: "Winter",
+            3: "Spring",
+            4: "Spring",
+            5: "Spring",
+            6: "Summer",
+            7: "Summer",
+            8: "Summer",
+            9: "Autumn",
+            10: "Autumn",
+            11: "Autumn",
+        }
+    )
 
     fig, axes = plt.subplots(2, 2, figsize=(14, 11))
     fig.suptitle("Weather Impact on Air Quality - Sargodha", fontsize=14, fontweight="bold")
 
     # Temperature vs AQI by season
     ax = axes[0, 0]
-    for season, color in zip(["Winter", "Spring", "Summer", "Autumn"],
-                             ["#3498db", "#27ae60", "#e74c3c", "#f39c12"]):
+    for season, color in zip(
+        ["Winter", "Spring", "Summer", "Autumn"], ["#3498db", "#27ae60", "#e74c3c", "#f39c12"]
+    ):
         subset = df_temp[df_temp["season"] == season]
-        ax.scatter(subset["temperature_c"], subset["aqi_value"], alpha=0.05, s=3, color=color, label=season)
+        ax.scatter(
+            subset["temperature_c"], subset["aqi_value"], alpha=0.05, s=3, color=color, label=season
+        )
     ax.set_xlabel("Temperature (C)")
     ax.set_ylabel("AQI")
     ax.set_title("Temperature vs AQI (by Season)")
@@ -396,7 +469,9 @@ def weather_pollutant_relationships(df: pd.DataFrame):
     ax.set_ylabel("Mean AQI")
     ax.set_title("Wind Speed Effect on AQI")
     ax.set_xticks(range(len(wind_aqi)))
-    ax.set_xticklabels([f"{i.left:.1f}-{i.right:.1f}" for i in wind_aqi.index], rotation=45, fontsize=8)
+    ax.set_xticklabels(
+        [f"{i.left:.1f}-{i.right:.1f}" for i in wind_aqi.index], rotation=45, fontsize=8
+    )
 
     # Humidity vs PM2.5
     ax = axes[1, 0]
@@ -417,8 +492,9 @@ def weather_pollutant_relationships(df: pd.DataFrame):
     plt.close()
 
     # Seasonal statistics
-    seasonal_stats = df_temp.groupby("season")[["aqi_value", "pm25", "pm10", "temperature_c",
-                                                 "humidity_pct", "wind_speed_ms"]].agg(["mean", "std", "median"])
+    seasonal_stats = df_temp.groupby("season")[
+        ["aqi_value", "pm25", "pm10", "temperature_c", "humidity_pct", "wind_speed_ms"]
+    ].agg(["mean", "std", "median"])
     seasonal_stats.columns = ["_".join(col) for col in seasonal_stats.columns]
     seasonal_stats.to_csv(REPORTS_DIR / "seasonal_statistics.csv")
     print("  Saved weather-pollutant relationship analysis")
@@ -431,8 +507,9 @@ def feature_importance_eda(df: pd.DataFrame):
     from sklearn.feature_selection import mutual_info_regression
     from sklearn.preprocessing import StandardScaler
 
-    feature_cols = [c for c in df.select_dtypes(include=[np.number]).columns
-                    if c not in ["aqi_value", "year"]]
+    feature_cols = [
+        c for c in df.select_dtypes(include=[np.number]).columns if c not in ["aqi_value", "year"]
+    ]
     X = df[feature_cols].fillna(0)
     y = df["aqi_value"]
 
@@ -468,8 +545,18 @@ def outlier_analysis(df: pd.DataFrame):
     """Detect and characterize outliers in key variables."""
     print("[10/10] Outlier detection & analysis...")
 
-    key_cols = ["aqi_value", "pm25", "pm10", "no2", "so2", "co", "o3",
-                "temperature_c", "humidity_pct", "wind_speed_ms"]
+    key_cols = [
+        "aqi_value",
+        "pm25",
+        "pm10",
+        "no2",
+        "so2",
+        "co",
+        "o3",
+        "temperature_c",
+        "humidity_pct",
+        "wind_speed_ms",
+    ]
     key_cols = [c for c in key_cols if c in df.columns]
 
     outlier_report = {}
@@ -516,18 +603,30 @@ def outlier_analysis(df: pd.DataFrame):
         "hazardous_hours": int(len(high_aqi)),
         "hazardous_pct": round(len(high_aqi) / len(df) * 100, 2),
         "max_aqi_recorded": round(float(df["aqi_value"].max()), 1),
-        "avg_aqi_during_hazardous": round(float(high_aqi["aqi_value"].mean()), 1) if len(high_aqi) > 0 else 0,
+        "avg_aqi_during_hazardous": round(float(high_aqi["aqi_value"].mean()), 1)
+        if len(high_aqi) > 0
+        else 0,
         "common_conditions_during_hazardous": {
-            "avg_temperature": round(float(high_aqi["temperature_c"].mean()), 1) if len(high_aqi) > 0 else None,
-            "avg_humidity": round(float(high_aqi["humidity_pct"].mean()), 1) if len(high_aqi) > 0 else None,
-            "avg_wind_speed": round(float(high_aqi["wind_speed_ms"].mean()), 1) if len(high_aqi) > 0 else None,
-        }
+            "avg_temperature": round(float(high_aqi["temperature_c"].mean()), 1)
+            if len(high_aqi) > 0
+            else None,
+            "avg_humidity": round(float(high_aqi["humidity_pct"].mean()), 1)
+            if len(high_aqi) > 0
+            else None,
+            "avg_wind_speed": round(float(high_aqi["wind_speed_ms"].mean()), 1)
+            if len(high_aqi) > 0
+            else None,
+        },
     }
     with open(REPORTS_DIR / "hazardous_events_analysis.json", "w") as f:
         json.dump(high_aqi_stats, f, indent=2)
 
-    print(f"  Found {outlier_report['aqi_value']['outlier_count']} AQI outliers ({outlier_report['aqi_value']['outlier_pct']}%)")
-    print(f"  Hazardous AQI events (>150): {high_aqi_stats['hazardous_hours']} hours ({high_aqi_stats['hazardous_pct']}%)")
+    print(
+        f"  Found {outlier_report['aqi_value']['outlier_count']} AQI outliers ({outlier_report['aqi_value']['outlier_pct']}%)"
+    )
+    print(
+        f"  Hazardous AQI events (>150): {high_aqi_stats['hazardous_hours']} hours ({high_aqi_stats['hazardous_pct']}%)"
+    )
 
 
 def generate_summary_report(df: pd.DataFrame):
@@ -557,7 +656,7 @@ def generate_summary_report(df: pd.DataFrame):
         "artifacts_generated": {
             "plots": [f.name for f in PLOTS_DIR.glob("*.png")],
             "reports": [f.name for f in REPORTS_DIR.glob("*.*") if f.suffix in [".csv", ".json"]],
-        }
+        },
     }
 
     with open(REPORTS_DIR / "eda_summary.json", "w") as f:

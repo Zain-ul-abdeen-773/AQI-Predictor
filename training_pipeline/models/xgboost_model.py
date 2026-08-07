@@ -12,11 +12,10 @@ Example:
 
 from __future__ import annotations
 
-import json
 import logging
 import pickle
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 from sklearn.model_selection import TimeSeriesSplit
@@ -55,11 +54,11 @@ class XGBoostOptimized:
         self.n_trials = n_trials
         self.cv_splits = cv_splits
         self.random_state = random_state
-        self.best_params: Dict[str, Any] = {}
+        self.best_params: dict[str, Any] = {}
         self.model = None
         self.is_fitted = False
-        self.feature_names: List[str] = []
-        self.feature_importances: Dict[str, float] = {}
+        self.feature_names: list[str] = []
+        self.feature_importances: dict[str, float] = {}
 
         logger.info("Initialized XGBoost with %d Optuna trials", self.n_trials)
 
@@ -99,7 +98,8 @@ class XGBoostOptimized:
 
                 model = xgb.XGBRegressor(**params)
                 model.fit(
-                    X_tr, y_tr,
+                    X_tr,
+                    y_tr,
                     eval_set=[(X_va, y_va)],
                     verbose=False,
                 )
@@ -115,10 +115,10 @@ class XGBoostOptimized:
         self,
         X_train: np.ndarray,
         y_train: np.ndarray,
-        X_val: Optional[np.ndarray] = None,
-        y_val: Optional[np.ndarray] = None,
-        feature_names: Optional[List[str]] = None,
-    ) -> "XGBoostOptimized":
+        X_val: np.ndarray | None = None,
+        y_val: np.ndarray | None = None,
+        feature_names: list[str] | None = None,
+    ) -> XGBoostOptimized:
         """Train with Bayesian hyperparameter optimization.
 
         Args:
@@ -131,8 +131,8 @@ class XGBoostOptimized:
         Returns:
             Self for method chaining.
         """
-        import xgboost as xgb
         import optuna
+        import xgboost as xgb
 
         optuna.logging.set_verbosity(optuna.logging.WARNING)
         self.feature_names = feature_names or [f"f{i}" for i in range(X_train.shape[1])]
@@ -146,7 +146,9 @@ class XGBoostOptimized:
 
         logger.info(
             "Starting XGBoost Optuna: %d trials, train=%d, val=%d",
-            self.n_trials, len(X_train), len(X_val),
+            self.n_trials,
+            len(X_train),
+            len(X_val),
         )
 
         study = optuna.create_study(
@@ -173,7 +175,8 @@ class XGBoostOptimized:
 
         self.model = xgb.XGBRegressor(**final_params)
         self.model.fit(
-            X_train, y_train,
+            X_train,
+            y_train,
             eval_set=[(X_val, y_val)],
             verbose=False,
         )
@@ -188,7 +191,9 @@ class XGBoostOptimized:
         }
 
         self.is_fitted = True
-        logger.info("XGBoost trained. Top 5 features: %s", list(self.feature_importances.keys())[:5])
+        logger.info(
+            "XGBoost trained. Top 5 features: %s", list(self.feature_importances.keys())[:5]
+        )
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
@@ -196,22 +201,26 @@ class XGBoostOptimized:
             raise RuntimeError("Model must be fitted before prediction")
         return np.clip(self.model.predict(X), 0, 500)
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         return {"model_type": "xgboost", "n_trials": self.n_trials, "best_params": self.best_params}
 
     def save(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "wb") as f:
-            pickle.dump({
-                "model": self.model, "best_params": self.best_params,
-                "feature_names": self.feature_names,
-                "feature_importances": self.feature_importances,
-                "is_fitted": self.is_fitted,
-            }, f)
+            pickle.dump(
+                {
+                    "model": self.model,
+                    "best_params": self.best_params,
+                    "feature_names": self.feature_names,
+                    "feature_importances": self.feature_importances,
+                    "is_fitted": self.is_fitted,
+                },
+                f,
+            )
         logger.info("Saved XGBoost model to %s", path)
 
     @classmethod
-    def load(cls, path: Path) -> "XGBoostOptimized":
+    def load(cls, path: Path) -> XGBoostOptimized:
         with open(path, "rb") as f:
             data = pickle.load(f)
         instance = cls()

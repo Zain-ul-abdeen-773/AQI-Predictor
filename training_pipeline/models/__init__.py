@@ -9,7 +9,6 @@ Exports all model classes for easy import:
 """
 
 from training_pipeline.models.baseline import BaselineRegressor
-from training_pipeline.models.tree_ensemble import LightGBMOptimized
 from training_pipeline.models.deep_learning import BiLSTMAttention
 from training_pipeline.models.ensemble_trees import (
     ExtraTreesModel,
@@ -17,6 +16,7 @@ from training_pipeline.models.ensemble_trees import (
     RandomForestModel,
     SVRModel,
 )
+from training_pipeline.models.tree_ensemble import LightGBMOptimized
 
 # Conditionally import XGBoost (requires xgboost package)
 try:

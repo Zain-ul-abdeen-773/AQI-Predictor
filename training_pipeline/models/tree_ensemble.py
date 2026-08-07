@@ -17,7 +17,7 @@ import json
 import logging
 import pickle
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -44,7 +44,7 @@ class LightGBMOptimized:
 
     def __init__(
         self,
-        n_trials: Optional[int] = None,
+        n_trials: int | None = None,
         random_state: int = 42,
     ) -> None:
         """Initialize the LightGBM model with Optuna optimization.
@@ -56,11 +56,11 @@ class LightGBMOptimized:
         settings = get_settings()
         self.n_trials = n_trials or settings.optuna_n_trials
         self.random_state = random_state
-        self.best_params: Dict[str, Any] = {}
+        self.best_params: dict[str, Any] = {}
         self.model = None
         self.is_fitted = False
-        self.feature_names: List[str] = []
-        self.feature_importances: Dict[str, float] = {}
+        self.feature_names: list[str] = []
+        self.feature_importances: dict[str, float] = {}
 
         logger.info("Initialized LightGBM with %d Optuna trials", self.n_trials)
 
@@ -92,7 +92,6 @@ class LightGBMOptimized:
                 "verbosity": -1,
                 "random_state": self.random_state,
                 "n_jobs": -1,
-
                 # Tunable hyperparameters (Anti-Overfitting Regularization Bounds Enforced)
                 "learning_rate": trial.suggest_float("learning_rate", 0.008, 0.15, log=True),
                 "n_estimators": trial.suggest_int("n_estimators", 150, 1200),
@@ -109,7 +108,8 @@ class LightGBMOptimized:
             model = lgb.LGBMRegressor(**params)
 
             model.fit(
-                X_train, y_train,
+                X_train,
+                y_train,
                 eval_set=[(X_val, y_val)],
                 callbacks=[
                     lgb.early_stopping(stopping_rounds=50, verbose=False),
@@ -127,10 +127,10 @@ class LightGBMOptimized:
         self,
         X_train: np.ndarray,
         y_train: np.ndarray,
-        X_val: Optional[np.ndarray] = None,
-        y_val: Optional[np.ndarray] = None,
-        feature_names: Optional[List[str]] = None,
-    ) -> "LightGBMOptimized":
+        X_val: np.ndarray | None = None,
+        y_val: np.ndarray | None = None,
+        feature_names: list[str] | None = None,
+    ) -> LightGBMOptimized:
         """Train with Bayesian hyperparameter optimization.
 
         If validation data is not provided, uses a 80/20 split from
@@ -164,7 +164,9 @@ class LightGBMOptimized:
 
         logger.info(
             "Starting Optuna optimization: %d trials, train=%d, val=%d",
-            self.n_trials, len(X_train), len(X_val),
+            self.n_trials,
+            len(X_train),
+            len(X_val),
         )
 
         # Bayesian Optimization
@@ -197,7 +199,8 @@ class LightGBMOptimized:
 
         self.model = lgb.LGBMRegressor(**final_params)
         self.model.fit(
-            X_train, y_train,
+            X_train,
+            y_train,
             eval_set=[(X_val, y_val)],
             callbacks=[
                 lgb.early_stopping(stopping_rounds=50, verbose=False),
@@ -240,7 +243,7 @@ class LightGBMOptimized:
         predictions = self.model.predict(X)
         return np.clip(predictions, 0, 500)
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Get the best hyperparameters found during optimization.
 
         Returns:
@@ -252,7 +255,7 @@ class LightGBMOptimized:
             "best_params": self.best_params,
         }
 
-    def get_feature_importance(self, top_k: int = 20) -> Dict[str, float]:
+    def get_feature_importance(self, top_k: int = 20) -> dict[str, float]:
         """Get top-K feature importance scores.
 
         Args:
@@ -272,17 +275,20 @@ class LightGBMOptimized:
         """
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "wb") as f:
-            pickle.dump({
-                "model": self.model,
-                "best_params": self.best_params,
-                "feature_names": self.feature_names,
-                "feature_importances": self.feature_importances,
-                "is_fitted": self.is_fitted,
-            }, f)
+            pickle.dump(
+                {
+                    "model": self.model,
+                    "best_params": self.best_params,
+                    "feature_names": self.feature_names,
+                    "feature_importances": self.feature_importances,
+                    "is_fitted": self.is_fitted,
+                },
+                f,
+            )
         logger.info("Saved LightGBM model to %s", path)
 
     @classmethod
-    def load(cls, path: Path) -> "LightGBMOptimized":
+    def load(cls, path: Path) -> LightGBMOptimized:
         """Load a trained model from disk.
 
         Args:

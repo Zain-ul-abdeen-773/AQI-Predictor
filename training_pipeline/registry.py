@@ -10,12 +10,11 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import pickle
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import torch
 
@@ -30,7 +29,7 @@ logger = logging.getLogger(__name__)
 MANIFEST_FILENAME = "model_registry.json"
 
 
-def _load_manifest(models_dir: Path) -> Dict[str, Any]:
+def _load_manifest(models_dir: Path) -> dict[str, Any]:
     """Load or initialise the local model registry manifest."""
     manifest_path = models_dir / MANIFEST_FILENAME
     if manifest_path.exists():
@@ -38,9 +37,9 @@ def _load_manifest(models_dir: Path) -> Dict[str, Any]:
     return {"models": {}, "champion": None, "updated_at": None}
 
 
-def _save_manifest(models_dir: Path, manifest: Dict[str, Any]) -> None:
+def _save_manifest(models_dir: Path, manifest: dict[str, Any]) -> None:
     manifest_path = models_dir / MANIFEST_FILENAME
-    manifest["updated_at"] = datetime.now(timezone.utc).isoformat()
+    manifest["updated_at"] = datetime.now(UTC).isoformat()
     manifest_path.write_text(json.dumps(manifest, indent=2, default=str))
     logger.info("Saved model registry manifest to %s", manifest_path)
 
@@ -51,7 +50,7 @@ def _save_manifest(models_dir: Path, manifest: Dict[str, Any]) -> None:
 class ModelRegistryManager:
     """Manages model artifacts using ClearML + local manifest."""
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
 
     # ------------------------------------------------------------------
@@ -68,8 +67,8 @@ class ModelRegistryManager:
         self,
         model: Any,
         metrics: EvaluationMetrics,
-        params: Dict[str, Any],
-        explainer: Optional[Any] = None,
+        params: dict[str, Any],
+        explainer: Any | None = None,
         model_type: str = "bilstm_attention",
     ) -> str:
         """Upload a single model artifact and explainer to ClearML.
@@ -89,11 +88,11 @@ class ModelRegistryManager:
     # ------------------------------------------------------------------
     def register_all_models(
         self,
-        trained_models: Dict[str, Any],
-        results: Dict[str, EvaluationMetrics],
-        champion_name: Optional[str] = None,
-        explainer: Optional[Any] = None,
-    ) -> Dict[str, str]:
+        trained_models: dict[str, Any],
+        results: dict[str, EvaluationMetrics],
+        champion_name: str | None = None,
+        explainer: Any | None = None,
+    ) -> dict[str, str]:
         """Register every trained model in the registry.
 
         Each model is saved locally under ``models/<model_id>/`` and
@@ -110,7 +109,7 @@ class ModelRegistryManager:
         Returns:
             Dict mapping model_name → version string.
         """
-        versions: Dict[str, str] = {}
+        versions: dict[str, str] = {}
         manifest = _load_manifest(self.settings.models_dir)
 
         for name, model_obj in trained_models.items():
@@ -125,7 +124,9 @@ class ModelRegistryManager:
             expl = explainer if (name == champion_name) else None
 
             export_dir = self._save_model_locally(model_obj, model_id, metrics, params, expl)
-            clearml_id = self._upload_to_clearml(export_dir, model_id, metrics, is_champion=(name == champion_name))
+            clearml_id = self._upload_to_clearml(
+                export_dir, model_id, metrics, is_champion=(name == champion_name)
+            )
             versions[name] = clearml_id
 
             # Update manifest entry
@@ -137,7 +138,7 @@ class ModelRegistryManager:
                 "params": {k: str(v) for k, v in params.items()},
                 "clearml_id": clearml_id,
                 "is_champion": (name == champion_name),
-                "registered_at": datetime.now(timezone.utc).isoformat(),
+                "registered_at": datetime.now(UTC).isoformat(),
             }
 
         manifest["champion"] = self._normalize_id(champion_name) if champion_name else None
@@ -153,12 +154,12 @@ class ModelRegistryManager:
     # ------------------------------------------------------------------
     # Retrieval helpers
     # ------------------------------------------------------------------
-    def list_registered_models(self) -> List[Dict[str, Any]]:
+    def list_registered_models(self) -> list[dict[str, Any]]:
         """Return metadata for every registered model from the local manifest."""
         manifest = _load_manifest(self.settings.models_dir)
         return list(manifest.get("models", {}).values())
 
-    def get_model_by_id(self, model_id: str) -> Optional[Tuple[Path, Dict[str, Any]]]:
+    def get_model_by_id(self, model_id: str) -> tuple[Path, dict[str, Any]] | None:
         """Load a specific model from disk by its ID.
 
         Returns:
@@ -177,7 +178,9 @@ class ModelRegistryManager:
 
         return model_file, entry
 
-    def get_champion_model(self, model_id: str = "bilstm_attention") -> Optional[Tuple[Path, Dict[str, Any]]]:
+    def get_champion_model(
+        self, model_id: str = "bilstm_attention"
+    ) -> tuple[Path, dict[str, Any]] | None:
         """Download the champion model artifacts.
 
         Tries local manifest first, then ClearML.
@@ -208,6 +211,7 @@ class ModelRegistryManager:
             return "unknown"
         # Insert underscore before uppercase letters, then lowercase
         import re
+
         s1 = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", name)
         return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
@@ -216,8 +220,8 @@ class ModelRegistryManager:
         model: Any,
         model_id: str,
         metrics: EvaluationMetrics,
-        params: Dict[str, Any],
-        explainer: Optional[Any] = None,
+        params: dict[str, Any],
+        explainer: Any | None = None,
     ) -> Path:
         """Persist model artifacts to ``models/<model_id>/``."""
         export_dir = self.settings.models_dir / model_id
@@ -302,7 +306,7 @@ class ModelRegistryManager:
             logger.error("ClearML upload failed for %s: %s", model_id, e)
             return "local"
 
-    def _get_from_clearml(self, model_id: str) -> Optional[Tuple[Path, Dict[str, Any]]]:
+    def _get_from_clearml(self, model_id: str) -> tuple[Path, dict[str, Any]] | None:
         """Retrieve a model from ClearML (legacy fallback)."""
         try:
             from clearml import Task
@@ -348,7 +352,7 @@ class ModelRegistryManager:
             return None
 
     @staticmethod
-    def _find_model_file(directory: Path, model_id: str) -> Optional[Path]:
+    def _find_model_file(directory: Path, model_id: str) -> Path | None:
         """Locate the primary model file inside *directory*."""
         is_pytorch = "lstm" in model_id.lower()
         model_ext = ".pt" if is_pytorch else ".pkl"

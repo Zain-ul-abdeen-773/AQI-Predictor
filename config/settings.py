@@ -11,7 +11,6 @@ import logging
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Optional
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -99,7 +98,9 @@ class Settings(BaseSettings):
 
     # ClearML Configuration
     clearml_project_name: str = Field(default="AQI Predictor", description="ClearML Project Name")
-    clearml_dataset_name: str = Field(default="Sargodha Features", description="ClearML Dataset Name")
+    clearml_dataset_name: str = Field(
+        default="Sargodha Features", description="ClearML Dataset Name"
+    )
 
     # Target Location
     target_city: str = Field(default="Sargodha", description="Target city name")
@@ -156,14 +157,14 @@ class Settings(BaseSettings):
     server_port: int = Field(default=8000, ge=1024, le=65535, description="API server port")
 
     # News Pipeline
-    news_rss_feeds: List[str] = Field(
+    news_rss_feeds: list[str] = Field(
         default=[
             "https://www.dawn.com/feeds/home",
             "https://tribune.com.pk/feed/home",
             "https://www.geo.tv/rss/1/1",
         ]
     )
-    news_keywords: List[str] = Field(
+    news_keywords: list[str] = Field(
         default=[
             "Sargodha",
             "smog",

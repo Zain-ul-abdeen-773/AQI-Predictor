@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -70,12 +70,19 @@ class PollutantReading(BaseModel):
     def normalize_pollutant_name(cls, v: str) -> str:
         """Normalize pollutant names to lowercase standard form."""
         mapping = {
-            "pm2.5": "pm25", "pm2_5": "pm25", "PM2.5": "pm25",
-            "pm10": "pm10", "PM10": "pm10",
-            "no2": "no2", "NO2": "no2",
-            "so2": "so2", "SO2": "so2",
-            "co": "co", "CO": "co",
-            "o3": "o3", "O3": "o3",
+            "pm2.5": "pm25",
+            "pm2_5": "pm25",
+            "PM2.5": "pm25",
+            "pm10": "pm10",
+            "PM10": "pm10",
+            "no2": "no2",
+            "NO2": "no2",
+            "so2": "so2",
+            "SO2": "so2",
+            "co": "co",
+            "CO": "co",
+            "o3": "o3",
+            "O3": "o3",
         }
         return mapping.get(v, v.lower())
 
@@ -113,9 +120,9 @@ class RawDataPayload(BaseModel):
         fetch_timestamp: When the data was fetched.
     """
 
-    pollutants: List[PollutantReading] = Field(..., min_length=1)
+    pollutants: list[PollutantReading] = Field(..., min_length=1)
     weather: WeatherReading
-    aqi_value: Optional[float] = Field(default=None, ge=0, le=500)
+    aqi_value: float | None = Field(default=None, ge=0, le=500)
     source: DataSource = Field(default=DataSource.AQICN)
     fetch_timestamp: datetime = Field(default_factory=datetime.utcnow)
 
@@ -197,16 +204,16 @@ class LagFeatures(BaseModel):
         pm25_rolling_mean_24h: Rolling 24-hour mean of PM2.5.
     """
 
-    aqi_lag_1h: Optional[float] = Field(default=None)
-    aqi_lag_3h: Optional[float] = Field(default=None)
-    aqi_lag_6h: Optional[float] = Field(default=None)
-    aqi_lag_12h: Optional[float] = Field(default=None)
-    aqi_lag_24h: Optional[float] = Field(default=None)
-    pm25_lag_1h: Optional[float] = Field(default=None)
-    pm25_lag_3h: Optional[float] = Field(default=None)
-    pm25_rolling_mean_6h: Optional[float] = Field(default=None)
-    pm25_rolling_std_6h: Optional[float] = Field(default=None)
-    pm25_rolling_mean_24h: Optional[float] = Field(default=None)
+    aqi_lag_1h: float | None = Field(default=None)
+    aqi_lag_3h: float | None = Field(default=None)
+    aqi_lag_6h: float | None = Field(default=None)
+    aqi_lag_12h: float | None = Field(default=None)
+    aqi_lag_24h: float | None = Field(default=None)
+    pm25_lag_1h: float | None = Field(default=None)
+    pm25_lag_3h: float | None = Field(default=None)
+    pm25_rolling_mean_6h: float | None = Field(default=None)
+    pm25_rolling_std_6h: float | None = Field(default=None)
+    pm25_rolling_mean_24h: float | None = Field(default=None)
 
 
 class FeatureVector(BaseModel):
@@ -242,7 +249,7 @@ class FeatureVector(BaseModel):
     month: int = Field(..., ge=1, le=12)
 
     # Target
-    aqi_value: Optional[float] = Field(default=None, ge=0, le=500)
+    aqi_value: float | None = Field(default=None, ge=0, le=500)
 
     # Raw pollutants
     pm25: float = Field(default=0.0, ge=0.0)
@@ -268,7 +275,7 @@ class FeatureVector(BaseModel):
     # Metadata
     source: DataSource = Field(default=DataSource.AQICN)
 
-    def to_flat_dict(self) -> Dict[str, Any]:
+    def to_flat_dict(self) -> dict[str, Any]:
         """Flatten nested feature blocks into a single-level dictionary.
 
         Returns:
@@ -318,10 +325,10 @@ class HourlyPrediction(BaseModel):
 
     timestamp: datetime
     aqi_predicted: float = Field(..., ge=0)
-    aqi_lower_80: Optional[float] = Field(default=None)
-    aqi_upper_80: Optional[float] = Field(default=None)
-    aqi_lower_95: Optional[float] = Field(default=None)
-    aqi_upper_95: Optional[float] = Field(default=None)
+    aqi_lower_80: float | None = Field(default=None)
+    aqi_upper_80: float | None = Field(default=None)
+    aqi_lower_95: float | None = Field(default=None)
+    aqi_upper_95: float | None = Field(default=None)
     level: AQILevel = Field(default=AQILevel.GOOD)
 
 
@@ -346,7 +353,7 @@ class ForecastResponse(BaseModel):
     model_version: str = Field(default="1.0.0")
     current_aqi: float = Field(..., ge=0)
     current_level: AQILevel
-    hourly_predictions: List[HourlyPrediction] = Field(..., min_length=1)
+    hourly_predictions: list[HourlyPrediction] = Field(..., min_length=1)
     summary: str = Field(default="")
     alert: bool = Field(default=False)
 
@@ -391,7 +398,7 @@ class ExplainResponse(BaseModel):
 
     prediction_aqi: float
     base_value: float
-    contributions: List[SHAPExplanation]
+    contributions: list[SHAPExplanation]
     model_type: ModelType
 
 
@@ -429,9 +436,9 @@ class NewsItem(BaseModel):
     title: str
     url: str = Field(default="")
     source: str = Field(default="unknown")
-    published_at: Optional[datetime] = Field(default=None)
+    published_at: datetime | None = Field(default=None)
     sentiment_score: float = Field(default=0.0, ge=-1.0, le=1.0)
-    relevance_keywords: List[str] = Field(default_factory=list)
+    relevance_keywords: list[str] = Field(default_factory=list)
     risk_factor: str = Field(default="Low")
 
 
@@ -448,4 +455,4 @@ class AnomalyDetectionResult(BaseModel):
     timestamp: datetime
     is_anomaly: bool = Field(default=False)
     anomaly_score: float = Field(default=0.0)
-    contributing_features: List[str] = Field(default_factory=list)
+    contributing_features: list[str] = Field(default_factory=list)

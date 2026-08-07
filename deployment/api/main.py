@@ -18,9 +18,8 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime, timedelta, timezone
-from functools import wraps
 import time
+from datetime import UTC, datetime, timedelta
 
 import numpy as np
 from flask import Flask, jsonify, request
@@ -84,26 +83,32 @@ def after_request(response):
 @app.errorhandler(Exception)
 def global_exception_handler(exc: Exception):
     logger.error("Unhandled exception on %s: %s", request.path, exc, exc_info=True)
-    return jsonify({
-        "error": "Internal Server Error",
-        "message": "An unexpected error occurred. Check server logs for details.",
-    }), 500
+    return jsonify(
+        {
+            "error": "Internal Server Error",
+            "message": "An unexpected error occurred. Check server logs for details.",
+        }
+    ), 500
 
 
 @app.errorhandler(422)
 def validation_error_handler(exc):
-    return jsonify({
-        "error": "Validation Error",
-        "message": "Invalid request parameters.",
-    }), 422
+    return jsonify(
+        {
+            "error": "Validation Error",
+            "message": "Invalid request parameters.",
+        }
+    ), 422
 
 
 @app.errorhandler(400)
 def bad_request_handler(exc):
-    return jsonify({
-        "error": "Bad Request",
-        "message": "Malformed request body or parameters.",
-    }), 400
+    return jsonify(
+        {
+            "error": "Bad Request",
+            "message": "Malformed request body or parameters.",
+        }
+    ), 400
 
 
 # --- Helper Functions ---
@@ -167,19 +172,22 @@ def _impute_features(df, feature_columns: list) -> np.ndarray:
 
 # --- Endpoints ---
 
-@app.route('/models', methods=['GET'])
+
+@app.route("/models", methods=["GET"])
 def list_models():
     """Get all 8 models in the Model Zoo with evaluation metrics."""
     model_service = get_model_service()
     if not model_service.is_loaded:
         model_service.load()
-    return jsonify({
-        "models": model_service.get_all_models_list(),
-        "default_model_id": model_service.default_model_id,
-    })
+    return jsonify(
+        {
+            "models": model_service.get_all_models_list(),
+            "default_model_id": model_service.default_model_id,
+        }
+    )
 
 
-@app.route('/health', methods=['GET'])
+@app.route("/health", methods=["GET"])
 def health_check():
     model_service = get_model_service()
     feature_service = get_feature_service()
@@ -194,7 +202,7 @@ def health_check():
     return jsonify(response.model_dump())
 
 
-@app.route('/predict', methods=['POST'])
+@app.route("/predict", methods=["POST"])
 def predict():
     model_id = request.args.get("model_id")
     settings = get_settings()
@@ -207,12 +215,12 @@ def predict():
     if not model_service.is_loaded:
         return jsonify({"error": "Service Unavailable", "message": "Model not loaded."}), 503
 
-    features_df = feature_service.get_latest_features(
-        n_hours=settings.lookback_window_hours
-    )
+    features_df = feature_service.get_latest_features(n_hours=settings.lookback_window_hours)
 
     if features_df is None or features_df.empty:
-        return jsonify({"error": "Service Unavailable", "message": "No feature data available."}), 503
+        return jsonify(
+            {"error": "Service Unavailable", "message": "No feature data available."}
+        ), 503
 
     from training_pipeline.train import FEATURE_COLUMNS
 
@@ -221,7 +229,8 @@ def predict():
     if len(used_cols) < len(FEATURE_COLUMNS) * 0.5:
         logger.warning(
             "Feature mismatch: using %d/%d columns. Missing: %s",
-            len(used_cols), len(FEATURE_COLUMNS),
+            len(used_cols),
+            len(FEATURE_COLUMNS),
             [c for c in FEATURE_COLUMNS if c not in features_df.columns][:5],
         )
 
@@ -229,15 +238,19 @@ def predict():
         model = model_service.get_model(model_id)
         selected_meta = model_service.get_model_metadata(model_id)
 
-        if hasattr(model, "pipeline") or (hasattr(model, "model") and hasattr(model.model, "predict")):
+        if hasattr(model, "pipeline") or (
+            hasattr(model, "model") and hasattr(model.model, "predict")
+        ):
             # Tree/linear model: single-step prediction, propagate forward
             current_pred = float(model.predict(X[-1:].reshape(1, -1))[0])
             # Deterministic decay toward mean (no random noise)
             long_term_mean = float(np.mean(X[-24:, 0])) if X.shape[0] >= 24 else current_pred
-            predictions = np.array([
-                current_pred + (long_term_mean - current_pred) * (1 - np.exp(-h / 36.0))
-                for h in range(settings.forecast_horizon_hours)
-            ])
+            predictions = np.array(
+                [
+                    current_pred + (long_term_mean - current_pred) * (1 - np.exp(-h / 36.0))
+                    for h in range(settings.forecast_horizon_hours)
+                ]
+            )
         else:
             # Sequence model (Bi-LSTM)
             seq_len = min(settings.lookback_window_hours, X.shape[0])
@@ -254,7 +267,7 @@ def predict():
         return jsonify({"error": "Prediction Error", "message": "Model inference failed."}), 500
 
     # Build response
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     current_aqi = float(predictions[0])
     current_level = classify_aqi(current_aqi)
 
@@ -296,10 +309,10 @@ def predict():
         summary=summary,
         alert=alert,
     )
-    return jsonify(response.model_dump(mode='json'))
+    return jsonify(response.model_dump(mode="json"))
 
 
-@app.route('/explain', methods=['POST'])
+@app.route("/explain", methods=["POST"])
 def explain():
     model_service = get_model_service()
 
@@ -309,14 +322,48 @@ def explain():
     if model_service.explainer is None:
         # Demo explanations when no live explainer is available
         contributions = [
-            SHAPExplanation(feature_name="pm25", shap_value=45.2, feature_value=120.0, direction="increase"),
-            SHAPExplanation(feature_name="wind_speed_ms", shap_value=-12.3, feature_value=2.5, direction="decrease"),
-            SHAPExplanation(feature_name="temperature_c", shap_value=8.1, feature_value=38.0, direction="increase"),
-            SHAPExplanation(feature_name="humidity_pct", shap_value=-5.4, feature_value=65.0, direction="decrease"),
-            SHAPExplanation(feature_name="pm10", shap_value=15.7, feature_value=85.0, direction="increase"),
-            SHAPExplanation(feature_name="aqi_lag_1h", shap_value=22.1, feature_value=135.0, direction="increase"),
-            SHAPExplanation(feature_name="wind_pm25_interaction", shap_value=-8.9, feature_value=300.0, direction="decrease"),
-            SHAPExplanation(feature_name="pollution_intensity", shap_value=11.3, feature_value=78.0, direction="increase"),
+            SHAPExplanation(
+                feature_name="pm25", shap_value=45.2, feature_value=120.0, direction="increase"
+            ),
+            SHAPExplanation(
+                feature_name="wind_speed_ms",
+                shap_value=-12.3,
+                feature_value=2.5,
+                direction="decrease",
+            ),
+            SHAPExplanation(
+                feature_name="temperature_c",
+                shap_value=8.1,
+                feature_value=38.0,
+                direction="increase",
+            ),
+            SHAPExplanation(
+                feature_name="humidity_pct",
+                shap_value=-5.4,
+                feature_value=65.0,
+                direction="decrease",
+            ),
+            SHAPExplanation(
+                feature_name="pm10", shap_value=15.7, feature_value=85.0, direction="increase"
+            ),
+            SHAPExplanation(
+                feature_name="aqi_lag_1h",
+                shap_value=22.1,
+                feature_value=135.0,
+                direction="increase",
+            ),
+            SHAPExplanation(
+                feature_name="wind_pm25_interaction",
+                shap_value=-8.9,
+                feature_value=300.0,
+                direction="decrease",
+            ),
+            SHAPExplanation(
+                feature_name="pollution_intensity",
+                shap_value=11.3,
+                feature_value=78.0,
+                direction="increase",
+            ),
         ]
         resp = ExplainResponse(
             prediction_aqi=135.0,
@@ -324,7 +371,7 @@ def explain():
             contributions=contributions,
             model_type=ModelType.LIGHTGBM,
         )
-        result = resp.model_dump(mode='json')
+        result = resp.model_dump(mode="json")
         result["source"] = "demo"
         return jsonify(result)
 
@@ -333,6 +380,7 @@ def explain():
         features_df = feature_service.get_latest_features(1)
         if features_df is not None and not features_df.empty:
             from training_pipeline.train import FEATURE_COLUMNS
+
             X, _ = _impute_features(features_df, FEATURE_COLUMNS)
 
             explanations = model_service.explainer.explain(X[-1:])
@@ -344,16 +392,18 @@ def explain():
                     contributions=explanations[0],
                     model_type=ModelType.LIGHTGBM,
                 )
-                result = resp.model_dump(mode='json')
+                result = resp.model_dump(mode="json")
                 result["source"] = "live"
                 return jsonify(result)
     except Exception as e:
         logger.error("SHAP explanation failed: %s", e)
 
-    return jsonify({"error": "Explanation Error", "message": "Could not generate explanation."}), 500
+    return jsonify(
+        {"error": "Explanation Error", "message": "Could not generate explanation."}
+    ), 500
 
 
-@app.route('/historical', methods=['GET'])
+@app.route("/historical", methods=["GET"])
 def get_historical():
     """Return historical feature data with pagination."""
     try:
@@ -386,41 +436,92 @@ def get_historical():
         df["timestamp"] = df["timestamp"].astype(str)
 
     records = df.to_dict(orient="records")
-    return jsonify({
-        "data": records,
-        "count": len(records),
-        "total_count": total_rows,
-        "page": page,
-        "total_pages": total_pages,
-        "source": "feature_store",
-    })
+    return jsonify(
+        {
+            "data": records,
+            "count": len(records),
+            "total_count": total_rows,
+            "page": page,
+            "total_pages": total_pages,
+            "source": "feature_store",
+        }
+    )
 
 
-@app.route('/explain/lime', methods=['POST', 'GET'])
+@app.route("/explain/lime", methods=["POST", "GET"])
 def explain_lime():
     """Return LIME local feature importance for the latest observation."""
     LIME_FALLBACK = [
-        {"feature_name": "aqi_lag_1h", "feature_description": "aqi_lag_1h > 80.0", "weight": 38.4, "feature_value": 88.0, "direction": "increase"},
-        {"feature_name": "pm25_rolling_mean_24h", "feature_description": "pm25_rolling_mean_24h > 65.0", "weight": 29.7, "feature_value": 72.3, "direction": "increase"},
-        {"feature_name": "temperature_c", "feature_description": "temperature_c > 32.0", "weight": 14.2, "feature_value": 36.1, "direction": "increase"},
-        {"feature_name": "humidity_pct", "feature_description": "humidity_pct > 60.0", "weight": 11.5, "feature_value": 67.8, "direction": "increase"},
-        {"feature_name": "wind_speed_ms", "feature_description": "wind_speed_ms <= 4.0", "weight": -18.3, "feature_value": 3.2, "direction": "decrease"},
-        {"feature_name": "pbl_height_m", "feature_description": "pbl_height_m <= 800.0", "weight": -22.6, "feature_value": 620.0, "direction": "decrease"},
-        {"feature_name": "solar_radiation_wm2", "feature_description": "solar_radiation_wm2 <= 400.0", "weight": -9.1, "feature_value": 280.0, "direction": "decrease"},
-        {"feature_name": "aqi_change_rate_6h", "feature_description": "aqi_change_rate_6h > 2.0", "weight": 8.6, "feature_value": 3.4, "direction": "increase"},
+        {
+            "feature_name": "aqi_lag_1h",
+            "feature_description": "aqi_lag_1h > 80.0",
+            "weight": 38.4,
+            "feature_value": 88.0,
+            "direction": "increase",
+        },
+        {
+            "feature_name": "pm25_rolling_mean_24h",
+            "feature_description": "pm25_rolling_mean_24h > 65.0",
+            "weight": 29.7,
+            "feature_value": 72.3,
+            "direction": "increase",
+        },
+        {
+            "feature_name": "temperature_c",
+            "feature_description": "temperature_c > 32.0",
+            "weight": 14.2,
+            "feature_value": 36.1,
+            "direction": "increase",
+        },
+        {
+            "feature_name": "humidity_pct",
+            "feature_description": "humidity_pct > 60.0",
+            "weight": 11.5,
+            "feature_value": 67.8,
+            "direction": "increase",
+        },
+        {
+            "feature_name": "wind_speed_ms",
+            "feature_description": "wind_speed_ms <= 4.0",
+            "weight": -18.3,
+            "feature_value": 3.2,
+            "direction": "decrease",
+        },
+        {
+            "feature_name": "pbl_height_m",
+            "feature_description": "pbl_height_m <= 800.0",
+            "weight": -22.6,
+            "feature_value": 620.0,
+            "direction": "decrease",
+        },
+        {
+            "feature_name": "solar_radiation_wm2",
+            "feature_description": "solar_radiation_wm2 <= 400.0",
+            "weight": -9.1,
+            "feature_value": 280.0,
+            "direction": "decrease",
+        },
+        {
+            "feature_name": "aqi_change_rate_6h",
+            "feature_description": "aqi_change_rate_6h > 2.0",
+            "weight": 8.6,
+            "feature_value": 3.4,
+            "direction": "increase",
+        },
     ]
 
     try:
         model_service = get_model_service()
         feature_service = get_feature_service()
         features_df = feature_service.get_latest_features(50)
-        
+
         if not model_service.is_loaded:
             model_service.load()
 
         if features_df is not None and not features_df.empty:
-            from training_pipeline.train import FEATURE_COLUMNS
             from training_pipeline.explainability import LIMEExplainer
+            from training_pipeline.train import FEATURE_COLUMNS
+
             X, available_cols = _impute_features(features_df, FEATURE_COLUMNS)
             lime_exp = LIMEExplainer(
                 model=model_service.model,
@@ -429,30 +530,34 @@ def explain_lime():
                 num_features=10,
             )
             result = lime_exp.explain_instance(X[-1], num_samples=500)
-            
+
             if not result.get("contributions"):
                 raise ValueError(result.get("error", "Empty contributions from LIME"))
-                
-            return jsonify({
-                "predicted_value": result["predicted_value"],
-                "local_r2": result["local_r2"],
-                "intercept": result["intercept"],
-                "contributions": result["contributions"],
-                "source": "live",
-            })
+
+            return jsonify(
+                {
+                    "predicted_value": result["predicted_value"],
+                    "local_r2": result["local_r2"],
+                    "intercept": result["intercept"],
+                    "contributions": result["contributions"],
+                    "source": "live",
+                }
+            )
     except Exception as e:
         logger.warning("LIME explanation failed, returning demo data: %s", e)
 
-    return jsonify({
-        "predicted_value": 88.0,
-        "local_r2": 0.91,
-        "intercept": 42.0,
-        "contributions": LIME_FALLBACK,
-        "source": "demo",
-    })
+    return jsonify(
+        {
+            "predicted_value": 88.0,
+            "local_r2": 0.91,
+            "intercept": 42.0,
+            "contributions": LIME_FALLBACK,
+            "source": "demo",
+        }
+    )
 
 
-@app.route('/simulate', methods=['POST'])
+@app.route("/simulate", methods=["POST"])
 def simulate_causal_policy():
     """Counterfactual policy simulation using environmental physics heuristics.
 
@@ -501,24 +606,26 @@ def simulate_causal_policy():
     else:
         recommendation = "Impacts remain within baseline tolerance limits."
 
-    return jsonify({
-        "status": "success",
-        "methodology": "heuristic_causal_elasticity",
-        "parameters": {
-            "traffic_reduction_pct": traffic_reduction,
-            "crop_burning_increase_pct": crop_burning_increase,
-            "wind_speed_delta_ms": wind_speed_delta,
-        },
-        "baseline_mean_aqi": round(mean_baseline, 1),
-        "simulated_mean_aqi": round(mean_simulated, 1),
-        "net_aqi_change": net_delta,
-        "baseline_curve": base_curve,
-        "simulated_curve": simulated_curve,
-        "policy_recommendation": recommendation,
-    })
+    return jsonify(
+        {
+            "status": "success",
+            "methodology": "heuristic_causal_elasticity",
+            "parameters": {
+                "traffic_reduction_pct": traffic_reduction,
+                "crop_burning_increase_pct": crop_burning_increase,
+                "wind_speed_delta_ms": wind_speed_delta,
+            },
+            "baseline_mean_aqi": round(mean_baseline, 1),
+            "simulated_mean_aqi": round(mean_simulated, 1),
+            "net_aqi_change": net_delta,
+            "baseline_curve": base_curve,
+            "simulated_curve": simulated_curve,
+            "policy_recommendation": recommendation,
+        }
+    )
 
 
-@app.route('/satellite/sentinel5p', methods=['GET'])
+@app.route("/satellite/sentinel5p", methods=["GET"])
 def get_satellite_earth_observation():
     """Simulated Sentinel-5P TROPOMI atmospheric column data grid for Sargodha basin.
 
@@ -542,32 +649,37 @@ def get_satellite_earth_observation():
             u_wind = round(2.5 + rng.normal(0, 0.3), 2)
             v_wind = round(-1.2 + rng.normal(0, 0.3), 2)
 
-            grid_points.append({
-                "latitude": lat,
-                "longitude": lon,
-                "no2_column_density": max(5.0, no2),
-                "aerosol_optical_depth": max(0.1, aod),
-                "wind_u_component": u_wind,
-                "wind_v_component": v_wind,
-                "aqi_proxy": int(np.clip(no2 * 5.2 + aod * 60, 30, 350)),
-            })
+            grid_points.append(
+                {
+                    "latitude": lat,
+                    "longitude": lon,
+                    "no2_column_density": max(5.0, no2),
+                    "aerosol_optical_depth": max(0.1, aod),
+                    "wind_u_component": u_wind,
+                    "wind_v_component": v_wind,
+                    "aqi_proxy": int(np.clip(no2 * 5.2 + aod * 60, 30, 350)),
+                }
+            )
 
-    return jsonify({
-        "satellite": "Copernicus Sentinel-5P TROPOMI",
-        "sensor": "OFFL NO2 / AER_AI",
-        "data_source": "simulated_regional_baseline",
-        "target_region": "Sargodha Basin, Punjab, Pakistan",
-        "center_coordinates": {"latitude": center_lat, "longitude": center_lon},
-        "observation_time": datetime.now(timezone.utc).isoformat(),
-        "grid_resolution": "0.08 deg (~8.8 km)",
-        "grid_points": grid_points,
-    })
+    return jsonify(
+        {
+            "satellite": "Copernicus Sentinel-5P TROPOMI",
+            "sensor": "OFFL NO2 / AER_AI",
+            "data_source": "simulated_regional_baseline",
+            "target_region": "Sargodha Basin, Punjab, Pakistan",
+            "center_coordinates": {"latitude": center_lat, "longitude": center_lon},
+            "observation_time": datetime.now(UTC).isoformat(),
+            "grid_resolution": "0.08 deg (~8.8 km)",
+            "grid_points": grid_points,
+        }
+    )
 
 
-@app.route('/shadow/metrics', methods=['GET'])
+@app.route("/shadow/metrics", methods=["GET"])
 def get_shadow_model_metrics():
     """Shadow model canary metrics for champion vs challenger comparison."""
     from deployment.api.shadow_logger import get_shadow_logger
+
     shadow_logger = get_shadow_logger()
     metrics = shadow_logger.get_metrics_summary()
     metrics["data_source"] = "in_memory_shadow_log"

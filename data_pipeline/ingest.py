@@ -20,26 +20,26 @@ import asyncio
 import logging
 import math
 import random
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import UTC, datetime
+from typing import Any
 
 import aiohttp
 from tenacity import (
+    RetryError,
+    before_sleep_log,
     retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    before_sleep_log,
-    RetryError,
 )
 
-from config.settings import get_settings, Settings
 from config.schemas import (
     DataSource,
     PollutantReading,
     RawDataPayload,
     WeatherReading,
 )
+from config.settings import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +56,13 @@ class APIError(Exception):
 
 class RateLimitError(APIError):
     """Raised when API rate limit (HTTP 429) is encountered."""
+
     pass
 
 
 class TransientError(APIError):
     """Raised for transient server errors (HTTP 5xx)."""
+
     pass
 
 
@@ -78,9 +80,9 @@ class AQICNClient:
 
     BASE_URL = "https://api.waqi.info"
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
-        self._session: Optional[aiohttp.ClientSession] = None
+        self._session: aiohttp.ClientSession | None = None
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create an aiohttp client session."""
@@ -101,7 +103,7 @@ class AQICNClient:
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
-    async def fetch_station_data(self) -> Dict[str, Any]:
+    async def fetch_station_data(self) -> dict[str, Any]:
         """Fetch real-time AQI data from the nearest AQICN station.
 
         Uses geo-based feed endpoint to find the closest monitoring station
@@ -136,7 +138,7 @@ class AQICNClient:
 
             return data.get("data", {})
 
-    async def fetch_pollutants(self) -> Tuple[List[PollutantReading], Optional[float]]:
+    async def fetch_pollutants(self) -> tuple[list[PollutantReading], float | None]:
         """Parse AQICN station data into validated PollutantReading objects.
 
         Returns:
@@ -144,7 +146,7 @@ class AQICNClient:
             - List[PollutantReading]: Validated pollutant readings.
             - Optional[float]: Composite AQI value if available.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         try:
             data = await self.fetch_station_data()
@@ -161,7 +163,7 @@ class AQICNClient:
 
         iaqi = data.get("iaqi", {})
         pollutant_names = ["pm25", "pm10", "no2", "so2", "co", "o3"]
-        readings: List[PollutantReading] = []
+        readings: list[PollutantReading] = []
 
         for name in pollutant_names:
             raw = iaqi.get(name, {})
@@ -201,9 +203,9 @@ class OpenWeatherClient:
     WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
     AIR_POLLUTION_URL = "https://api.openweathermap.org/data/2.5/air_pollution"
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
-        self._session: Optional[aiohttp.ClientSession] = None
+        self._session: aiohttp.ClientSession | None = None
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create an aiohttp client session."""
@@ -265,7 +267,7 @@ class OpenWeatherClient:
             wind_direction_deg=wind.get("deg", 0.0),
             pressure_hpa=main.get("pressure", 1013.25),
             precipitation_mm=rain.get("1h", 0.0),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
         logger.info(
@@ -283,7 +285,7 @@ class OpenWeatherClient:
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
-    async def fetch_air_pollution(self) -> List[PollutantReading]:
+    async def fetch_air_pollution(self) -> list[PollutantReading]:
         """Fetch air pollution data from OpenWeatherMap.
 
         Returns supplementary pollutant concentrations in µg/m³.
@@ -309,8 +311,8 @@ class OpenWeatherClient:
 
             data = await response.json()
 
-        readings: List[PollutantReading] = []
-        now = datetime.now(timezone.utc)
+        readings: list[PollutantReading] = []
+        now = datetime.now(UTC)
 
         items = data.get("list", [])
         if items:
@@ -358,7 +360,7 @@ class SyntheticDataGenerator:
     PEAK_POLLUTION_MONTH = 12  # December (smog season)
     PEAK_POLLUTION_HOUR = 8  # Morning rush hour
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
 
     def generate_for_timestamp(self, dt: datetime) -> RawDataPayload:
@@ -399,14 +401,20 @@ class SyntheticDataGenerator:
 
         # Non-Linear Emissions & Dispersion Engine
         # Boundary layer inversion effect (cold ground + calm winds = high trapping)
-        inversion_trapping = max(0.8, (28.0 - temperature) * 0.04) * (1.0 / max(0.8, wind_speed * 0.5))
+        inversion_trapping = max(0.8, (28.0 - temperature) * 0.04) * (
+            1.0 / max(0.8, wind_speed * 0.5)
+        )
         traffic_rush = 1.4 if dt.hour in [7, 8, 9, 17, 18, 19] else 0.85
         kiln_emission = 1.3 if dt.month in [10, 11, 12, 1, 2] else 0.7
 
         # Base particulate load subjected to stochastic meteorological turbulence
-        pm25_base = max(5, 32.0 * inversion_trapping * traffic_rush * kiln_emission + random.gauss(0, 11))
+        pm25_base = max(
+            5, 32.0 * inversion_trapping * traffic_rush * kiln_emission + random.gauss(0, 11)
+        )
         pm10_base = max(12, pm25_base * 1.85 + random.gauss(0, 16))
-        no2_base = max(4, 22.0 * traffic_rush * (1.0 / max(1.0, wind_speed * 0.4)) + random.gauss(0, 6))
+        no2_base = max(
+            4, 22.0 * traffic_rush * (1.0 / max(1.0, wind_speed * 0.4)) + random.gauss(0, 6)
+        )
         so2_base = max(2, 14.0 * kiln_emission + random.gauss(0, 4))
         co_base = max(300, 720.0 * traffic_rush + random.gauss(0, 120))
         o3_base = max(10, 45.0 * max(0.2, temperature / 35.0) + random.gauss(0, 10))
@@ -482,7 +490,7 @@ class DataIngestionOrchestrator:
         synthetic: Synthetic data generator for fallback.
     """
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
         self.aqicn = AQICNClient(self.settings)
         self.openweather = OpenWeatherClient(self.settings)
@@ -497,18 +505,16 @@ class DataIngestionOrchestrator:
         Returns:
             RawDataPayload: Unified validated data payload.
         """
-        now = datetime.now(timezone.utc)
-        pollutants: List[PollutantReading] = []
-        aqi_value: Optional[float] = None
-        weather: Optional[WeatherReading] = None
+        now = datetime.now(UTC)
+        pollutants: list[PollutantReading] = []
+        aqi_value: float | None = None
+        weather: WeatherReading | None = None
 
         # Concurrent fetch from both sources
         aqicn_task = asyncio.create_task(self._safe_fetch_aqicn())
         openweather_task = asyncio.create_task(self._safe_fetch_openweather())
 
-        aqicn_result, openweather_result = await asyncio.gather(
-            aqicn_task, openweather_task
-        )
+        aqicn_result, openweather_result = await asyncio.gather(aqicn_task, openweather_task)
 
         # Merge AQICN results
         if aqicn_result is not None:
@@ -528,9 +534,7 @@ class DataIngestionOrchestrator:
 
         # Fallback to synthetic if both failed
         if not pollutants or weather is None:
-            logger.warning(
-                "API sources unavailable - using synthetic data for %s", now
-            )
+            logger.warning("API sources unavailable - using synthetic data for %s", now)
             synthetic_payload = self.synthetic.generate_for_timestamp(now)
             if not pollutants:
                 pollutants = synthetic_payload.pollutants
@@ -539,8 +543,10 @@ class DataIngestionOrchestrator:
             if aqi_value is None:
                 aqi_value = synthetic_payload.aqi_value
 
-        source = DataSource.AQICN if aqicn_result else (
-            DataSource.OPENWEATHER if openweather_result else DataSource.SYNTHETIC
+        source = (
+            DataSource.AQICN
+            if aqicn_result
+            else (DataSource.OPENWEATHER if openweather_result else DataSource.SYNTHETIC)
         )
 
         payload = RawDataPayload(
@@ -553,13 +559,15 @@ class DataIngestionOrchestrator:
 
         logger.info(
             "Ingestion complete: source=%s, pollutants=%d, AQI=%s",
-            source.value, len(pollutants), aqi_value,
+            source.value,
+            len(pollutants),
+            aqi_value,
         )
         return payload
 
     async def _safe_fetch_aqicn(
         self,
-    ) -> Optional[Tuple[List[PollutantReading], Optional[float]]]:
+    ) -> tuple[list[PollutantReading], float | None] | None:
         """Safely attempt AQICN fetch, returning None on failure."""
         try:
             return await self.aqicn.fetch_pollutants()
@@ -569,16 +577,14 @@ class DataIngestionOrchestrator:
 
     async def _safe_fetch_openweather(
         self,
-    ) -> Optional[Tuple[WeatherReading, List[PollutantReading]]]:
+    ) -> tuple[WeatherReading, list[PollutantReading]] | None:
         """Safely attempt OpenWeather fetch, returning None on failure."""
         if not self.settings.openweather_api_key:
             logger.info("OpenWeather API key not configured - skipping")
             return None
         try:
             weather_task = asyncio.create_task(self.openweather.fetch_weather())
-            pollution_task = asyncio.create_task(
-                self.openweather.fetch_air_pollution()
-            )
+            pollution_task = asyncio.create_task(self.openweather.fetch_air_pollution())
             weather, air_pollutants = await asyncio.gather(weather_task, pollution_task)
             return weather, air_pollutants
         except Exception as e:
@@ -597,16 +603,18 @@ async def _main() -> None:
     orchestrator = DataIngestionOrchestrator()
     try:
         payload = await orchestrator.fetch_current()
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Source: {payload.source.value}")
         print(f"AQI: {payload.aqi_value}")
         print(f"Pollutants: {len(payload.pollutants)}")
         for p in payload.pollutants:
             print(f"  {p.name}: {p.value:.1f} {p.unit}")
         w = payload.weather
-        print(f"Weather: T={w.temperature_c}°C, H={w.humidity_pct}%, "
-              f"WS={w.wind_speed_ms}m/s, WD={w.wind_direction_deg}°")
-        print(f"{'='*60}\n")
+        print(
+            f"Weather: T={w.temperature_c}°C, H={w.humidity_pct}%, "
+            f"WS={w.wind_speed_ms}m/s, WD={w.wind_direction_deg}°"
+        )
+        print(f"{'=' * 60}\n")
     finally:
         await orchestrator.close()
 

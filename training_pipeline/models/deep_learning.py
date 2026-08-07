@@ -25,7 +25,7 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Literal
 
 import numpy as np
 import torch
@@ -69,7 +69,7 @@ class MultiHeadAttention(nn.Module):
 
         self.n_heads = n_heads
         self.head_dim = hidden_size // n_heads
-        self.scale = self.head_dim ** 0.5
+        self.scale = self.head_dim**0.5
 
         self.query = nn.Linear(hidden_size, hidden_size)
         self.key = nn.Linear(hidden_size, hidden_size)
@@ -78,7 +78,7 @@ class MultiHeadAttention(nn.Module):
 
         self.dropout = nn.Dropout(0.1)
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Apply multi-head attention over the sequence.
 
         Args:
@@ -142,7 +142,7 @@ class AsymmetricMSELoss(nn.Module):
             torch.Tensor: Scalar loss value.
         """
         errors = y_true - y_pred
-        squared_errors = errors ** 2
+        squared_errors = errors**2
 
         # Identify under-predictions in hazardous range
         is_hazardous = y_true > self.hazard_threshold
@@ -236,7 +236,7 @@ class BiLSTMNetwork(nn.Module):
             nn.Linear(hidden_size // 2, forecast_horizon),
         )
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass through the network.
 
         Args:
@@ -295,13 +295,13 @@ class BiLSTMAttention:
     def __init__(
         self,
         input_size: int = 40,
-        hidden_size: Optional[int] = None,
-        num_layers: Optional[int] = None,
-        dropout: Optional[float] = None,
-        forecast_horizon: Optional[int] = None,
-        learning_rate: Optional[float] = None,
-        epochs: Optional[int] = None,
-        batch_size: Optional[int] = None,
+        hidden_size: int | None = None,
+        num_layers: int | None = None,
+        dropout: float | None = None,
+        forecast_horizon: int | None = None,
+        learning_rate: float | None = None,
+        epochs: int | None = None,
+        batch_size: int | None = None,
         accumulation_steps: int = 4,
         scheduler_type: Literal["onecycle", "cosine_warm", "plateau"] = "cosine_warm",
         use_amp: bool = True,
@@ -335,13 +335,15 @@ class BiLSTMAttention:
 
         self.is_fitted = False
         self.training_logger = TrainingLogger()
-        self.feature_names: List[str] = []
+        self.feature_names: list[str] = []
 
         total_params = sum(p.numel() for p in self.model.parameters())
         trainable = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         logger.info(
             "BiLSTM initialized: %d total params, %d trainable, horizon=%d",
-            total_params, trainable, self.forecast_horizon,
+            total_params,
+            trainable,
+            self.forecast_horizon,
         )
 
     @staticmethod
@@ -350,7 +352,7 @@ class BiLSTMAttention:
         y: np.ndarray,
         lookback: int = 72,
         horizon: int = 72,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Create sliding window sequences for time-series training.
 
         Args:
@@ -366,8 +368,8 @@ class BiLSTMAttention:
         """
         X_seq, y_seq = [], []
         for i in range(lookback, len(X) - horizon + 1):
-            X_seq.append(X[i - lookback: i])
-            y_seq.append(y[i: i + horizon])
+            X_seq.append(X[i - lookback : i])
+            y_seq.append(y[i : i + horizon])
         return np.array(X_seq), np.array(y_seq)
 
     def _build_scheduler(
@@ -413,18 +415,18 @@ class BiLSTMAttention:
         for p in self.model.parameters():
             if p.grad is not None:
                 total_norm += p.grad.data.norm(2).item() ** 2
-        return total_norm ** 0.5
+        return total_norm**0.5
 
     def fit(
         self,
         X_train: np.ndarray,
         y_train: np.ndarray,
-        X_val: Optional[np.ndarray] = None,
-        y_val: Optional[np.ndarray] = None,
-        feature_names: Optional[List[str]] = None,
+        X_val: np.ndarray | None = None,
+        y_val: np.ndarray | None = None,
+        feature_names: list[str] | None = None,
         patience: int = 15,
-        checkpoint_dir: Optional[Path] = None,
-    ) -> "BiLSTMAttention":
+        checkpoint_dir: Path | None = None,
+    ) -> BiLSTMAttention:
         """Train the Bi-LSTM model with full training infrastructure.
 
         Args:
@@ -489,9 +491,13 @@ class BiLSTMAttention:
         logger.info(
             "Training Bi-LSTM: %d epochs, batch=%d, accum=%d (eff_batch=%d), "
             "lr=%.6f, scheduler=%s, AMP=%s",
-            self.epochs, self.batch_size, self.accumulation_steps,
+            self.epochs,
+            self.batch_size,
+            self.accumulation_steps,
             self.batch_size * self.accumulation_steps,
-            self.learning_rate, self.scheduler_type, self.use_amp,
+            self.learning_rate,
+            self.scheduler_type,
+            self.use_amp,
         )
 
         # Training Loop
@@ -568,17 +574,21 @@ class BiLSTMAttention:
                 train_loss=train_loss,
                 val_loss=val_loss,
                 learning_rate=current_lr,
-                grad_norm=grad_norm if 'grad_norm' in dir() else 0.0,
+                grad_norm=grad_norm if "grad_norm" in dir() else 0.0,
                 epoch_time_s=epoch_time,
             )
             self.training_logger.log_epoch(metrics)
 
             if (epoch + 1) % 10 == 0:
                 logger.info(
-                    "Epoch %d/%d - train=%.4f, val=%.4f, lr=%.6f, "
-                    "grad_norm=%.2f, time=%.1fs",
-                    epoch + 1, self.epochs, train_loss, val_loss,
-                    current_lr, metrics.grad_norm, epoch_time,
+                    "Epoch %d/%d - train=%.4f, val=%.4f, lr=%.6f, grad_norm=%.2f, time=%.1fs",
+                    epoch + 1,
+                    self.epochs,
+                    train_loss,
+                    val_loss,
+                    current_lr,
+                    metrics.grad_norm,
+                    epoch_time,
                 )
 
             # Checkpoint
@@ -630,9 +640,7 @@ class BiLSTMAttention:
         result = predictions.squeeze(-1).cpu().numpy()
         return np.clip(result, 0, 500)
 
-    def predict_with_attention(
-        self, X: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    def predict_with_attention(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Generate predictions with attention weights for interpretability.
 
         Args:
@@ -656,7 +664,7 @@ class BiLSTMAttention:
         weights = attn_weights.cpu().numpy()
         return np.clip(preds, 0, 500), weights
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Get model architecture parameters.
 
         Returns:
@@ -676,7 +684,8 @@ class BiLSTMAttention:
             "scheduler_type": self.scheduler_type,
             "total_params": sum(p.numel() for p in self.model.parameters()),
             "best_epoch": self.training_logger.get_best_epoch().epoch
-            if self.training_logger.get_best_epoch() else 0,
+            if self.training_logger.get_best_epoch()
+            else 0,
         }
 
     def save(self, path: Path) -> None:
@@ -686,23 +695,26 @@ class BiLSTMAttention:
             path: File path for saving (.pt).
         """
         path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save({
-            "model_state": self.model.state_dict(),
-            "config": {
-                "input_size": self.input_size,
-                "hidden_size": self.hidden_size,
-                "num_layers": self.num_layers,
-                "dropout": self.dropout,
-                "forecast_horizon": self.forecast_horizon,
+        torch.save(
+            {
+                "model_state": self.model.state_dict(),
+                "config": {
+                    "input_size": self.input_size,
+                    "hidden_size": self.hidden_size,
+                    "num_layers": self.num_layers,
+                    "dropout": self.dropout,
+                    "forecast_horizon": self.forecast_horizon,
+                },
+                "feature_names": self.feature_names,
+                "training_history": self.training_logger.to_dict_list(),
+                "is_fitted": self.is_fitted,
             },
-            "feature_names": self.feature_names,
-            "training_history": self.training_logger.to_dict_list(),
-            "is_fitted": self.is_fitted,
-        }, path)
+            path,
+        )
         logger.info("Saved BiLSTM model to %s", path)
 
     @classmethod
-    def load(cls, path: Path) -> "BiLSTMAttention":
+    def load(cls, path: Path) -> BiLSTMAttention:
         """Load a trained model from disk.
 
         Args:

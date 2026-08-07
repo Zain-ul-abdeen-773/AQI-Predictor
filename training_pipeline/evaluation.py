@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Protocol
+from typing import Any, Protocol
 
 import numpy as np
 from sklearn.model_selection import TimeSeriesSplit
@@ -28,11 +28,9 @@ logger = logging.getLogger(__name__)
 class Predictor(Protocol):
     """Protocol for any model with a predict method."""
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
-        ...
+    def predict(self, X: np.ndarray) -> np.ndarray: ...
 
-    def get_params(self) -> Dict[str, Any]:
-        ...
+    def get_params(self) -> dict[str, Any]: ...
 
 
 @dataclass
@@ -57,9 +55,9 @@ class EvaluationMetrics:
     max_error: float = 0.0
     within_50: float = 0.0
     model_name: str = ""
-    fold_metrics: List[Dict[str, float]] = field(default_factory=list)
+    fold_metrics: list[dict[str, float]] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert metrics to dictionary for serialization."""
         return {
             "rmse": round(self.rmse, 4),
@@ -119,7 +117,7 @@ class ModelEvaluator:
         n_splits: Number of TimeSeriesSplit folds.
     """
 
-    def __init__(self, n_splits: Optional[int] = None) -> None:
+    def __init__(self, n_splits: int | None = None) -> None:
         settings = get_settings()
         self.n_splits = n_splits or settings.cv_n_splits
 
@@ -151,7 +149,11 @@ class ModelEvaluator:
 
         logger.info(
             "%s evaluation: RMSE=%.4f, MAE=%.4f, R²=%.4f, MAPE=%.2f%%",
-            model_name, metrics.rmse, metrics.mae, metrics.r2, metrics.mape,
+            model_name,
+            metrics.rmse,
+            metrics.mae,
+            metrics.r2,
+            metrics.mape,
         )
         return metrics
 
@@ -174,11 +176,12 @@ class ModelEvaluator:
             EvaluationMetrics: Averaged metrics across folds.
         """
         tscv = TimeSeriesSplit(n_splits=self.n_splits)
-        fold_metrics: List[Dict[str, float]] = []
+        fold_metrics: list[dict[str, float]] = []
 
         logger.info(
             "Starting %d-fold TimeSeriesSplit CV for %s",
-            self.n_splits, model_name,
+            self.n_splits,
+            model_name,
         )
 
         for fold, (train_idx, val_idx) in enumerate(tscv.split(X), 1):
@@ -208,8 +211,12 @@ class ModelEvaluator:
 
             logger.info(
                 "  Fold %d: RMSE=%.4f, MAE=%.4f, R²=%.4f (train=%d, val=%d)",
-                fold, fold_result["rmse"], fold_result["mae"],
-                fold_result["r2"], len(train_idx), len(val_idx),
+                fold,
+                fold_result["rmse"],
+                fold_result["mae"],
+                fold_result["r2"],
+                len(train_idx),
+                len(val_idx),
             )
 
         # Aggregate across folds
@@ -225,15 +232,18 @@ class ModelEvaluator:
         logger.info(
             "%s CV Results: RMSE=%.4f±%.4f, MAE=%.4f±%.4f, R²=%.4f±%.4f",
             model_name,
-            avg_metrics.rmse, np.std([f["rmse"] for f in fold_metrics]),
-            avg_metrics.mae, np.std([f["mae"] for f in fold_metrics]),
-            avg_metrics.r2, np.std([f["r2"] for f in fold_metrics]),
+            avg_metrics.rmse,
+            np.std([f["rmse"] for f in fold_metrics]),
+            avg_metrics.mae,
+            np.std([f["mae"] for f in fold_metrics]),
+            avg_metrics.r2,
+            np.std([f["r2"] for f in fold_metrics]),
         )
         return avg_metrics
 
     def compare_models(
         self,
-        model_results: Dict[str, EvaluationMetrics],
+        model_results: dict[str, EvaluationMetrics],
     ) -> str:
         """Compare multiple models and identify the champion.
 
@@ -257,7 +267,12 @@ class ModelEvaluator:
             marker = " [CHAMPION]" if rank == 1 else ""
             logger.info(
                 "  %d. %s: RMSE=%.4f, MAE=%.4f, R²=%.4f%s",
-                rank, name, metrics.rmse, metrics.mae, metrics.r2, marker,
+                rank,
+                name,
+                metrics.rmse,
+                metrics.mae,
+                metrics.r2,
+                marker,
             )
         logger.info("=" * 60)
 
@@ -317,8 +332,8 @@ class DataDriftDetector:
         self,
         reference_df: np.ndarray,
         current_df: np.ndarray,
-        feature_names: List[str],
-    ) -> Dict[str, Any]:
+        feature_names: list[str],
+    ) -> dict[str, Any]:
         """Check for data drift across all features.
 
         Args:
@@ -329,7 +344,7 @@ class DataDriftDetector:
         Returns:
             Dict with drift detection results per feature.
         """
-        results: Dict[str, Any] = {
+        results: dict[str, Any] = {
             "overall_drift": False,
             "drifted_features": [],
             "psi_scores": {},
@@ -353,7 +368,9 @@ class DataDriftDetector:
                 results["drifted_features"].append(name)
                 logger.warning(
                     "Data drift detected in '%s': PSI=%.4f > %.4f",
-                    name, psi, self.threshold,
+                    name,
+                    psi,
+                    self.threshold,
                 )
 
         results["overall_drift"] = len(results["drifted_features"]) > 0
@@ -385,7 +402,7 @@ class AnomalyDetector:
         self.contamination = contamination
         self.model = None
 
-    def fit(self, X: np.ndarray) -> "AnomalyDetector":
+    def fit(self, X: np.ndarray) -> AnomalyDetector:
         """Fit the anomaly detector on training data.
 
         Args:
@@ -408,8 +425,8 @@ class AnomalyDetector:
     def detect(
         self,
         X: np.ndarray,
-        feature_names: Optional[List[str]] = None,
-    ) -> List[Dict[str, Any]]:
+        feature_names: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
         """Detect anomalies in the input data.
 
         Args:
@@ -438,14 +455,15 @@ class AnomalyDetector:
                 z_scores = np.abs((X[i] - np.mean(X, axis=0)) / (np.std(X, axis=0) + 1e-8))
                 top_features = np.argsort(z_scores)[-3:][::-1]
                 result["contributing_features"] = [
-                    feature_names[idx] for idx in top_features
-                    if idx < len(feature_names)
+                    feature_names[idx] for idx in top_features if idx < len(feature_names)
                 ]
             results.append(result)
 
         anomaly_count = sum(1 for r in results if r["is_anomaly"])
         logger.info(
             "Anomaly detection: %d/%d anomalies detected (%.1f%%)",
-            anomaly_count, len(results), 100 * anomaly_count / len(results),
+            anomaly_count,
+            len(results),
+            100 * anomaly_count / len(results),
         )
         return results

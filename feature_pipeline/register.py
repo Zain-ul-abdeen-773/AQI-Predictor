@@ -12,18 +12,18 @@ Example:
 from __future__ import annotations
 
 import logging
-import os
 import tempfile
 import time
 from datetime import datetime
-from typing import Any, Dict, Optional
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
-from config.settings import get_settings, Settings
+from config.settings import Settings, get_settings
 
 logger = logging.getLogger(__name__)
+
 
 class FeatureStoreManager:
     """Manages ClearML Dataset operations.
@@ -35,16 +35,16 @@ class FeatureStoreManager:
         settings: Application settings instance.
     """
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
-        self._cache: Optional[pd.DataFrame] = None
+        self._cache: pd.DataFrame | None = None
         self._cache_ts: float = 0.0
         self._cache_ttl: float = float(self.settings.cache_ttl_seconds)
 
     def insert_features(
         self,
         df: pd.DataFrame,
-        write_options: Optional[Dict[str, Any]] = None,
+        write_options: dict[str, Any] | None = None,
     ) -> None:
         """Insert feature data into the ClearML dataset.
 
@@ -58,7 +58,7 @@ class FeatureStoreManager:
 
         try:
             from clearml import Dataset
-            
+
             # Ensure timestamp is correct type
             if "timestamp" in df.columns:
                 df["timestamp"] = pd.to_datetime(df["timestamp"])
@@ -75,7 +75,7 @@ class FeatureStoreManager:
             # Save locally to temp file
             with tempfile.TemporaryDirectory() as tmpdir:
                 csv_path = Path(tmpdir) / "features.csv"
-                
+
                 # If dataset exists, pull old data to append
                 try:
                     old_dataset = Dataset.get(
@@ -88,13 +88,15 @@ class FeatureStoreManager:
                         old_df = pd.read_csv(old_csv)
                         if "timestamp" in old_df.columns:
                             old_df["timestamp"] = pd.to_datetime(old_df["timestamp"])
-                        
+
                         # Concatenate and drop duplicates
-                        df = pd.concat([old_df, df]).drop_duplicates(subset=["timestamp"], keep="last")
+                        df = pd.concat([old_df, df]).drop_duplicates(
+                            subset=["timestamp"], keep="last"
+                        )
                 except ValueError:
                     # Dataset doesn't exist yet, we will create a new one
                     pass
-                
+
                 df.sort_values("timestamp", inplace=True)
                 df.to_csv(csv_path, index=False)
 
@@ -104,11 +106,11 @@ class FeatureStoreManager:
                     dataset_name=self.settings.clearml_dataset_name,
                     description="Sargodha AQI features including pollutant concentrations, meteorological data, and lag features.",
                 )
-                
+
                 dataset.add_files(str(csv_path))
                 dataset.upload()
                 dataset.finalize()
-                
+
             # Invalidate local cache after new insert
             self._cache = None
             self._cache_ts = 0.0
@@ -121,8 +123,8 @@ class FeatureStoreManager:
 
     def get_training_data(
         self,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> pd.DataFrame:
         """Retrieve feature data for model training.
 
@@ -135,22 +137,22 @@ class FeatureStoreManager:
         """
         try:
             from clearml import Dataset
-            
+
             dataset = Dataset.get(
                 dataset_project=self.settings.clearml_project_name,
                 dataset_name=self.settings.clearml_dataset_name,
             )
             local_path = dataset.get_local_copy()
             csv_path = Path(local_path) / "features.csv"
-            
+
             if not csv_path.exists():
                 logger.warning("features.csv not found in ClearML dataset")
                 return pd.DataFrame()
-                
+
             df = pd.read_csv(csv_path)
-            
+
             if not df.empty and "timestamp" in df.columns:
-                df["timestamp"] = pd.to_datetime(df["timestamp"], format='ISO8601', utc=True)
+                df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601", utc=True)
                 if start_date:
                     if start_date.tzinfo is not None:
                         start_date = start_date.replace(tzinfo=None)
@@ -160,14 +162,14 @@ class FeatureStoreManager:
                         end_date = end_date.replace(tzinfo=None)
                     df = df[df["timestamp"] <= end_date]
                 df.sort_values("timestamp", inplace=True)
-            
+
             logger.info("Retrieved %d rows from ClearML dataset", len(df))
             return df
         except ValueError as e:
             logger.warning("ClearML Dataset Error: %s", e)
         except Exception as e:
             logger.error("Failed to read from ClearML dataset: %s", e)
-        
+
         return pd.DataFrame()
 
     def get_latest_features(self, n_hours: int = 72) -> pd.DataFrame:

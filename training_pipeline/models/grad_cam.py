@@ -14,7 +14,6 @@ Example:
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -40,7 +39,7 @@ class TemporalGradCAM:
     def __init__(
         self,
         model: nn.Module,
-        target_layer: Optional[nn.Module] = None,
+        target_layer: nn.Module | None = None,
     ) -> None:
         """Initialize Temporal Grad-CAM.
 
@@ -49,8 +48,8 @@ class TemporalGradCAM:
             target_layer: Layer to hook. If None, auto-detects the LSTM layer.
         """
         self.model = model
-        self.activations: Optional[torch.Tensor] = None
-        self.gradients: Optional[torch.Tensor] = None
+        self.activations: torch.Tensor | None = None
+        self.gradients: torch.Tensor | None = None
 
         # Auto-detect target layer
         if target_layer is None:
@@ -65,7 +64,7 @@ class TemporalGradCAM:
         self._forward_hook = target_layer.register_forward_hook(self._save_activation)
         self._backward_hook = target_layer.register_full_backward_hook(self._save_gradient)
 
-    def _find_lstm_layer(self, model: nn.Module) -> Optional[nn.Module]:
+    def _find_lstm_layer(self, model: nn.Module) -> nn.Module | None:
         """Auto-detect the LSTM layer in the model."""
         for name, module in model.named_modules():
             if isinstance(module, nn.LSTM):
@@ -76,7 +75,7 @@ class TemporalGradCAM:
     def _save_activation(
         self,
         module: nn.Module,
-        input: Tuple[torch.Tensor, ...],
+        input: tuple[torch.Tensor, ...],
         output: torch.Tensor,
     ) -> None:
         """Forward hook to cache activations."""
@@ -89,8 +88,8 @@ class TemporalGradCAM:
     def _save_gradient(
         self,
         module: nn.Module,
-        grad_input: Tuple[torch.Tensor, ...],
-        grad_output: Tuple[torch.Tensor, ...],
+        grad_input: tuple[torch.Tensor, ...],
+        grad_output: tuple[torch.Tensor, ...],
     ) -> None:
         """Backward hook to cache gradients."""
         self.gradients = grad_output[0].detach()
@@ -98,8 +97,8 @@ class TemporalGradCAM:
     def generate(
         self,
         x: torch.Tensor,
-        target_timestep: Optional[int] = None,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        target_timestep: int | None = None,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Generate Grad-CAM heatmap for input sequences.
 
         Args:
@@ -155,7 +154,8 @@ class TemporalGradCAM:
 
         logger.info(
             "Grad-CAM generated: %d samples, lookback=%d",
-            heatmap.shape[0], heatmap.shape[1],
+            heatmap.shape[0],
+            heatmap.shape[1],
         )
 
         return heatmap, predictions
@@ -163,8 +163,8 @@ class TemporalGradCAM:
     def generate_feature_heatmap(
         self,
         x: torch.Tensor,
-        feature_names: Optional[List[str]] = None,
-    ) -> Tuple[np.ndarray, Dict[str, float]]:
+        feature_names: list[str] | None = None,
+    ) -> tuple[np.ndarray, dict[str, float]]:
         """Generate per-feature importance using input gradients.
 
         Uses the gradient of the output with respect to the input tensor

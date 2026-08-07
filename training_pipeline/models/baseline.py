@@ -16,14 +16,12 @@ from __future__ import annotations
 import logging
 import pickle
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Literal
 
 import numpy as np
 from sklearn.linear_model import ElasticNet, Ridge
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import RobustScaler
-
-from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -76,22 +74,25 @@ class BaselineRegressor:
                 solver="auto",
             )
 
-        self.pipeline = Pipeline([
-            ("scaler", RobustScaler(quantile_range=(5.0, 95.0))),
-            ("regressor", regressor),
-        ])
+        self.pipeline = Pipeline(
+            [
+                ("scaler", RobustScaler(quantile_range=(5.0, 95.0))),
+                ("regressor", regressor),
+            ]
+        )
 
         logger.info(
             "Initialized %s regressor (alpha=%.4f)",
-            model_type, alpha,
+            model_type,
+            alpha,
         )
 
     def fit(
         self,
         X: np.ndarray,
         y: np.ndarray,
-        feature_names: Optional[list[str]] = None,
-    ) -> "BaselineRegressor":
+        feature_names: list[str] | None = None,
+    ) -> BaselineRegressor:
         """Train the baseline model.
 
         Args:
@@ -106,7 +107,9 @@ class BaselineRegressor:
 
         logger.info(
             "Training %s on %d samples x %d features",
-            self.model_type, X.shape[0], X.shape[1],
+            self.model_type,
+            X.shape[0],
+            X.shape[1],
         )
 
         self.pipeline.fit(X, y)
@@ -145,7 +148,7 @@ class BaselineRegressor:
         predictions = np.clip(predictions, 0, 500)
         return predictions
 
-    def get_coefficients(self) -> Dict[str, float]:
+    def get_coefficients(self) -> dict[str, float]:
         """Get feature coefficients from the fitted model.
 
         Returns:
@@ -157,12 +160,9 @@ class BaselineRegressor:
         regressor = self.pipeline.named_steps["regressor"]
         coefs = regressor.coef_
 
-        return {
-            name: float(coef)
-            for name, coef in zip(self.feature_names, coefs)
-        }
+        return {name: float(coef) for name, coef in zip(self.feature_names, coefs)}
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Get model hyperparameters.
 
         Returns:
@@ -181,16 +181,19 @@ class BaselineRegressor:
         """
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "wb") as f:
-            pickle.dump({
-                "pipeline": self.pipeline,
-                "model_type": self.model_type,
-                "feature_names": self.feature_names,
-                "is_fitted": self.is_fitted,
-            }, f)
+            pickle.dump(
+                {
+                    "pipeline": self.pipeline,
+                    "model_type": self.model_type,
+                    "feature_names": self.feature_names,
+                    "is_fitted": self.is_fitted,
+                },
+                f,
+            )
         logger.info("Saved %s model to %s", self.model_type, path)
 
     @classmethod
-    def load(cls, path: Path) -> "BaselineRegressor":
+    def load(cls, path: Path) -> BaselineRegressor:
         """Load a trained model from disk.
 
         Args:

@@ -6,13 +6,11 @@ and backfill pipeline functionality.
 
 from __future__ import annotations
 
-import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import numpy as np
-import pytest
 
-from config.schemas import DataSource, PollutantReading, RawDataPayload, WeatherReading
+from config.schemas import DataSource, RawDataPayload
 from data_pipeline.ingest import SyntheticDataGenerator
 from data_pipeline.transformers import FeatureEngineer
 
@@ -27,7 +25,7 @@ class TestSyntheticDataGenerator:
 
     def test_generates_valid_payload(self):
         """Generator produces a valid RawDataPayload."""
-        dt = datetime(2024, 6, 15, 12, 0, tzinfo=timezone.utc)
+        dt = datetime(2024, 6, 15, 12, 0, tzinfo=UTC)
         payload = self.generator.generate_for_timestamp(dt)
 
         assert isinstance(payload, RawDataPayload)
@@ -39,7 +37,7 @@ class TestSyntheticDataGenerator:
     def test_aqi_within_valid_range(self):
         """Generated AQI values are within 10-450 range."""
         for month in range(1, 13):
-            dt = datetime(2024, month, 15, 12, 0, tzinfo=timezone.utc)
+            dt = datetime(2024, month, 15, 12, 0, tzinfo=UTC)
             payload = self.generator.generate_for_timestamp(dt)
             assert 10 <= payload.aqi_value <= 450, f"AQI {payload.aqi_value} out of range"
 
@@ -49,18 +47,19 @@ class TestSyntheticDataGenerator:
         summer_aqis = []
 
         for _ in range(100):
-            winter_dt = datetime(2024, 12, 15, 12, 0, tzinfo=timezone.utc)
-            summer_dt = datetime(2024, 6, 15, 12, 0, tzinfo=timezone.utc)
+            winter_dt = datetime(2024, 12, 15, 12, 0, tzinfo=UTC)
+            summer_dt = datetime(2024, 6, 15, 12, 0, tzinfo=UTC)
 
             winter_aqis.append(self.generator.generate_for_timestamp(winter_dt).aqi_value)
             summer_aqis.append(self.generator.generate_for_timestamp(summer_dt).aqi_value)
 
-        assert np.mean(winter_aqis) > np.mean(summer_aqis), \
+        assert np.mean(winter_aqis) > np.mean(summer_aqis), (
             "Winter AQI should be higher than summer"
+        )
 
     def test_pollutant_names_normalized(self):
         """All pollutant names are in standard format."""
-        dt = datetime(2024, 6, 15, 12, 0, tzinfo=timezone.utc)
+        dt = datetime(2024, 6, 15, 12, 0, tzinfo=UTC)
         payload = self.generator.generate_for_timestamp(dt)
 
         expected_names = {"pm25", "pm10", "no2", "so2", "co", "o3"}
@@ -69,7 +68,7 @@ class TestSyntheticDataGenerator:
 
     def test_weather_values_realistic(self):
         """Weather values are within physically realistic ranges."""
-        dt = datetime(2024, 6, 15, 14, 0, tzinfo=timezone.utc)
+        dt = datetime(2024, 6, 15, 14, 0, tzinfo=UTC)
         payload = self.generator.generate_for_timestamp(dt)
         w = payload.weather
 
@@ -90,17 +89,17 @@ class TestFeatureEngineer:
 
     def test_temporal_features_cyclical(self):
         """Cyclical encodings maintain sin²+cos²=1 identity."""
-        dt = datetime(2024, 6, 15, 14, 30, tzinfo=timezone.utc)
+        dt = datetime(2024, 6, 15, 14, 30, tzinfo=UTC)
         temporal = self.engineer.compute_temporal_features(dt)
 
         # Hour encoding: sin² + cos² should ≈ 1
-        assert abs(temporal.hour_sin ** 2 + temporal.hour_cos ** 2 - 1.0) < 1e-10
-        assert abs(temporal.day_sin ** 2 + temporal.day_cos ** 2 - 1.0) < 1e-10
-        assert abs(temporal.month_sin ** 2 + temporal.month_cos ** 2 - 1.0) < 1e-10
+        assert abs(temporal.hour_sin**2 + temporal.hour_cos**2 - 1.0) < 1e-10
+        assert abs(temporal.day_sin**2 + temporal.day_cos**2 - 1.0) < 1e-10
+        assert abs(temporal.month_sin**2 + temporal.month_cos**2 - 1.0) < 1e-10
 
     def test_temporal_features_values(self):
         """Temporal features have correct values."""
-        dt = datetime(2024, 6, 15, 14, 30, tzinfo=timezone.utc)  # Saturday
+        dt = datetime(2024, 6, 15, 14, 30, tzinfo=UTC)  # Saturday
         temporal = self.engineer.compute_temporal_features(dt)
 
         assert temporal.hour == 14
@@ -147,7 +146,7 @@ class TestFeatureEngineer:
     def test_transform_produces_feature_vector(self):
         """Full transform produces a valid FeatureVector."""
         generator = SyntheticDataGenerator()
-        dt = datetime(2024, 6, 15, 12, 0, tzinfo=timezone.utc)
+        dt = datetime(2024, 6, 15, 12, 0, tzinfo=UTC)
         payload = generator.generate_for_timestamp(dt)
 
         fv = self.engineer.transform(payload)
@@ -162,18 +161,32 @@ class TestFeatureEngineer:
     def test_flat_dict_has_all_fields(self):
         """to_flat_dict() contains all expected feature columns."""
         generator = SyntheticDataGenerator()
-        dt = datetime(2024, 6, 15, 12, 0, tzinfo=timezone.utc)
+        dt = datetime(2024, 6, 15, 12, 0, tzinfo=UTC)
         payload = generator.generate_for_timestamp(dt)
 
         fv = self.engineer.transform(payload)
         flat = fv.to_flat_dict()
 
         expected_keys = {
-            "timestamp", "year", "month", "aqi_value",
-            "pm25", "pm10", "no2", "so2", "co", "o3",
-            "temperature_c", "humidity_pct", "wind_speed_ms",
-            "hour_sin", "hour_cos", "day_sin", "day_cos",
-            "wind_u_component", "wind_v_component",
+            "timestamp",
+            "year",
+            "month",
+            "aqi_value",
+            "pm25",
+            "pm10",
+            "no2",
+            "so2",
+            "co",
+            "o3",
+            "temperature_c",
+            "humidity_pct",
+            "wind_speed_ms",
+            "hour_sin",
+            "hour_cos",
+            "day_sin",
+            "day_cos",
+            "wind_u_component",
+            "wind_v_component",
             "temperature_humidity_index",
         }
         assert expected_keys.issubset(set(flat.keys()))
@@ -184,7 +197,7 @@ class TestFeatureEngineer:
 
         # Feed multiple timestamps
         for h in range(5):
-            dt = datetime(2024, 6, 15, h, 0, tzinfo=timezone.utc)
+            dt = datetime(2024, 6, 15, h, 0, tzinfo=UTC)
             payload = generator.generate_for_timestamp(dt)
             self.engineer.transform(payload)
 
@@ -199,7 +212,7 @@ class TestFeatureEngineer:
         payloads = []
 
         for h in range(10):
-            dt = datetime(2024, 6, 15, h, 0, tzinfo=timezone.utc)
+            dt = datetime(2024, 6, 15, h, 0, tzinfo=UTC)
             payloads.append(generator.generate_for_timestamp(dt))
 
         df = self.engineer.transform_batch(payloads)

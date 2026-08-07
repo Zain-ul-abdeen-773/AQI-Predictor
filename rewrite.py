@@ -1,6 +1,6 @@
 import re
 
-with open("docs/documentation.tex", "r", encoding="utf-8") as f:
+with open("docs/documentation.tex", encoding="utf-8") as f:
     text = f.read()
 
 # Tone and Style Replacements
@@ -20,7 +20,6 @@ replacements = [
     (r"leveraging", r"using"),
     (r"state-of-the-art", r"modern"),
     (r"trustworthiness", r"interpretability"),
-    
     # Meta-commentary removal
     (r"As we can see from the figure above,", r""),
     (r"The following table summarizes", r"Table \ref{...} details"),

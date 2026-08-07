@@ -6,12 +6,12 @@ import numpy as np
 import pytest
 
 from training_pipeline.evaluation import (
+    DataDriftDetector,
     ModelEvaluator,
     compute_mae,
     compute_mape,
     compute_r2,
     compute_rmse,
-    DataDriftDetector,
 )
 from training_pipeline.models.baseline import BaselineRegressor
 
@@ -30,7 +30,7 @@ class TestMetrics:
         y_true = np.array([1.0, 2.0, 3.0])
         y_pred = np.array([1.0, 2.0, 4.0])
         rmse = compute_rmse(y_true, y_pred)
-        assert abs(rmse - (1.0 / 3 ** 0.5)) < 1e-6
+        assert abs(rmse - (1.0 / 3**0.5)) < 1e-6
 
     def test_mae_perfect_predictions(self):
         """MAE is 0 for perfect predictions."""
@@ -120,9 +120,7 @@ class TestBaselineRegressor:
         assert loaded.is_fitted
 
         # Predictions should match
-        np.testing.assert_array_almost_equal(
-            model.predict(X), loaded.predict(X)
-        )
+        np.testing.assert_array_almost_equal(model.predict(X), loaded.predict(X))
 
 
 # --- Evaluator Tests ---

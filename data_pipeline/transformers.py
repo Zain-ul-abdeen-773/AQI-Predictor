@@ -20,21 +20,19 @@ from __future__ import annotations
 
 import logging
 import math
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from datetime import UTC, datetime
 
 import numpy as np
 import pandas as pd
 
-from config.settings import get_settings, Settings
 from config.schemas import (
     DerivedFeatures,
     FeatureVector,
     LagFeatures,
     RawDataPayload,
     TemporalFeatures,
-    DataSource,
 )
+from config.settings import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +49,9 @@ class FeatureEngineer:
         _history_buffer: In-memory buffer of recent AQI values for lag computation.
     """
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
-        self._history_buffer: List[Dict] = []
+        self._history_buffer: list[dict] = []
 
     # --- Temporal Features ---
     @staticmethod
@@ -111,9 +109,7 @@ class FeatureEngineer:
         return round(u, 4), round(v, 4)
 
     @staticmethod
-    def compute_temperature_humidity_index(
-        temperature_c: float, humidity_pct: float
-    ) -> float:
+    def compute_temperature_humidity_index(temperature_c: float, humidity_pct: float) -> float:
         """Compute Temperature-Humidity Index (THI) as boundary layer proxy.
 
         THI serves as a proxy for atmospheric inversion layer conditions.
@@ -162,7 +158,7 @@ class FeatureEngineer:
         return is_night_or_dawn and low_wind and (high_humidity or cool_temp)
 
     @staticmethod
-    def compute_pollution_intensity(pollutant_dict: Dict[str, float]) -> float:
+    def compute_pollution_intensity(pollutant_dict: dict[str, float]) -> float:
         """Compute composite pollution intensity index.
 
         Weighted sum of normalized pollutant concentrations with
@@ -190,8 +186,8 @@ class FeatureEngineer:
 
     def compute_derived_features(
         self,
-        weather: Dict[str, float],
-        pollutant_dict: Dict[str, float],
+        weather: dict[str, float],
+        pollutant_dict: dict[str, float],
         hour: int,
     ) -> DerivedFeatures:
         """Compute all derived environmental features.
@@ -216,7 +212,7 @@ class FeatureEngineer:
 
         pm25 = pollutant_dict.get("pm25", 0.0)
         pm10 = pollutant_dict.get("pm10", 0.0)
-        wind_magnitude = math.sqrt(u ** 2 + v ** 2) if (u or v) else 0.0
+        wind_magnitude = math.sqrt(u**2 + v**2) if (u or v) else 0.0
 
         return DerivedFeatures(
             aqi_change_rate_1h=0.0,  # Computed from history buffer
@@ -242,11 +238,13 @@ class FeatureEngineer:
             aqi: AQI value.
             pm25: PM2.5 concentration.
         """
-        self._history_buffer.append({
-            "timestamp": timestamp,
-            "aqi": aqi,
-            "pm25": pm25,
-        })
+        self._history_buffer.append(
+            {
+                "timestamp": timestamp,
+                "aqi": aqi,
+                "pm25": pm25,
+            }
+        )
         # Keep last 48 hours (buffer overhead for rolling windows)
         if len(self._history_buffer) > 48:
             self._history_buffer = self._history_buffer[-48:]
@@ -264,7 +262,7 @@ class FeatureEngineer:
         if n == 0:
             return LagFeatures()
 
-        def _get_lag(offset: int, key: str) -> Optional[float]:
+        def _get_lag(offset: int, key: str) -> float | None:
             idx = n - offset
             if 0 <= idx < n:
                 return self._history_buffer[idx].get(key)
@@ -288,7 +286,7 @@ class FeatureEngineer:
             pm25_rolling_mean_24h=round(np.mean(pm25_24h), 4) if pm25_24h else None,
         )
 
-    def compute_aqi_change_rates(self) -> Dict[str, float]:
+    def compute_aqi_change_rates(self) -> dict[str, float]:
         """Compute AQI change rate (first derivative) over rolling windows.
 
         Delta AQI / Delta t for 1h, 3h, and 6h windows.
@@ -297,7 +295,7 @@ class FeatureEngineer:
             Dict with keys 'rate_1h', 'rate_3h', 'rate_6h'.
         """
         n = len(self._history_buffer)
-        rates: Dict[str, float] = {"rate_1h": 0.0, "rate_3h": 0.0, "rate_6h": 0.0}
+        rates: dict[str, float] = {"rate_1h": 0.0, "rate_3h": 0.0, "rate_6h": 0.0}
 
         if n < 2:
             return rates
@@ -326,10 +324,10 @@ class FeatureEngineer:
         """
         dt = payload.fetch_timestamp
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
 
         # Extract pollutant values
-        pollutant_dict: Dict[str, float] = {}
+        pollutant_dict: dict[str, float] = {}
         for p in payload.pollutants:
             pollutant_dict[p.name] = p.value
 
@@ -355,9 +353,7 @@ class FeatureEngineer:
         lags = self.compute_lag_features()
 
         # Compute derived features
-        derived = self.compute_derived_features(
-            weather_dict, pollutant_dict, dt.hour
-        )
+        derived = self.compute_derived_features(weather_dict, pollutant_dict, dt.hour)
 
         # Inject AQI change rates
         change_rates = self.compute_aqi_change_rates()
@@ -391,12 +387,14 @@ class FeatureEngineer:
 
         logger.debug(
             "Feature vector generated for %s (AQI=%.1f, %d features)",
-            dt.isoformat(), aqi, len(feature_vector.to_flat_dict()),
+            dt.isoformat(),
+            aqi,
+            len(feature_vector.to_flat_dict()),
         )
         return feature_vector
 
     # --- Batch DataFrame Transform ---
-    def transform_batch(self, payloads: List[RawDataPayload]) -> pd.DataFrame:
+    def transform_batch(self, payloads: list[RawDataPayload]) -> pd.DataFrame:
         """Transform a list of raw payloads into a feature DataFrame.
 
         Processes payloads sequentially to maintain temporal ordering
@@ -411,14 +409,18 @@ class FeatureEngineer:
         # Sort by timestamp to ensure correct lag computation
         sorted_payloads = sorted(payloads, key=lambda p: p.fetch_timestamp)
 
-        vectors: List[Dict] = []
+        vectors: list[dict] = []
         for payload in sorted_payloads:
             fv = self.transform(payload)
             vectors.append(fv.to_flat_dict())
 
         df = pd.DataFrame(vectors)
-        logger.info("Batch transform: %d payloads -> %d rows x %d cols",
-                     len(payloads), len(df), len(df.columns))
+        logger.info(
+            "Batch transform: %d payloads -> %d rows x %d cols",
+            len(payloads),
+            len(df),
+            len(df.columns),
+        )
         return df
 
     def impute_missing_lags(self, df: pd.DataFrame) -> pd.DataFrame:

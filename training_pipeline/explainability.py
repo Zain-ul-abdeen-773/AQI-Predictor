@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 import pickle
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 
@@ -44,7 +44,7 @@ class SHAPExplainer:
     def __init__(
         self,
         explainer: Any,
-        feature_names: List[str],
+        feature_names: list[str],
         explainer_type: str = "tree",
         base_value: float = 0.0,
     ) -> None:
@@ -58,8 +58,8 @@ class SHAPExplainer:
         cls,
         model: Any,
         background_data: np.ndarray,
-        feature_names: Optional[List[str]] = None,
-    ) -> "SHAPExplainer":
+        feature_names: list[str] | None = None,
+    ) -> SHAPExplainer:
         """Create a TreeExplainer for a LightGBM model.
 
         Args:
@@ -82,11 +82,16 @@ class SHAPExplainer:
         explainer = shap.TreeExplainer(raw_model, background_data)
 
         names = feature_names or [f"feature_{i}" for i in range(background_data.shape[1])]
-        base_val = float(explainer.expected_value) if np.isscalar(explainer.expected_value) else float(explainer.expected_value[0])
+        base_val = (
+            float(explainer.expected_value)
+            if np.isscalar(explainer.expected_value)
+            else float(explainer.expected_value[0])
+        )
 
         logger.info(
             "Created TreeExplainer with %d background samples, base_value=%.4f",
-            len(background_data), base_val,
+            len(background_data),
+            base_val,
         )
 
         return cls(
@@ -101,8 +106,8 @@ class SHAPExplainer:
         cls,
         model: Any,
         background_data: np.ndarray,
-        feature_names: Optional[List[str]] = None,
-    ) -> "SHAPExplainer":
+        feature_names: list[str] | None = None,
+    ) -> SHAPExplainer:
         """Create a GradientExplainer for a PyTorch model.
 
         Args:
@@ -147,7 +152,7 @@ class SHAPExplainer:
         self,
         X: np.ndarray,
         top_k: int = 15,
-    ) -> List[List[SHAPExplanation]]:
+    ) -> list[list[SHAPExplanation]]:
         """Compute SHAP explanations for input data.
 
         Args:
@@ -157,11 +162,11 @@ class SHAPExplainer:
         Returns:
             List of SHAPExplanation lists, one per input sample.
         """
-        import shap
 
         try:
             if self.explainer_type == "gradient":
                 import torch
+
                 if not isinstance(X, torch.Tensor):
                     X_input = torch.FloatTensor(X)
                 else:
@@ -180,10 +185,12 @@ class SHAPExplainer:
             # Sequence data: average over time dimension
             shap_values = np.mean(shap_values, axis=1)
 
-        all_explanations: List[List[SHAPExplanation]] = []
+        all_explanations: list[list[SHAPExplanation]] = []
 
         for i in range(len(X)):
-            sample_shap = shap_values[i] if i < len(shap_values) else np.zeros(len(self.feature_names))
+            sample_shap = (
+                shap_values[i] if i < len(shap_values) else np.zeros(len(self.feature_names))
+            )
 
             # Get feature values
             if X.ndim == 3:
@@ -223,7 +230,7 @@ class SHAPExplainer:
         self,
         X: np.ndarray,
         top_k: int = 20,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Compute global feature importance via mean absolute SHAP values.
 
         Args:
@@ -262,16 +269,19 @@ class SHAPExplainer:
         """
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "wb") as f:
-            pickle.dump({
-                "explainer": self.explainer,
-                "feature_names": self.feature_names,
-                "explainer_type": self.explainer_type,
-                "base_value": self.base_value,
-            }, f)
+            pickle.dump(
+                {
+                    "explainer": self.explainer,
+                    "feature_names": self.feature_names,
+                    "explainer_type": self.explainer_type,
+                    "base_value": self.base_value,
+                },
+                f,
+            )
         logger.info("Saved SHAP explainer to %s", path)
 
     @classmethod
-    def load(cls, path: Path) -> "SHAPExplainer":
+    def load(cls, path: Path) -> SHAPExplainer:
         """Load a serialized explainer from disk.
 
         Args:
@@ -312,7 +322,7 @@ class LIMEExplainer:
         self,
         model: Any,
         training_data: np.ndarray,
-        feature_names: Optional[List[str]] = None,
+        feature_names: list[str] | None = None,
         mode: str = "regression",
         kernel_width: float = 0.75,
         num_features: int = 15,
@@ -354,7 +364,10 @@ class LIMEExplainer:
         logger.info(
             "Created LIME TabularExplainer (%s mode) with %d training samples, "
             "%d features, kernel_width=%.2f",
-            mode, len(training_data), len(self.feature_names), kernel_width,
+            mode,
+            len(training_data),
+            len(self.feature_names),
+            kernel_width,
         )
 
     @staticmethod
@@ -381,9 +394,9 @@ class LIMEExplainer:
     def explain_instance(
         self,
         instance: np.ndarray,
-        num_features: Optional[int] = None,
+        num_features: int | None = None,
         num_samples: int = 5000,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate LIME explanation for a single prediction.
 
         Args:
@@ -439,26 +452,36 @@ class LIMEExplainer:
                     break
 
             feat_value = float(instance[feat_idx]) if feat_idx is not None else 0.0
-            direction = "increase" if weight > 0.01 else ("decrease" if weight < -0.01 else "neutral")
+            direction = (
+                "increase" if weight > 0.01 else ("decrease" if weight < -0.01 else "neutral")
+            )
 
-            contributions.append({
-                "feature_name": feat_name,
-                "feature_description": feature_desc,
-                "weight": round(float(weight), 4),
-                "feature_value": round(feat_value, 4),
-                "direction": direction,
-            })
+            contributions.append(
+                {
+                    "feature_name": feat_name,
+                    "feature_description": feature_desc,
+                    "weight": round(float(weight), 4),
+                    "feature_value": round(feat_value, 4),
+                    "direction": direction,
+                }
+            )
 
         result = {
             "predicted_value": round(predicted_value, 2),
-            "intercept": round(float(explanation.intercept[0]) if hasattr(explanation.intercept, '__len__') else float(explanation.intercept), 4),
+            "intercept": round(
+                float(explanation.intercept[0])
+                if hasattr(explanation.intercept, "__len__")
+                else float(explanation.intercept),
+                4,
+            ),
             "local_r2": round(float(local_r2), 4),
             "contributions": contributions,
         }
 
         logger.info(
             "LIME explanation: predicted=%.1f, R2=%.3f, top_feature=%s (%.4f)",
-            predicted_value, local_r2,
+            predicted_value,
+            local_r2,
             contributions[0]["feature_name"] if contributions else "N/A",
             contributions[0]["weight"] if contributions else 0.0,
         )
@@ -467,9 +490,9 @@ class LIMEExplainer:
     def explain_batch(
         self,
         X: np.ndarray,
-        num_features: Optional[int] = None,
+        num_features: int | None = None,
         num_samples: int = 3000,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Generate LIME explanations for multiple instances.
 
         Args:
@@ -497,7 +520,7 @@ class LIMEExplainer:
         X: np.ndarray,
         num_samples_per_instance: int = 2000,
         max_instances: int = 100,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Approximate global feature importance by averaging LIME weights.
 
         Computes local explanations for a sample of instances and averages
@@ -517,9 +540,7 @@ class LIMEExplainer:
         X_sample = X[indices]
 
         # Accumulate weights
-        weight_accumulator: Dict[str, List[float]] = {
-            name: [] for name in self.feature_names
-        }
+        weight_accumulator: dict[str, list[float]] = {name: [] for name in self.feature_names}
 
         for i in range(n):
             exp = self.explain_instance(
@@ -538,13 +559,12 @@ class LIMEExplainer:
                 importance[name] = round(float(np.mean(weights)), 4)
 
         # Sort by importance
-        importance = dict(
-            sorted(importance.items(), key=lambda x: x[1], reverse=True)
-        )
+        importance = dict(sorted(importance.items(), key=lambda x: x[1], reverse=True))
 
         logger.info(
             "LIME global importance computed from %d instances. Top: %s",
-            n, list(importance.keys())[:5],
+            n,
+            list(importance.keys())[:5],
         )
         return importance
 
@@ -559,12 +579,15 @@ class LIMEExplainer:
         """
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "wb") as f:
-            pickle.dump({
-                "feature_names": self.feature_names,
-                "mode": self.mode,
-                "num_features": self.num_features,
-                "explainer": self.explainer,
-            }, f)
+            pickle.dump(
+                {
+                    "feature_names": self.feature_names,
+                    "mode": self.mode,
+                    "num_features": self.num_features,
+                    "explainer": self.explainer,
+                },
+                f,
+            )
         logger.info("Saved LIME explainer to %s", path)
 
     @classmethod
@@ -572,7 +595,7 @@ class LIMEExplainer:
         cls,
         path: Path,
         model: Any,
-    ) -> "LIMEExplainer":
+    ) -> LIMEExplainer:
         """Load a serialized LIME explainer from disk.
 
         Args:

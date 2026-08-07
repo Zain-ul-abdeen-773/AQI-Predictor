@@ -14,14 +14,12 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import List, Optional
 
 import pandas as pd
 
-from config.settings import get_settings, Settings
-from config.schemas import RawDataPayload
+from config.settings import Settings, get_settings
 from data_pipeline.ingest import SyntheticDataGenerator
 from data_pipeline.transformers import FeatureEngineer
 
@@ -43,7 +41,7 @@ class BackfillPipeline:
         engineer: Feature engineering transformer.
     """
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
         self.generator = SyntheticDataGenerator(self.settings)
         self.engineer = FeatureEngineer(self.settings)
@@ -51,10 +49,10 @@ class BackfillPipeline:
 
     def generate_timestamps(
         self,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
         freq_hours: int = 1,
-    ) -> List[datetime]:
+    ) -> list[datetime]:
         """Generate a list of hourly timestamps for the backfill period.
 
         Args:
@@ -66,11 +64,11 @@ class BackfillPipeline:
             List[datetime]: Ordered list of UTC timestamps.
         """
         if end is None:
-            end = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+            end = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
         if start is None:
             start = end - timedelta(days=365 * self.settings.backfill_years)
 
-        timestamps: List[datetime] = []
+        timestamps: list[datetime] = []
         current = start
         while current <= end:
             timestamps.append(current)
@@ -78,7 +76,9 @@ class BackfillPipeline:
 
         logger.info(
             "Generated %d timestamps from %s to %s",
-            len(timestamps), start.isoformat(), end.isoformat(),
+            len(timestamps),
+            start.isoformat(),
+            end.isoformat(),
         )
         return timestamps
 
@@ -92,12 +92,12 @@ class BackfillPipeline:
         checkpoint = {
             "last_processed_idx": last_processed_idx,
             "total": total,
-            "saved_at": datetime.now(timezone.utc).isoformat(),
+            "saved_at": datetime.now(UTC).isoformat(),
         }
         self._checkpoint_path.write_text(json.dumps(checkpoint, indent=2))
         logger.debug("Checkpoint saved: %d/%d", last_processed_idx, total)
 
-    def _load_checkpoint(self) -> Optional[int]:
+    def _load_checkpoint(self) -> int | None:
         """Load the last checkpoint index, if available.
 
         Returns:
@@ -122,9 +122,9 @@ class BackfillPipeline:
     def run(
         self,
         start_date: str = "2022-07-28",
-        end_date: Optional[str] = None,
-        batch_size: Optional[int] = None,
-        output_path: Optional[Path] = None,
+        end_date: str | None = None,
+        batch_size: int | None = None,
+        output_path: Path | None = None,
         resume: bool = False,
     ) -> pd.DataFrame:
         """Execute the full backfill pipeline using real historical API data.
@@ -143,6 +143,7 @@ class BackfillPipeline:
             pd.DataFrame: Complete backfilled feature DataFrame.
         """
         from data_pipeline.historical import RealHistoricalDataFetcher
+
         fetcher = RealHistoricalDataFetcher(self.settings)
 
         if batch_size is None:
@@ -150,12 +151,9 @@ class BackfillPipeline:
         if output_path is None:
             output_path = self.settings.data_dir / "backfill_features.csv"
         if end_date is None:
-            end_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            end_date = datetime.now(UTC).strftime("%Y-%m-%d")
 
-        logger.info(
-            "Starting backfill: %s to %s, batch_size=%d",
-            start_date, end_date, batch_size
-        )
+        logger.info("Starting backfill: %s to %s, batch_size=%d", start_date, end_date, batch_size)
 
         # Fetch real historical payloads
         all_payloads = fetcher.fetch_all(start_date=start_date, end_date=end_date)
@@ -168,7 +166,7 @@ class BackfillPipeline:
             if checkpoint is not None:
                 start_idx = checkpoint
 
-        all_dfs: List[pd.DataFrame] = []
+        all_dfs: list[pd.DataFrame] = []
 
         for batch_start in range(start_idx, total, batch_size):
             batch_end = min(batch_start + batch_size, total)
@@ -176,7 +174,9 @@ class BackfillPipeline:
 
             logger.info(
                 "Processing batch %d-%d / %d (%.1f%%)",
-                batch_start, batch_end, total,
+                batch_start,
+                batch_end,
+                total,
                 100 * batch_end / total,
             )
 
@@ -190,7 +190,8 @@ class BackfillPipeline:
 
             logger.info(
                 "Batch complete: %d rows (cumulative: %d)",
-                len(batch_df), sum(len(d) for d in all_dfs),
+                len(batch_df),
+                sum(len(d) for d in all_dfs),
             )
 
         # Concatenate all batches
@@ -203,7 +204,9 @@ class BackfillPipeline:
         final_df.to_csv(output_path, index=False)
         logger.info(
             "Backfill complete: %d rows x %d cols -> %s",
-            len(final_df), len(final_df.columns), output_path,
+            len(final_df),
+            len(final_df.columns),
+            output_path,
         )
 
         # EDA Summary Statistics
@@ -234,7 +237,10 @@ class BackfillPipeline:
             aqi = df["aqi_value"].dropna()
             logger.info(
                 "AQI Distribution: mean=%.1f, std=%.1f, min=%.1f, max=%.1f",
-                aqi.mean(), aqi.std(), aqi.min(), aqi.max(),
+                aqi.mean(),
+                aqi.std(),
+                aqi.min(),
+                aqi.max(),
             )
             # AQI category distribution
             categories = {
@@ -266,7 +272,9 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="AQI Data Backfill Pipeline")
-    parser.add_argument("--start-date", type=str, default="2022-07-28", help="Start date (YYYY-MM-DD)")
+    parser.add_argument(
+        "--start-date", type=str, default="2022-07-28", help="Start date (YYYY-MM-DD)"
+    )
     parser.add_argument("--end-date", type=str, default=None, help="End date (YYYY-MM-DD)")
     parser.add_argument("--batch-size", type=int, default=None, help="Batch size")
     parser.add_argument("--output", type=str, default=None, help="Output CSV path")

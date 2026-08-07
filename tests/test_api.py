@@ -124,11 +124,14 @@ class TestSimulateEndpoint:
     """Tests for /simulate endpoint including input validation."""
 
     def test_simulate_valid_input(self, client):
-        response = client.post("/simulate", json={
-            "traffic_reduction_pct": 30.0,
-            "crop_burning_increase_pct": 10.0,
-            "wind_speed_delta_ms": 2.0,
-        })
+        response = client.post(
+            "/simulate",
+            json={
+                "traffic_reduction_pct": 30.0,
+                "crop_burning_increase_pct": 10.0,
+                "wind_speed_delta_ms": 2.0,
+            },
+        )
         assert response.status_code == 200
         data = response.get_json()
         assert data["status"] == "success"
@@ -138,9 +141,12 @@ class TestSimulateEndpoint:
 
     def test_simulate_invalid_string_input(self, client):
         """Non-numeric input returns 422 with error message."""
-        response = client.post("/simulate", json={
-            "traffic_reduction_pct": "not_a_number",
-        })
+        response = client.post(
+            "/simulate",
+            json={
+                "traffic_reduction_pct": "not_a_number",
+            },
+        )
         assert response.status_code == 422
         data = response.get_json()
         assert "error" in data
@@ -148,11 +154,14 @@ class TestSimulateEndpoint:
 
     def test_simulate_clamps_extreme_values(self, client):
         """Values beyond valid range are clamped, not rejected."""
-        response = client.post("/simulate", json={
-            "traffic_reduction_pct": 999.0,
-            "crop_burning_increase_pct": -50.0,
-            "wind_speed_delta_ms": 100.0,
-        })
+        response = client.post(
+            "/simulate",
+            json={
+                "traffic_reduction_pct": 999.0,
+                "crop_burning_increase_pct": -50.0,
+                "wind_speed_delta_ms": 100.0,
+            },
+        )
         assert response.status_code == 200
         data = response.get_json()
         # traffic_reduction clamped to 100

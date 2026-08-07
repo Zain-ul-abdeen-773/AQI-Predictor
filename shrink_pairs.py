@@ -8,10 +8,10 @@ shrink_map = {
     "pollution_wind_rose.png": ("0.9\\textwidth", "0.75\\textwidth"),
     "granger_causality.png": ("0.85\\textwidth", "0.75\\textwidth"),
     "feature_importance_mutual_info.png": ("0.85\\textwidth", "0.75\\textwidth"),
-    "pair_plot_by_aqi_level.png": ("0.9\\textwidth", "0.75\\textwidth")
+    "pair_plot_by_aqi_level.png": ("0.9\\textwidth", "0.75\\textwidth"),
 }
 
-with open("docs/documentation.tex", "r", encoding="utf-8") as f:
+with open("docs/documentation.tex", encoding="utf-8") as f:
     text = f.read()
 
 for img, (old_w, new_w) in shrink_map.items():

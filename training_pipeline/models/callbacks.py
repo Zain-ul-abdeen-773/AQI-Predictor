@@ -21,11 +21,10 @@ from __future__ import annotations
 import json
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-import numpy as np
 import torch
 import torch.nn as nn
 
@@ -66,11 +65,11 @@ class EarlyStopping:
         self.patience = patience
         self.min_delta = min_delta
         self.mode = mode
-        self.best_score: Optional[float] = None
+        self.best_score: float | None = None
         self.best_epoch: int = 0
         self.counter: int = 0
         self.should_stop: bool = False
-        self.best_state: Optional[Dict[str, Any]] = None
+        self.best_state: dict[str, Any] | None = None
 
     def _is_improvement(self, current: float) -> bool:
         """Check if current score is an improvement over best."""
@@ -102,9 +101,11 @@ class EarlyStopping:
             if self.counter >= self.patience:
                 self.should_stop = True
                 logger.info(
-                    "Early stopping triggered at epoch %d "
-                    "(best=%.6f at epoch %d, patience=%d)",
-                    epoch, self.best_score, self.best_epoch, self.patience,
+                    "Early stopping triggered at epoch %d (best=%.6f at epoch %d, patience=%d)",
+                    epoch,
+                    self.best_score,
+                    self.best_epoch,
+                    self.patience,
                 )
 
         return self.should_stop
@@ -119,7 +120,8 @@ class EarlyStopping:
             model.load_state_dict(self.best_state)
             logger.info(
                 "Restored best model from epoch %d (score=%.6f)",
-                self.best_epoch, self.best_score,
+                self.best_epoch,
+                self.best_score,
             )
 
 
@@ -156,7 +158,7 @@ class ModelCheckpoint:
         self.filename_prefix = filename_prefix
         self.save_every = save_every
         self.mode = mode
-        self.best_score: Optional[float] = None
+        self.best_score: float | None = None
 
     def _is_improvement(self, current: float) -> bool:
         if self.best_score is None:
@@ -170,9 +172,9 @@ class ModelCheckpoint:
         score: float,
         model: nn.Module,
         epoch: int,
-        optimizer: Optional[torch.optim.Optimizer] = None,
-        extra: Optional[Dict[str, Any]] = None,
-    ) -> Optional[Path]:
+        optimizer: torch.optim.Optimizer | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> Path | None:
         """Save checkpoint if conditions are met.
 
         Args:
@@ -196,7 +198,7 @@ class ModelCheckpoint:
 
         # Periodic save
         if self.save_every > 0 and (epoch + 1) % self.save_every == 0:
-            periodic_path = self.save_dir / f"{self.filename_prefix}_epoch{epoch+1}.pt"
+            periodic_path = self.save_dir / f"{self.filename_prefix}_epoch{epoch + 1}.pt"
             self._save(periodic_path, model, epoch, optimizer, extra)
 
         return save_path
@@ -206,8 +208,8 @@ class ModelCheckpoint:
         path: Path,
         model: nn.Module,
         epoch: int,
-        optimizer: Optional[torch.optim.Optimizer] = None,
-        extra: Optional[Dict[str, Any]] = None,
+        optimizer: torch.optim.Optimizer | None = None,
+        extra: dict[str, Any] | None = None,
     ) -> None:
         checkpoint = {
             "epoch": epoch,
@@ -272,6 +274,7 @@ class GradientAccumulator:
 @dataclass
 class EpochMetrics:
     """Metrics for a single training epoch."""
+
     epoch: int
     train_loss: float
     val_loss: float = float("inf")
@@ -292,7 +295,7 @@ class TrainingLogger:
     """
 
     def __init__(self) -> None:
-        self.history: List[EpochMetrics] = []
+        self.history: list[EpochMetrics] = []
         self.start_time: float = time.time()
 
     def log_epoch(self, metrics: EpochMetrics) -> None:
@@ -303,7 +306,7 @@ class TrainingLogger:
         """
         self.history.append(metrics)
 
-    def get_best_epoch(self, metric: str = "val_loss", mode: str = "min") -> Optional[EpochMetrics]:
+    def get_best_epoch(self, metric: str = "val_loss", mode: str = "min") -> EpochMetrics | None:
         """Get the epoch with the best metric value.
 
         Args:
@@ -320,7 +323,7 @@ class TrainingLogger:
             return min(self.history, key=key)
         return max(self.history, key=key)
 
-    def to_dict_list(self) -> List[Dict[str, Any]]:
+    def to_dict_list(self) -> list[dict[str, Any]]:
         """Convert history to list of dicts for JSON serialization."""
         return [
             {

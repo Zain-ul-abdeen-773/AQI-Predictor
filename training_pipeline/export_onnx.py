@@ -10,9 +10,8 @@ Usage:
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
-import numpy as np
+
 import torch
 import torch.nn as nn
 
@@ -24,7 +23,9 @@ class SyntheticBiLSTM(nn.Module):
 
     def __init__(self, input_dim: int = 37, hidden_dim: int = 64, output_dim: int = 72) -> None:
         super().__init__()
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=2, batch_first=True, bidirectional=True)
+        self.lstm = nn.LSTM(
+            input_dim, hidden_dim, num_layers=2, batch_first=True, bidirectional=True
+        )
         self.fc = nn.Linear(hidden_dim * 2, output_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -61,13 +62,14 @@ def export_bilstm_to_onnx(output_path: Path) -> Path:
         )
         logger.info("Exported ONNX Bi-LSTM model to %s", output_path)
     except Exception as exc:
-        logger.warning("ONNX library export fallback triggered (%s). Writing binary placeholder.", exc)
+        logger.warning(
+            "ONNX library export fallback triggered (%s). Writing binary placeholder.", exc
+        )
         with open(output_path, "wb") as f:
             f.write(b"ONNX_SYNTHETIC_MODEL_WEIGHTS_V1_AQI_PREDICTOR")
         logger.info("Created fallback ONNX artifact at %s", output_path)
 
     return output_path
-
 
 
 def main() -> None:
@@ -82,6 +84,7 @@ def main() -> None:
     public_onnx = root_dir / "deployment" / "web_app" / "public" / "models" / "bilstm_aqi.onnx"
     public_onnx.parent.mkdir(parents=True, exist_ok=True)
     import shutil
+
     shutil.copy(target_onnx, public_onnx)
     logger.info("Synced ONNX model to public web folder: %s", public_onnx)
 

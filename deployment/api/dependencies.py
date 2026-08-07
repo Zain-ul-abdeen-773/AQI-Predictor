@@ -9,9 +9,9 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
-from config.settings import get_settings, Settings
+from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +33,10 @@ class ModelService:
     def __init__(self) -> None:
         self.model: Any = None
         self.explainer: Any = None
-        self.model_metadata: Dict[str, Any] = {}
+        self.model_metadata: dict[str, Any] = {}
         self._loaded = False
-        self.models: Dict[str, Any] = {}
-        self.models_metadata: Dict[str, Dict[str, Any]] = {}
+        self.models: dict[str, Any] = {}
+        self.models_metadata: dict[str, dict[str, Any]] = {}
         self.default_model_id: str = "ridge"
 
     def load(self) -> None:
@@ -59,24 +59,28 @@ class ModelService:
 
                 # Load model
                 import pickle
+
                 import torch
-                
+
                 try:
                     with open(model_path, "rb") as f:
                         data = pickle.load(f)
                 except Exception:
                     data = torch.load(model_path, map_location="cpu", weights_only=False)
-                    
+
                 if "pipeline" in data:
                     from training_pipeline.models.baseline import BaselineRegressor
+
                     self.model = BaselineRegressor.load(model_path)
                 elif "model_state_dict" in data:  # PyTorch specific dict key
                     from training_pipeline.models.deep_learning import BiLSTMRegressor
+
                     self.model = BiLSTMRegressor.load(model_path)
                 else:
                     from training_pipeline.models.tree_ensemble import TreeEnsembleRegressor
+
                     self.model = TreeEnsembleRegressor.load(model_path)
-                        
+
                     logger.info("Loaded champion model from %s", model_path)
 
                 # Load explainer
@@ -119,9 +123,9 @@ class ModelService:
     def _try_load_from_manifest(self, settings: Any) -> bool:
         """Load models from the local model_registry.json manifest."""
         try:
-            from training_pipeline.registry import ModelRegistryManager
-            import json
             import pickle
+
+            from training_pipeline.registry import ModelRegistryManager
 
             registry = ModelRegistryManager(settings)
             registered = registry.list_registered_models()
@@ -158,6 +162,7 @@ class ModelService:
                             model_obj = pickle.load(f)
                     else:
                         import torch
+
                         model_obj = torch.load(model_file, map_location="cpu", weights_only=False)
 
                     self.models[model_id] = model_obj
@@ -206,69 +211,125 @@ class ModelService:
         # Always set metadata so /models endpoint responds correctly
         self.models_metadata = {
             "ridge": {
-                "id": "ridge", "name": "Scikit-Learn Ridge + RobustScaler",
-                "category": "Baseline", "r2": 0.9988, "rmse": 1.54, "mae": 0.87,
-                "is_default": True, "description": "L2 regularized linear regression pipeline with robust quantile outlier scaling.",
+                "id": "ridge",
+                "name": "Scikit-Learn Ridge + RobustScaler",
+                "category": "Baseline",
+                "r2": 0.9988,
+                "rmse": 1.54,
+                "mae": 0.87,
+                "is_default": True,
+                "description": "L2 regularized linear regression pipeline with robust quantile outlier scaling.",
             },
             "gradient_boosting": {
-                "id": "gradient_boosting", "name": "Gradient Boosting Regressor",
-                "category": "Ensemble Trees", "r2": 0.9986, "rmse": 1.68, "mae": 0.87,
-                "is_default": False, "description": "Sequential additive decision tree ensemble focusing on minimizing residual errors.",
+                "id": "gradient_boosting",
+                "name": "Gradient Boosting Regressor",
+                "category": "Ensemble Trees",
+                "r2": 0.9986,
+                "rmse": 1.68,
+                "mae": 0.87,
+                "is_default": False,
+                "description": "Sequential additive decision tree ensemble focusing on minimizing residual errors.",
             },
             "extra_trees": {
-                "id": "extra_trees", "name": "Extra Trees Regressor",
-                "category": "Ensemble Trees", "r2": 0.9979, "rmse": 2.05, "mae": 1.00,
-                "is_default": False, "description": "Extremely randomized decision tree forest with random split thresholds.",
+                "id": "extra_trees",
+                "name": "Extra Trees Regressor",
+                "category": "Ensemble Trees",
+                "r2": 0.9979,
+                "rmse": 2.05,
+                "mae": 1.00,
+                "is_default": False,
+                "description": "Extremely randomized decision tree forest with random split thresholds.",
             },
             "xgboost": {
-                "id": "xgboost", "name": "XGBoost (Optuna Tuned)",
-                "category": "Tree Ensemble", "r2": 0.9975, "rmse": 2.25, "mae": 1.18,
-                "is_default": False, "description": "Extreme gradient boosting trees with L1/L2 regularization.",
+                "id": "xgboost",
+                "name": "XGBoost (Optuna Tuned)",
+                "category": "Tree Ensemble",
+                "r2": 0.9975,
+                "rmse": 2.25,
+                "mae": 1.18,
+                "is_default": False,
+                "description": "Extreme gradient boosting trees with L1/L2 regularization.",
             },
             "lightgbm": {
-                "id": "lightgbm", "name": "LightGBM (Optuna Tuned)",
-                "category": "Tree Ensemble", "r2": 0.9975, "rmse": 2.26, "mae": 1.19,
-                "is_default": False, "description": "Gradient boosted trees optimized via Bayesian hyperparameter search.",
+                "id": "lightgbm",
+                "name": "LightGBM (Optuna Tuned)",
+                "category": "Tree Ensemble",
+                "r2": 0.9975,
+                "rmse": 2.26,
+                "mae": 1.19,
+                "is_default": False,
+                "description": "Gradient boosted trees optimized via Bayesian hyperparameter search.",
             },
             "random_forest": {
-                "id": "random_forest", "name": "Random Forest Regressor",
-                "category": "Ensemble Trees", "r2": 0.9908, "rmse": 4.33, "mae": 2.39,
-                "is_default": False, "description": "Bagged ensemble of randomized decision trees.",
+                "id": "random_forest",
+                "name": "Random Forest Regressor",
+                "category": "Ensemble Trees",
+                "r2": 0.9908,
+                "rmse": 4.33,
+                "mae": 2.39,
+                "is_default": False,
+                "description": "Bagged ensemble of randomized decision trees.",
             },
             "svr": {
-                "id": "svr", "name": "Support Vector Regressor (SVR)",
-                "category": "Kernel Methods", "r2": 0.9815, "rmse": 6.13, "mae": 3.25,
-                "is_default": False, "description": "RBF kernel support vector machine.",
+                "id": "svr",
+                "name": "Support Vector Regressor (SVR)",
+                "category": "Kernel Methods",
+                "r2": 0.9815,
+                "rmse": 6.13,
+                "mae": 3.25,
+                "is_default": False,
+                "description": "RBF kernel support vector machine.",
             },
             "bilstm_attention": {
-                "id": "bilstm_attention", "name": "Bi-LSTM + Multi-Head Attention",
-                "category": "Deep Learning", "r2": 0.5913, "rmse": 28.94, "mae": 21.19,
-                "is_default": False, "description": "Deep bidirectional recurrent neural network with attention.",
+                "id": "bilstm_attention",
+                "name": "Bi-LSTM + Multi-Head Attention",
+                "category": "Deep Learning",
+                "r2": 0.5913,
+                "rmse": 28.94,
+                "mae": 21.19,
+                "is_default": False,
+                "description": "Deep bidirectional recurrent neural network with attention.",
             },
         }
 
         try:
+            import numpy as np
+
+            from feature_pipeline.register import FeatureStoreManager
             from training_pipeline.models.baseline import BaselineRegressor
             from training_pipeline.models.ensemble_trees import (
-                RandomForestModel, ExtraTreesModel, GradientBoostingModel, SVRModel
+                ExtraTreesModel,
+                GradientBoostingModel,
+                RandomForestModel,
+                SVRModel,
             )
             from training_pipeline.models.tree_ensemble import LightGBMOptimized
-            from feature_pipeline.register import FeatureStoreManager
             from training_pipeline.train import FEATURE_COLUMNS, TARGET_COLUMN
-            import numpy as np
 
             manager = FeatureStoreManager(settings)
             df = manager.get_latest_features(10)
 
             if df is None or df.empty:
-                logger.warning("No feature data available for model initialization. API will serve metadata only.")
+                logger.warning(
+                    "No feature data available for model initialization. API will serve metadata only."
+                )
                 self._loaded = True  # metadata is available, /models works
                 return
 
             available_cols = [c for c in FEATURE_COLUMNS if c in df.columns]
-            X = df[available_cols].ffill().fillna(df[available_cols].median()).fillna(0.0).values.astype(np.float32)[:5]
+            X = (
+                df[available_cols]
+                .ffill()
+                .fillna(df[available_cols].median())
+                .fillna(0.0)
+                .values.astype(np.float32)[:5]
+            )
             if TARGET_COLUMN in df.columns:
-                y = df[TARGET_COLUMN].fillna(df[TARGET_COLUMN].median()).values.astype(np.float32)[:5]
+                y = (
+                    df[TARGET_COLUMN]
+                    .fillna(df[TARGET_COLUMN].median())
+                    .values.astype(np.float32)[:5]
+                )
             else:
                 y = df["aqi_value"].fillna(100.0).values.astype(np.float32)[:5]
 
@@ -304,6 +365,7 @@ class ModelService:
             # XGBoost with minimal trials
             try:
                 from training_pipeline.models.xgboost_model import XGBoostOptimized
+
                 m_xgb = XGBoostOptimized(n_trials=1)
                 m_xgb.fit(X, y, feature_names=available_cols)
                 self.models["xgboost"] = m_xgb
@@ -322,19 +384,19 @@ class ModelService:
             logger.error("Model zoo initialization failed: %s", ex)
             self._loaded = True  # metadata still available
 
-    def get_model(self, model_id: Optional[str] = None) -> Any:
+    def get_model(self, model_id: str | None = None) -> Any:
         """Get model instance by ID, defaulting to highest metric champion."""
         if not model_id or model_id not in self.models:
             model_id = self.default_model_id
         return self.models.get(model_id, self.model)
 
-    def get_model_metadata(self, model_id: Optional[str] = None) -> Dict[str, Any]:
+    def get_model_metadata(self, model_id: str | None = None) -> dict[str, Any]:
         """Get model metadata by ID."""
         if not model_id or model_id not in self.models_metadata:
             model_id = self.default_model_id
         return self.models_metadata.get(model_id, self.model_metadata)
 
-    def get_all_models_list(self) -> list[Dict[str, Any]]:
+    def get_all_models_list(self) -> list[dict[str, Any]]:
         """Get list of all 8 models sorted by highest R2 metric."""
         return list(self.models_metadata.values())
 
@@ -342,12 +404,16 @@ class ModelService:
     def _infer_category(model_id: str) -> str:
         """Infer model category from its ID."""
         categories = {
-            "ridge": "Baseline", "elastic_net": "Baseline",
-            "random_forest": "Ensemble Trees", "extra_trees": "Ensemble Trees",
+            "ridge": "Baseline",
+            "elastic_net": "Baseline",
+            "random_forest": "Ensemble Trees",
+            "extra_trees": "Ensemble Trees",
             "gradient_boosting": "Ensemble Trees",
-            "xgboost": "Tree Ensemble", "lightgbm": "Tree Ensemble",
+            "xgboost": "Tree Ensemble",
+            "lightgbm": "Tree Ensemble",
             "svr": "Kernel Methods",
-            "bilstm_attention": "Deep Learning", "bi_l_s_t_m": "Deep Learning",
+            "bilstm_attention": "Deep Learning",
+            "bi_l_s_t_m": "Deep Learning",
         }
         return categories.get(model_id, "Unknown")
 
@@ -420,8 +486,8 @@ class FeatureService:
 
 
 # Singleton instances
-_model_service: Optional[ModelService] = None
-_feature_service: Optional[FeatureService] = None
+_model_service: ModelService | None = None
+_feature_service: FeatureService | None = None
 
 
 def get_model_service() -> ModelService:

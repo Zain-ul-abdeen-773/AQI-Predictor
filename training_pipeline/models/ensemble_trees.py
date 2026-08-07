@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import pickle
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 from sklearn.ensemble import (
@@ -40,28 +40,32 @@ class _BaseEnsembleTree:
     model_name: str = "base"
 
     def __init__(self) -> None:
-        self.pipeline: Optional[Pipeline] = None
+        self.pipeline: Pipeline | None = None
         self.is_fitted = False
-        self.feature_names: List[str] = []
-        self.feature_importances: Dict[str, float] = {}
+        self.feature_names: list[str] = []
+        self.feature_importances: dict[str, float] = {}
 
     def _build_pipeline(self, regressor) -> Pipeline:
-        return Pipeline([
-            ("scaler", RobustScaler(quantile_range=(5.0, 95.0))),
-            ("regressor", regressor),
-        ])
+        return Pipeline(
+            [
+                ("scaler", RobustScaler(quantile_range=(5.0, 95.0))),
+                ("regressor", regressor),
+            ]
+        )
 
     def fit(
         self,
         X: np.ndarray,
         y: np.ndarray,
-        feature_names: Optional[List[str]] = None,
-    ) -> "_BaseEnsembleTree":
+        feature_names: list[str] | None = None,
+    ) -> _BaseEnsembleTree:
         self.feature_names = feature_names or [f"f{i}" for i in range(X.shape[1])]
 
         logger.info(
             "Training %s on %d samples x %d features",
-            self.model_name, X.shape[0], X.shape[1],
+            self.model_name,
+            X.shape[0],
+            X.shape[1],
         )
 
         self.pipeline.fit(X, y)
@@ -91,7 +95,7 @@ class _BaseEnsembleTree:
             raise RuntimeError(f"{self.model_name} must be fitted before prediction")
         return np.clip(self.pipeline.predict(X), 0, 500)
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         regressor = self.pipeline.named_steps["regressor"]
         params = regressor.get_params()
         params["model_type"] = self.model_name
@@ -100,17 +104,20 @@ class _BaseEnsembleTree:
     def save(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "wb") as f:
-            pickle.dump({
-                "pipeline": self.pipeline,
-                "model_name": self.model_name,
-                "feature_names": self.feature_names,
-                "feature_importances": self.feature_importances,
-                "is_fitted": self.is_fitted,
-            }, f)
+            pickle.dump(
+                {
+                    "pipeline": self.pipeline,
+                    "model_name": self.model_name,
+                    "feature_names": self.feature_names,
+                    "feature_importances": self.feature_importances,
+                    "is_fitted": self.is_fitted,
+                },
+                f,
+            )
         logger.info("Saved %s model to %s", self.model_name, path)
 
     @classmethod
-    def load(cls, path: Path) -> "_BaseEnsembleTree":
+    def load(cls, path: Path) -> _BaseEnsembleTree:
         with open(path, "rb") as f:
             data = pickle.load(f)
         instance = cls.__new__(cls)
@@ -140,7 +147,7 @@ class RandomForestModel(_BaseEnsembleTree):
     def __init__(
         self,
         n_estimators: int = 500,
-        max_depth: Optional[int] = None,
+        max_depth: int | None = None,
         min_samples_leaf: int = 5,
         max_features: str = "sqrt",
         random_state: int = 42,
@@ -174,7 +181,7 @@ class ExtraTreesModel(_BaseEnsembleTree):
     def __init__(
         self,
         n_estimators: int = 500,
-        max_depth: Optional[int] = None,
+        max_depth: int | None = None,
         min_samples_leaf: int = 5,
         random_state: int = 42,
     ) -> None:
@@ -226,7 +233,8 @@ class GradientBoostingModel(_BaseEnsembleTree):
         self.pipeline = self._build_pipeline(regressor)
         logger.info(
             "Initialized GradientBoosting (n=%d, lr=%.3f)",
-            n_estimators, learning_rate,
+            n_estimators,
+            learning_rate,
         )
 
 
@@ -253,6 +261,7 @@ class SVRModel(_BaseEnsembleTree):
     ) -> None:
         super().__init__()
         from sklearn.svm import SVR
+
         regressor = SVR(kernel=kernel, C=C, epsilon=epsilon, gamma=gamma)
         self.pipeline = self._build_pipeline(regressor)
         logger.info("Initialized SVR (kernel=%s, C=%.1f)", kernel, C)
