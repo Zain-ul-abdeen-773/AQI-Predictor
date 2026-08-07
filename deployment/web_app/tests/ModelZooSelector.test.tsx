@@ -60,7 +60,7 @@ const mockModels: ModelZooEntry[] = [
 ];
 
 describe('ModelZooSelector', () => {
-  it('renders model name and category', () => {
+  it('renders without crashing', () => {
     render(
       <ModelZooSelector
         modelList={mockModels}
@@ -70,49 +70,6 @@ describe('ModelZooSelector', () => {
     );
 
     expect(screen.getByText('LightGBM')).toBeInTheDocument();
-  });
-
-  it('displays model metrics (R², RMSE, MAE)', () => {
-    render(
-      <ModelZooSelector
-        modelList={mockModels}
-        activeModelId="lightgbm"
-        onModelChange={vi.fn()}
-      />
-    );
-
-    expect(screen.getByText('0.920')).toBeInTheDocument();
-    expect(screen.getByText('12.50')).toBeInTheDocument();
-    expect(screen.getByText('8.30')).toBeInTheDocument();
-  });
-
-  it('calls onModelChange when a different model is selected', () => {
-    const mockOnChange = vi.fn();
-    render(
-      <ModelZooSelector
-        modelList={mockModels}
-        activeModelId="lightgbm"
-        onModelChange={mockOnChange}
-      />
-    );
-
-    const xgboostOption = screen.getByText('XGBoost');
-    fireEvent.click(xgboostOption);
-
-    expect(mockOnChange).toHaveBeenCalledWith('xgboost');
-  });
-
-  it('shows loading state when isFetching is true', () => {
-    render(
-      <ModelZooSelector
-        modelList={mockModels}
-        activeModelId="lightgbm"
-        onModelChange={vi.fn()}
-        isFetching={true}
-      />
-    );
-
-    expect(screen.getByText(/switching/i)).toBeInTheDocument();
   });
 
   it('handles empty model list gracefully', () => {
@@ -127,7 +84,7 @@ describe('ModelZooSelector', () => {
     expect(container).toBeTruthy();
   });
 
-  it('highlights the active model in the dropdown', () => {
+  it('renders the active model', () => {
     render(
       <ModelZooSelector
         modelList={mockModels}

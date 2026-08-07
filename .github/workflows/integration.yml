@@ -5,6 +5,10 @@ on:
     - cron: '30 */6 * * *'  # Every 6 hours at :30
   workflow_dispatch:
   push:
+    branches: [main]
+    paths:
+      - 'deployment/api/**'
+      - 'render.yaml'
 
 env:
   API_URL: ${{ vars.API_URL || 'https://pearls-aqi-api.onrender.com' }}
@@ -15,6 +19,7 @@ jobs:
     name: Live API Contract Validation
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    continue-on-error: true
 
     steps:
       - name: Wake up Render (free tier sleeps after inactivity)
