@@ -246,9 +246,7 @@ def predict():
 
         rng = np.random.default_rng(42)
         n = settings.lookback_window_hours
-        features_df = pd.DataFrame(
-            {col: rng.normal(50, 20, n).astype(np.float32) for col in _FC}
-        )
+        features_df = pd.DataFrame({col: rng.normal(50, 20, n).astype(np.float32) for col in _FC})
 
     from training_pipeline.train import FEATURE_COLUMNS
 

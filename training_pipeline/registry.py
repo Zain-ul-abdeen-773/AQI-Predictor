@@ -237,6 +237,7 @@ class ModelRegistryManager:
                         shutil.copy(p, model_path)
             else:
                 import torch
+
                 torch.save(model.state_dict(), model_path)
         else:
             if hasattr(model, "save"):

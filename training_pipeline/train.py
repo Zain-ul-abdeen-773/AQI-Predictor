@@ -54,8 +54,9 @@ BiLSTMAttention: Any = None
 def _get_bilstm_class():
     global BiLSTMAttention
     if BiLSTMAttention is None:
-        from training_pipeline.models.deep_learning import BiLSTMAttention as _cls
-        BiLSTMAttention = _cls
+        from training_pipeline.models.deep_learning import BiLSTMAttention as _BiLSTM  # noqa: N813
+
+        BiLSTMAttention = _BiLSTM
     return BiLSTMAttention
 
 

@@ -326,7 +326,9 @@ class ModelService:
 
                 n_samples = 10
                 rng = np.random.default_rng(42)
-                synth = {col: rng.normal(50, 20, n_samples).astype(np.float32) for col in FEATURE_COLUMNS}
+                synth = {
+                    col: rng.normal(50, 20, n_samples).astype(np.float32) for col in FEATURE_COLUMNS
+                }
                 synth[TARGET_COLUMN] = rng.uniform(30, 200, n_samples).astype(np.float32)
                 df = pd.DataFrame(synth)
 
