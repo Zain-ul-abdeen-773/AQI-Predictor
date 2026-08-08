@@ -61,52 +61,79 @@ This system delivers **72-hour AQI predictions** with uncertainty quantification
 
 ## System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                              DATA SOURCES                                                │
-│         ┌──────────────────┐              ┌──────────────────────┐                      │
-│         │    AQICN API     │              │   OpenWeatherMap API  │                      │
-│         │ PM2.5|PM10|NO2   │              │  Temp|Humidity|Wind   │                      │
-│         │ SO2|CO|O3        │              │  Pressure|Precip      │                      │
-│         └────────┬─────────┘              └──────────┬───────────┘                      │
-└──────────────────┼───────────────────────────────────┼──────────────────────────────────┘
-                   │                                   │
-                   ▼                                   ▼
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                    FEATURE PIPELINE  (Hourly via GitHub Actions)                         │
-│                                                                                         │
-│   ┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────────────┐     │
-│   │ Async Ingestion │────▶│  37-Feature Engineer │────▶│   ClearML Feature Store  │     │
-│   │ aiohttp+tenacity│     │ Cyclical|Lag|Rolling │     │  Hive-Partitioned Parquet│     │
-│   └─────────────────┘     └──────────────────────┘     └────────────┬────────────┘     │
-└──────────────────────────────────────────────────────────────────────┼───────────────────┘
-                                                                       │
-                   ┌───────────────────────────────────────────────────┤
-                   │                                                   │
-                   ▼                                                   ▼
-┌─────────────────────────────────────────────────────┐  ┌────────────────────────────────┐
-│         TRAINING PIPELINE  (Daily via GitHub Actions)│  │        SERVING LAYER           │
-│                                                      │  │                                │
-│  ┌────────────┐  ┌──────────┐  ┌────────────────┐  │  │  ┌──────────────────────────┐  │
-│  │  Temporal   │─▶│ Train 9  │─▶│  Evaluate +    │  │  │  │    Flask REST API        │  │
-│  │   Split     │  │  Models  │  │   Explain      │  │  │  │    8 Endpoints           │  │
-│  │(no-shuffle) │  │(Optuna)  │  │ (SHAP/LIME)    │  │  │  │    Gunicorn              │  │
-│  └────────────┘  └──────────┘  └───────┬────────┘  │  │  └─────────────┬────────────┘  │
-│                                         │           │  │                │               │
-│                               ┌─────────▼────────┐  │  │  ┌────────────▼───────────┐   │
-│                               │  ClearML Model   │──┼──┼─▶│   Next.js Dashboard    │   │
-│                               │    Registry      │  │  │  │   React 19 + Tailwind  │   │
-│                               └──────────────────┘  │  │  └────────────────────────┘   │
-└─────────────────────────────────────────────────────┘  └────────────────────────────────┘
-                                                                       │
-                                                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                              CLOUD DEPLOYMENT                                           │
-│              ┌─────────────────────┐         ┌─────────────────────┐                    │
-│              │   Render (Backend)  │         │   Vercel (Frontend)  │                    │
-│              │   Docker Container  │         │    Edge Network      │                    │
-│              └─────────────────────┘         └─────────────────────┘                    │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    %% Define Styles
+    classDef render fill:#46E3B7,stroke:#232F3E,stroke-width:2px,color:black;
+    classDef github fill:#181717,stroke:#fff,stroke-width:2px,color:white;
+    classDef ext fill:#4285F4,stroke:#fff,stroke-width:2px,color:white;
+    classDef store fill:#2D9CDB,stroke:#fff,stroke-width:2px,color:white;
+    classDef client fill:#34A853,stroke:#fff,stroke-width:2px,color:white;
+    classDef vercel fill:#000000,stroke:#fff,stroke-width:2px,color:white;
+
+    %% External Sources
+    User((User / Browser)):::client
+    AQICN([AQICN API]):::ext
+    OpenWeather([OpenWeather API]):::ext
+    GitHub([GitHub Repository]):::github
+    ClearMLFS[(ClearML Feature Store)]:::store
+    ClearMLMR[(ClearML Model Registry)]:::store
+
+    subgraph GitHub Actions
+        direction TB
+
+        subgraph CI/CD Pipeline
+            direction LR
+            CI(CI: Lint + Tests + Build):::github
+            DeployAPI(Deploy API to Render):::github
+            DeployFE(Deploy Frontend to Vercel):::github
+        end
+
+        subgraph Automated Pipelines
+            CronHour([Cron: Hourly]):::github
+            CronDay([Cron: Daily]):::github
+
+            FeatPipe[Feature Pipeline]:::github
+            TrainPipe[Training Pipeline]:::github
+
+            CronHour -. triggers .-> FeatPipe
+            CronDay -. triggers .-> TrainPipe
+        end
+    end
+
+    subgraph Serving Layer
+        FlaskAPI[Flask REST API<br/>Gunicorn]:::render
+        NextJS[Next.js Dashboard<br/>React + Tailwind]:::vercel
+    end
+
+    subgraph Cloud Hosting
+        Render[Render]:::render
+        Vercel[Vercel]:::vercel
+    end
+
+    %% CI/CD Flow
+    GitHub -- "Push to main" --> CI
+    CI -- "On success" --> DeployAPI
+    CI -- "On success" --> DeployFE
+    DeployAPI --> Render
+    DeployFE --> Vercel
+
+    %% Feature Pipeline Flow
+    FeatPipe -- "Fetches Data" --> AQICN
+    FeatPipe -- "Fetches Data" --> OpenWeather
+    FeatPipe -- "Writes Features" --> ClearMLFS
+
+    %% Training Pipeline Flow
+    TrainPipe -- "Reads Features" --> ClearMLFS
+    TrainPipe -- "Trains 9 Models + Registers" --> ClearMLMR
+
+    %% Serving Flow
+    User -- "HTTPS" --> NextJS
+    NextJS -- "API Calls" --> FlaskAPI
+    FlaskAPI -- "Reads Features" --> ClearMLFS
+    FlaskAPI -- "Loads Model" --> ClearMLMR
+    Render -- "Hosts" --> FlaskAPI
+    Vercel -- "Hosts" --> NextJS
 ```
 
 <br/>
