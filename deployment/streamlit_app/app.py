@@ -23,10 +23,10 @@ st.markdown(
 # Tabs Layout
 tab_forecast, tab_causal, tab_satellite, tab_canary = st.tabs(
     [
-        "📈 72-Hour Forecast",
-        "🔮 Causal What-If Simulator",
-        "🛰️ Satellite Sentinel-5P",
-        "🛡️ Shadow Canary Engine",
+        "72-Hour Forecast",
+        "Causal What-If Simulator",
+        "Satellite Sentinel-5P",
+        "Shadow Canary Engine",
     ]
 )
 

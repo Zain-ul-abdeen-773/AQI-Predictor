@@ -257,7 +257,7 @@ class ModelRegistryManager:
                 torch.save(model.state_dict(), model_path)
         else:
             if hasattr(model, "save"):
-                model.save(export_dir)
+                model.save(model_path)
                 if not model_path.exists():
                     for p in export_dir.glob("*.pkl"):
                         if "explainer" not in p.name:

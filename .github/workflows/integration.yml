@@ -25,8 +25,13 @@ jobs:
       - name: Wake up Render (free tier sleeps after inactivity)
         run: |
           echo "Pinging API to wake from sleep..."
+          # First ping to trigger cold start
           curl -s "${{ env.API_URL }}/health" > /dev/null 2>&1 || true
-          sleep 30
+          echo "Waiting 60s for Render to initialize models..."
+          sleep 60
+          # Second ping to confirm it's ready
+          curl -s "${{ env.API_URL }}/health" > /dev/null 2>&1 || true
+          sleep 10
 
       - name: Test /health endpoint
         id: health
