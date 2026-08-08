@@ -5,7 +5,11 @@ info:
   description: |
     Air Quality Index prediction API for Sargodha, Pakistan.
     Provides 72-hour AQI forecasts, SHAP/LIME explainability,
-    8-model zoo selection, and counterfactual policy simulation.
+    9-model zoo selection, and counterfactual policy simulation.
+    
+    All endpoints are available at both root (/) and versioned (/v1/) paths.
+    Rate limited to 60 requests/minute per IP.
+    Authentication via X-API-Key header (when API_AUTH_KEY is configured).
   contact:
     name: Pearls Engineering Team
   license:

@@ -16,6 +16,10 @@
   <a href="https://pearls-aqi-api.onrender.com/health"><img src="https://img.shields.io/badge/API_ENDPOINT-46E3B7?style=for-the-badge&logo=render&logoColor=white" alt="API"/></a>
   &nbsp;
   <a href="docs/documentation.pdf"><img src="https://img.shields.io/badge/DOCUMENTATION-2D9CDB?style=for-the-badge&logo=readthedocs&logoColor=white" alt="Docs"/></a>
+  &nbsp;
+  <a href="openapi.yaml"><img src="https://img.shields.io/badge/OpenAPI_SPEC-6BA539?style=for-the-badge&logo=openapiinitiative&logoColor=white" alt="OpenAPI"/></a>
+  &nbsp;
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/CONTRIBUTING-FF6F00?style=for-the-badge&logo=github&logoColor=white" alt="Contributing"/></a>
 </p>
 
 <br/>
@@ -24,7 +28,7 @@
   <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white"/>
   <img src="https://img.shields.io/badge/PyTorch-2.2+-EE4C2C?style=flat-square&logo=pytorch&logoColor=white"/>
   <img src="https://img.shields.io/badge/Flask-3.0-000000?style=flat-square&logo=flask&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Next.js-14-000000?style=flat-square&logo=nextdotjs&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white"/>
   <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black"/>
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white"/>
   <img src="https://img.shields.io/badge/TailwindCSS-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white"/>
@@ -242,11 +246,16 @@ Base URL: `https://pearls-aqi-api.onrender.com`
 | `GET` | `/health` | Liveness + readiness probe |
 | `POST` | `/predict` | 72-hour AQI forecast with confidence bands |
 | `POST` | `/explain` | SHAP feature contributions for any prediction |
+| `POST/GET` | `/explain/lime` | LIME local feature importance |
 | `GET` | `/historical` | Paginated historical AQI time-series |
 | `GET` | `/models` | Model zoo listing with live metrics |
 | `POST` | `/simulate` | Counterfactual policy scenario testing |
 | `GET` | `/satellite/sentinel5p` | Simulated Sentinel-5P grid overlay |
 | `GET` | `/shadow/metrics` | Shadow model A/B comparison |
+
+> All endpoints are also available under `/v1/` prefix (e.g., `/v1/predict`).
+> Authentication: Set `API_AUTH_KEY` env var to require `X-API-Key` header.
+> Rate Limit: 60 requests/minute per IP.
 
 <details>
 <summary><b>Request/Response Examples</b></summary>
@@ -255,22 +264,20 @@ Base URL: `https://pearls-aqi-api.onrender.com`
 
 **72-Hour Forecast:**
 ```bash
-curl -X POST "https://pearls-aqi-api.onrender.com/predict" \
-  -H "Content-Type: application/json" \
-  -d '{"model_id": "lightgbm"}'
+curl -X POST "https://pearls-aqi-api.onrender.com/predict?model_id=ridge" \
+  -H "Content-Type: application/json"
 ```
 
 ```json
 {
-  "model_id": "lightgbm",
-  "forecast": [
-    {"hour": 1, "aqi": 142.3, "level": "Unhealthy for Sensitive Groups"},
-    {"hour": 2, "aqi": 138.7, "level": "Unhealthy for Sensitive Groups"},
-    ...
-    {"hour": 72, "aqi": 95.2, "level": "Moderate"}
+  "current_aqi": 142.3,
+  "model_type": "ridge",
+  "hourly_predictions": [
+    {"timestamp": "2026-08-08T12:00:00Z", "aqi_predicted": 142.3, "aqi_lower_80": 126.1, "aqi_upper_80": 158.5, "level": "unhealthy_sensitive"},
+    {"timestamp": "2026-08-08T13:00:00Z", "aqi_predicted": 138.7, "aqi_lower_80": 121.5, "aqi_upper_80": 155.9, "level": "unhealthy_sensitive"}
   ],
-  "health_advisory": "Members of sensitive groups should limit prolonged outdoor exertion.",
-  "confidence": {"lower_bound": 125.1, "upper_bound": 159.5}
+  "alert": false,
+  "advisory": "Members of sensitive groups should limit prolonged outdoor exertion."
 }
 ```
 
@@ -282,11 +289,11 @@ curl https://pearls-aqi-api.onrender.com/models
 ```json
 {
   "models": [
-    {"id": "lightgbm", "name": "LightGBM", "r2": 0.92, "rmse": 12.5, "mae": 8.3, "is_default": true},
-    {"id": "xgboost", "name": "XGBoost", "r2": 0.89, "rmse": 14.2, "mae": 9.7, "is_default": false},
-    {"id": "bilstm_attention", "name": "Bi-LSTM + Attention", "r2": 0.88, "rmse": 15.1, "mae": 10.2, "is_default": false}
+    {"id": "ridge", "name": "Scikit-Learn Ridge + RobustScaler", "r2": 0.9988, "rmse": 1.54, "mae": 0.87, "is_default": true},
+    {"id": "gradient_boosting", "name": "Gradient Boosting Regressor", "r2": 0.9986, "rmse": 1.68, "mae": 0.87, "is_default": false},
+    {"id": "xgboost", "name": "XGBoost (Optuna Tuned)", "r2": 0.9975, "rmse": 2.25, "mae": 1.18, "is_default": false}
   ],
-  "default_model_id": "lightgbm"
+  "default_model_id": "ridge"
 }
 ```
 
@@ -294,7 +301,7 @@ curl https://pearls-aqi-api.onrender.com/models
 ```bash
 curl -X POST "https://pearls-aqi-api.onrender.com/simulate" \
   -H "Content-Type: application/json" \
-  -d '{"scenario": "reduce_traffic_50"}'
+  -d '{"traffic_reduction_pct": 30, "crop_burning_increase_pct": 10, "wind_speed_delta_ms": 2}'
 ```
 
 </details>
@@ -361,6 +368,7 @@ Run unit tests                          Deploy updated models
 | Model Training | `train.yml` | Daily | Metric thresholds |
 | API Deploy | `deploy-api.yml` | On push | Health check verification |
 | Frontend Deploy | `deploy-frontend.yml` | On push | Build + Type check |
+| Integration Tests | `integration.yml` | Every 6h + API push | Live API contract validation |
 
 <br/>
 
@@ -379,6 +387,9 @@ Run unit tests                          Deploy updated models
 | **Thermal Inversion** | Custom atmospheric feature | Detects pollution-trapping conditions |
 | **Input Validation** | Pydantic + clamping | Rejects malformed data gracefully |
 | **Error Isolation** | Per-model try/except | One model failure doesn't crash the pipeline |
+| **Error Tracking** | Sentry integration | Production exception monitoring (opt-in) |
+| **Rate Limiting** | In-memory per-IP | 60 req/min prevents abuse |
+| **Request Tracing** | X-Request-ID header | Correlate logs across services |
 
 <br/>
 
@@ -480,12 +491,14 @@ cd deployment/web_app && npx vitest run
 ruff check . && ruff format --check .
 ```
 
-Coverage is enforced at **60% minimum** in CI. The test suite includes:
-- 21 API endpoint tests (all routes, error cases, edge cases)
+Coverage is reported in CI. The test suite includes:
+- 31 API endpoint tests (all routes, error cases, edge cases)
 - 14 data pipeline tests (ingestion, transformation, feature engineering)
+- 8 end-to-end pipeline integration tests (ingest → train → registry → predict)
 - Feature store operation tests
-- Training pipeline integration tests
-- Frontend component tests (Vitest + React Testing Library)
+- Training pipeline unit tests
+- 12 frontend component tests (Vitest + React Testing Library)
+- Load test configuration (Locust)
 
 <br/>
 
@@ -499,48 +512,61 @@ Coverage is enforced at **60% minimum** in CI. The test suite includes:
 .
 ├── config/                             # Pydantic configuration layer
 │   ├── settings.py                     #   Singleton settings + env loading
-│   └── schemas.py                      #   451 lines of strict validation
+│   └── schemas.py                      #   Strict validation schemas
 │
 ├── data_pipeline/                      # Data ingestion & engineering
 │   ├── ingest.py                       #   Async clients + retry + synthetic fallback
 │   ├── backfill.py                     #   Historical data generation
+│   ├── historical.py                   #   Historical data retrieval
 │   └── transformers.py                 #   37-feature transformer pipeline
 │
 ├── feature_pipeline/                   # ClearML feature store ops
-│   └── register.py                     #   Dataset versioning + Parquet management
+│   └── register.py                     #   Dataset versioning + caching
 │
 ├── training_pipeline/                  # ML training orchestration
-│   ├── train.py                        #   9-model orchestrator with per-model isolation
+│   ├── train.py                        #   9-model orchestrator with leakage prevention
 │   ├── evaluation.py                   #   Metrics + PSI drift + anomaly detection
 │   ├── explainability.py               #   SHAP + LIME + Temporal Grad-CAM
-│   ├── registry.py                     #   ClearML model versioning
+│   ├── registry.py                     #   ClearML model versioning + promotion logic
+│   ├── export_onnx.py                  #   ONNX model export
 │   └── models/                         #   Model implementations
 │       ├── baseline.py                 #     Ridge / ElasticNet
-│       ├── tree_ensemble.py            #     Random Forest / Extra Trees
-│       ├── gradient_boosting.py        #     LightGBM / XGBoost + Optuna
-│       ├── svr_model.py                #     Support Vector Regression
-│       ├── deep_learning.py            #     Bi-LSTM + Attention (730 lines)
-│       └── callbacks.py                #     EarlyStopping, Checkpoints, GradAccum
+│       ├── ensemble_trees.py           #     GradientBoosting / RandomForest / ExtraTrees / SVR
+│       ├── tree_ensemble.py            #     LightGBM + Optuna
+│       ├── xgboost_model.py            #     XGBoost + Optuna
+│       ├── deep_learning.py            #     Bi-LSTM + Multi-Head Attention (742 lines)
+│       ├── callbacks.py                #     EarlyStopping, Checkpoints, GradAccum
+│       └── grad_cam.py                 #     Temporal Grad-CAM visualization
 │
 ├── deployment/
 │   ├── api/                            # Flask REST API
-│   │   ├── main.py                     #   8 endpoints, 567 lines
-│   │   └── dependencies.py             #   Model loading + feature injection
-│   └── web_app/                        # Next.js 14 Frontend
-│       ├── app/                         #   Pages (home, analytics, explainability)
-│       ├── components/                  #   12 React/TS components
-│       └── tests/                       #   Vitest component tests
+│   │   ├── main.py                     #   9 endpoints + /v1/ versioning, auth, rate limiting
+│   │   ├── dependencies.py             #   Thread-safe model loading + feature injection
+│   │   └── shadow_logger.py            #   Shadow model comparison logging
+│   ├── web_app/                        # Next.js 16 Frontend
+│   │   ├── app/                        #   Pages (home, analytics, explainability)
+│   │   ├── components/                 #   11 React/TS components + ErrorBoundary
+│   │   └── tests/                      #   12 Vitest component tests
+│   └── streamlit_app/                  # Streamlit dashboard (alternative UI)
+│       └── app.py                      #   Interactive EDA dashboard
 │
-├── eda/                                # Exploratory Data Analysis
-│   ├── plots/                          #   20 visualizations
-│   └── reports/                        #   26 statistical reports
+├── tests/                              # pytest suite (70+ tests)
+│   ├── test_api.py                     #   31 API endpoint tests
+│   ├── test_data_pipeline.py           #   14 data pipeline tests
+│   ├── test_e2e_pipeline.py            #   8 end-to-end integration tests
+│   ├── test_feature_pipeline.py        #   Feature store tests
+│   ├── test_training_pipeline.py       #   Training pipeline tests
+│   └── load_test.py                    #   Locust load test configuration
 │
-├── tests/                              # pytest suite (35+ tests)
 ├── docs/                               # LaTeX documentation + PDF
 ├── .github/workflows/                  # 6 CI/CD workflows
+├── openapi.yaml                        # OpenAPI 3.1 specification
+├── CONTRIBUTING.md                     # Developer setup guide
 ├── Dockerfile                          # Multi-stage, non-root, <500MB
 ├── docker-compose.yml                  # Full stack orchestration
-└── pyproject.toml                      # Build + Ruff + mypy + pytest + coverage
+├── render.yaml                         # Render deployment config
+├── vercel.json                         # Vercel frontend config
+└── pyproject.toml                      # Build + Ruff + mypy + pytest config
 ```
 
 <br/>
@@ -575,7 +601,7 @@ Coverage is enforced at **60% minimum** in CI. The test suite includes:
 ### Frontend & Infra
 | | Technology |
 |:-:|-----------|
-| | Next.js 14 (React 19) |
+| | Next.js 16 (React 19) |
 | | TypeScript 5 |
 | | Tailwind CSS 4 |
 | | Framer Motion |
@@ -609,6 +635,9 @@ Coverage is enforced at **60% minimum** in CI. The test suite includes:
 | `LOOKBACK_WINDOW_HOURS` | No | `72` | Input sequence length |
 | `AQI_ALERT_THRESHOLD` | No | `150` | Health alert trigger |
 | `OPTUNA_N_TRIALS` | No | `50` | HPO trial budget |
+| `API_AUTH_KEY` | No | -- | API key for authentication (empty = disabled) |
+| `SENTRY_DSN` | No | -- | Sentry error tracking DSN |
+| `CORS_ORIGINS` | No | Vercel domains | Comma-separated allowed origins |
 
 <br/>
 

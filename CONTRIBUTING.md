@@ -24,7 +24,7 @@ source .venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 
 # Copy environment template
-cp config/.env.example .env
+cp .env.example .env
 # Edit .env with your API keys (AQICN_API_KEY required for live data)
 
 # Verify installation
@@ -93,6 +93,16 @@ AQI-Predictor/
 When `API_AUTH_KEY` environment variable is set, all endpoints (except `/health`) require authentication via:
 - Header: `X-API-Key: <key>`
 - Query param: `?api_key=<key>`
+
+Additional environment variables:
+- `SENTRY_DSN` — Sentry error tracking (optional)
+- `CORS_ORIGINS` — Comma-separated allowed origins
+- `API_AUTH_KEY` — API key for authentication (empty = open access)
+
+## Dependencies
+
+- `requirements.txt` — Full development dependencies (includes PyTorch, Optuna, ClearML, Streamlit)
+- `requirements-deploy.txt` — Lightweight deploy deps (excludes PyTorch, fits Render 512MB limit)
 
 ## Running the API Locally
 
