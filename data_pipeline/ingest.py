@@ -73,6 +73,10 @@ class AQICNClient:
     Fetches real-time pollutant concentrations (PM2.5, PM10, NO2, SO2, CO, O3)
     and the composite AQI value for the configured target location.
 
+    Supports async context manager for safe session lifecycle:
+        async with AQICNClient() as client:
+            data = await client.fetch_station_data()
+
     Attributes:
         settings: Application settings instance.
         base_url: AQICN API base URL.
@@ -83,6 +87,16 @@ class AQICNClient:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
         self._session: aiohttp.ClientSession | None = None
+
+    async def __aenter__(self):
+        """Enter async context manager."""
+        await self._get_session()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Exit async context manager, closing session."""
+        await self.close()
+        return False
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create an aiohttp client session."""
@@ -433,18 +447,8 @@ class SyntheticDataGenerator:
             PollutantReading(name="o3", value=round(o3_base, 2), unit="µg/m³", timestamp=dt),
         ]
 
-        # Weather (Sargodha climate: hot semi-arid)
-        # Temperature: Summer 35-45°C, Winter 5-18°C
-        temp_seasonal = 25 + 15 * math.cos(2 * math.pi * (dt.month - 7) / 12)
-        temp_diurnal = 5 * math.cos(2 * math.pi * (dt.hour - 14) / 24)
-        temperature = temp_seasonal + temp_diurnal + random.gauss(0, 2)
-
-        # Humidity inversely correlated with temperature
-        humidity = max(10, min(95, 70 - temperature * 0.8 + random.gauss(0, 8)))
-
-        # Wind: typically low in winter smog, higher in summer
-        wind_base = 2.0 + 3.0 * math.sin(2 * math.pi * (dt.month - 4) / 12)
-        wind_speed = max(0, wind_base + random.gauss(0, 1.5))
+        # Weather — reuse temperature/humidity already computed above for emissions model
+        # Wind direction (random uniform) and refined wind for weather report
         wind_dir = random.uniform(0, 360)
 
         # Pressure: slight seasonal variation

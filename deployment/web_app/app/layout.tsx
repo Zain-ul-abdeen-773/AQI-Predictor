@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import LiquidNavigation from '../components/LiquidNavigation';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -27,7 +28,9 @@ export default function RootLayout({
       >
         <LiquidNavigation />
         <main className="w-full mx-auto px-4 sm:px-6 lg:px-12 pb-24 relative z-10">
-          {children}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </main>
       </body>
     </html>

@@ -1,0 +1,255 @@
+openapi: "3.1.0"
+info:
+  title: AQI Predictor API
+  version: "1.0.0"
+  description: |
+    Air Quality Index prediction API for Sargodha, Pakistan.
+    Provides 72-hour AQI forecasts, SHAP/LIME explainability,
+    8-model zoo selection, and counterfactual policy simulation.
+  contact:
+    name: Pearls Engineering Team
+  license:
+    name: MIT
+
+servers:
+  - url: https://pearls-aqi-api.onrender.com
+    description: Production (Render)
+  - url: http://localhost:8000
+    description: Local development
+
+security:
+  - ApiKeyHeader: []
+  - ApiKeyQuery: []
+
+components:
+  securitySchemes:
+    ApiKeyHeader:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    ApiKeyQuery:
+      type: apiKey
+      in: query
+      name: api_key
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded]
+        version:
+          type: string
+        model_loaded:
+          type: boolean
+        feature_store_connected:
+          type: boolean
+        uptime_seconds:
+          type: number
+
+    HourlyPrediction:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        aqi_predicted:
+          type: number
+        aqi_lower_80:
+          type: number
+        aqi_upper_80:
+          type: number
+        aqi_lower_95:
+          type: number
+        aqi_upper_95:
+          type: number
+        level:
+          type: string
+
+    PredictResponse:
+      type: object
+      properties:
+        current_aqi:
+          type: number
+        model_type:
+          type: string
+        hourly_predictions:
+          type: array
+          items:
+            $ref: "#/components/schemas/HourlyPrediction"
+        alert:
+          type: boolean
+        advisory:
+          type: string
+
+    ModelEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        r2:
+          type: number
+        rmse:
+          type: number
+        mae:
+          type: number
+        is_default:
+          type: boolean
+        description:
+          type: string
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: Service status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /predict:
+    post:
+      summary: 72-hour AQI forecast
+      parameters:
+        - name: model_id
+          in: query
+          schema:
+            type: string
+          description: Model to use (default=ridge)
+      responses:
+        "200":
+          description: Forecast response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PredictResponse"
+        "503":
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /models:
+    get:
+      summary: List all models in the zoo
+      responses:
+        "200":
+          description: Model list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ModelEntry"
+                  default_model_id:
+                    type: string
+
+  /explain:
+    post:
+      summary: SHAP feature contributions
+      responses:
+        "200":
+          description: Explanation response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  prediction_aqi:
+                    type: number
+                  contributions:
+                    type: array
+                    items:
+                      type: object
+                  source:
+                    type: string
+                    enum: [live, demo]
+
+  /explain/lime:
+    post:
+      summary: LIME local explanations
+      responses:
+        "200":
+          description: LIME explanation
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /simulate:
+    post:
+      summary: Counterfactual policy simulation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                traffic_reduction_pct:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                crop_burning_increase_pct:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                wind_speed_delta_ms:
+                  type: number
+                  minimum: -20
+                  maximum: 20
+      responses:
+        "200":
+          description: Simulation results
+
+  /historical:
+    get:
+      summary: Historical AQI data (paginated)
+      parameters:
+        - name: hours
+          in: query
+          schema:
+            type: integer
+            default: 168
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: Historical data
+
+  /satellite/sentinel5p:
+    get:
+      summary: Simulated satellite grid data
+      responses:
+        "200":
+          description: NO2 and aerosol grid
+
+  /shadow/metrics:
+    get:
+      summary: Shadow model comparison metrics
+      responses:
+        "200":
+          description: Canary metrics

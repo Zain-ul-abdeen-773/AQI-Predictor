@@ -22,7 +22,7 @@ import time
 from datetime import UTC, datetime, timedelta
 
 import numpy as np
-from flask import Flask, jsonify, request
+from flask import Blueprint, Flask, jsonify, request
 from flask_cors import CORS
 
 from config.schemas import (
@@ -45,6 +45,13 @@ logger = logging.getLogger(__name__)
 
 # --- App Initialization ---
 app = Flask(__name__)
+
+# Request body size limit (1MB max)
+app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
+
+# API key authentication (optional; set API_AUTH_KEY env var to enable)
+_API_AUTH_KEY = os.environ.get("API_AUTH_KEY", "")
+_PUBLIC_ENDPOINTS = {"/health", "/v1/health"}
 
 # CORS: restrict to known origins in production, allow all in dev
 _allowed_origins = os.environ.get("CORS_ORIGINS", "").split(",")
@@ -81,6 +88,15 @@ def _check_rate_limit(ip: str) -> bool:
 @app.before_request
 def before_request():
     request.start_time = time.time()
+
+    # API key authentication (skip for public endpoints and OPTIONS preflight)
+    if _API_AUTH_KEY and request.method != "OPTIONS":
+        if request.path not in _PUBLIC_ENDPOINTS:
+            auth_header = request.headers.get("X-API-Key", "")
+            auth_param = request.args.get("api_key", "")
+            if auth_header != _API_AUTH_KEY and auth_param != _API_AUTH_KEY:
+                return jsonify({"error": "Unauthorized", "message": "Valid API key required."}), 401
+
     # Rate limiting
     client_ip = request.headers.get("X-Forwarded-For", request.remote_addr) or "unknown"
     if not _check_rate_limit(client_ip):
@@ -739,3 +755,55 @@ def get_shadow_model_metrics():
     metrics = shadow_logger.get_metrics_summary()
     metrics["data_source"] = "in_memory_shadow_log"
     return jsonify(metrics)
+
+
+# --- API Versioning: mount all routes under /v1/ as well ---
+v1 = Blueprint("v1", __name__, url_prefix="/v1")
+
+
+@v1.route("/health", methods=["GET"])
+def v1_health():
+    return health_check()
+
+
+@v1.route("/predict", methods=["POST"])
+def v1_predict():
+    return predict()
+
+
+@v1.route("/explain", methods=["POST"])
+def v1_explain():
+    return explain()
+
+
+@v1.route("/explain/lime", methods=["POST", "GET"])
+def v1_explain_lime():
+    return explain_lime()
+
+
+@v1.route("/models", methods=["GET"])
+def v1_models():
+    return list_models()
+
+
+@v1.route("/simulate", methods=["POST"])
+def v1_simulate():
+    return simulate_causal_policy()
+
+
+@v1.route("/historical", methods=["GET"])
+def v1_historical():
+    return get_historical()
+
+
+@v1.route("/satellite/sentinel5p", methods=["GET"])
+def v1_satellite():
+    return get_satellite_earth_observation()
+
+
+@v1.route("/shadow/metrics", methods=["GET"])
+def v1_shadow_metrics():
+    return get_shadow_model_metrics()
+
+
+app.register_blueprint(v1)

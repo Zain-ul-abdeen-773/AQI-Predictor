@@ -94,7 +94,7 @@ class ModelService:
                 self._loaded = True
             else:
                 logger.warning("No champion model found in registry")
-        except Exception as e:
+        except (ImportError, OSError, ValueError, RuntimeError) as e:
             logger.error("Failed to load model: %s", e)
 
         # Always initialize the 8-model zoo so users can select from any of the 8 models
@@ -389,7 +389,7 @@ class ModelService:
 
             self._loaded = True
             logger.info("Initialized model zoo with lightweight training")
-        except Exception as ex:
+        except (ImportError, OSError, ValueError, RuntimeError, TypeError) as ex:
             logger.error("Model zoo initialization failed: %s", ex)
             self._loaded = True  # metadata still available
 
