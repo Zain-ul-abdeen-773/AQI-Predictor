@@ -1,20 +1,20 @@
 \contentsline {figure}{\numberline {1}{\ignorespaces System Architecture Overview}}{6}{figure.caption.2}%
 \contentsline {figure}{\numberline {2}{\ignorespaces AQI Category Distribution (EPA Standards)}}{9}{figure.caption.6}%
-\contentsline {figure}{\numberline {3}{\ignorespaces Distribution of Key Pollutants with KDE Overlays and Normality Tests}}{9}{figure.caption.7}%
-\contentsline {figure}{\numberline {4}{\ignorespaces Pearson Correlation Matrix: Pollutants and Weather Features}}{10}{figure.caption.8}%
-\contentsline {figure}{\numberline {5}{\ignorespaces AQI vs Top Correlated Features with Regression Lines}}{11}{figure.caption.10}%
-\contentsline {figure}{\numberline {6}{\ignorespaces Temporal AQI Patterns: Diurnal, Weekly, Monthly, and Yearly}}{12}{figure.caption.11}%
-\contentsline {figure}{\numberline {7}{\ignorespaces AQI Heatmap: Hour of Day vs Month (Winter Nights are Worst)}}{12}{figure.caption.12}%
-\contentsline {figure}{\numberline {8}{\ignorespaces Monthly Average AQI Time Series (5 Years)}}{13}{figure.caption.13}%
-\contentsline {figure}{\numberline {9}{\ignorespaces Additive Seasonal Decomposition (Period = 365 Days)}}{13}{figure.caption.14}%
-\contentsline {figure}{\numberline {10}{\ignorespaces ACF and PACF of Daily AQI (60-Day Lags)}}{14}{figure.caption.15}%
-\contentsline {figure}{\numberline {11}{\ignorespaces Hourly Autocorrelation Showing Strong 24-Hour Periodicity}}{14}{figure.caption.16}%
-\contentsline {figure}{\numberline {12}{\ignorespaces AQI Volatility: 7-Day and 30-Day Rolling Standard Deviation}}{15}{figure.caption.17}%
-\contentsline {figure}{\numberline {13}{\ignorespaces Weather Impact on Air Quality (Temperature, Wind, Humidity, Pressure)}}{16}{figure.caption.18}%
-\contentsline {figure}{\numberline {14}{\ignorespaces Pollution by Wind Direction (16-Sector Analysis)}}{17}{figure.caption.19}%
-\contentsline {figure}{\numberline {15}{\ignorespaces Granger Causality: Weather Variables Predicting AQI}}{17}{figure.caption.20}%
-\contentsline {figure}{\numberline {16}{\ignorespaces Statistical Hypothesis Tests (Weekend/Seasonal/Day-Night/Temperature)}}{18}{figure.caption.21}%
-\contentsline {figure}{\numberline {17}{\ignorespaces Top 20 Features by Mutual Information with AQI}}{18}{figure.caption.22}%
-\contentsline {figure}{\numberline {18}{\ignorespaces Pair Plot of Key Variables Colored by AQI Severity}}{19}{figure.caption.23}%
-\contentsline {figure}{\numberline {19}{\ignorespaces Outlier Analysis: Box Plots of Key Variables}}{19}{figure.caption.24}%
-\contentsline {figure}{\numberline {20}{\ignorespaces Empirical CDF of AQI with EPA Category Thresholds}}{20}{figure.caption.25}%
+\contentsline {figure}{\numberline {3}{\ignorespaces Distribution of Key Pollutants with KDE Overlays and Normality Tests}}{10}{figure.caption.7}%
+\contentsline {figure}{\numberline {4}{\ignorespaces Pearson Correlation Matrix: Pollutants and Weather Features}}{11}{figure.caption.8}%
+\contentsline {figure}{\numberline {5}{\ignorespaces AQI vs Top Correlated Features with Regression Lines}}{12}{figure.caption.10}%
+\contentsline {figure}{\numberline {6}{\ignorespaces Temporal AQI Patterns: Diurnal, Weekly, Monthly, and Yearly}}{13}{figure.caption.11}%
+\contentsline {figure}{\numberline {7}{\ignorespaces AQI Heatmap: Hour of Day vs Month (Winter Nights are Worst)}}{13}{figure.caption.12}%
+\contentsline {figure}{\numberline {8}{\ignorespaces Monthly Average AQI Time Series (5 Years)}}{14}{figure.caption.13}%
+\contentsline {figure}{\numberline {9}{\ignorespaces Additive Seasonal Decomposition (Period = 365 Days)}}{14}{figure.caption.14}%
+\contentsline {figure}{\numberline {10}{\ignorespaces ACF and PACF of Daily AQI (60-Day Lags)}}{15}{figure.caption.15}%
+\contentsline {figure}{\numberline {11}{\ignorespaces Hourly Autocorrelation Showing Strong 24-Hour Periodicity}}{15}{figure.caption.16}%
+\contentsline {figure}{\numberline {12}{\ignorespaces AQI Volatility: 7-Day and 30-Day Rolling Standard Deviation}}{16}{figure.caption.17}%
+\contentsline {figure}{\numberline {13}{\ignorespaces Weather Impact on Air Quality (Temperature, Wind, Humidity, Pressure)}}{17}{figure.caption.18}%
+\contentsline {figure}{\numberline {14}{\ignorespaces Pollution by Wind Direction (16-Sector Analysis)}}{18}{figure.caption.19}%
+\contentsline {figure}{\numberline {15}{\ignorespaces Granger Causality: Weather Variables Predicting AQI}}{18}{figure.caption.20}%
+\contentsline {figure}{\numberline {16}{\ignorespaces Statistical Hypothesis Tests (Weekend/Seasonal/Day-Night/Temperature)}}{19}{figure.caption.21}%
+\contentsline {figure}{\numberline {17}{\ignorespaces Top 20 Features by Mutual Information with AQI}}{19}{figure.caption.22}%
+\contentsline {figure}{\numberline {18}{\ignorespaces Pair Plot of Key Variables Colored by AQI Severity}}{20}{figure.caption.23}%
+\contentsline {figure}{\numberline {19}{\ignorespaces Outlier Analysis: Box Plots of Key Variables}}{20}{figure.caption.24}%
+\contentsline {figure}{\numberline {20}{\ignorespaces Empirical CDF of AQI with EPA Category Thresholds}}{21}{figure.caption.25}%
