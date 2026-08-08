@@ -322,8 +322,8 @@ The system follows a modular pipeline architecture with clear separation between
     \node[block, below=of eval] (registry) {Model Registry\\(All 9 models versioned)};
     
     % Serving
-    \node[deploy, right=3cm of registry] (flask) {Flask REST API\\(8 endpoints)};
-    \node[deploy, above=of flask] (nextjs) {Next.js Dashboard\\(10 React components)};
+    \node[deploy, right=3cm of registry] (flask) {Flask REST API\\(9 endpoints + /v1/)};
+    \node[deploy, above=of flask] (nextjs) {Next.js Dashboard\\(11 React components)};
     
     % Deployment
     \node[deploy, right=3cm of flask] (render) {Render\\(Backend Host)};
@@ -370,8 +370,9 @@ The system follows a modular pipeline architecture with clear separation between
 
 \subsubsection{Serving Layer}
 \begin{itemize}
-    \item \textbf{API:} Flask REST with 8 endpoints (predict, explain, health, historical, models, simulate, satellite, shadow)
-    \item \textbf{Frontend:} Next.js dashboard with 10 interactive React components for forecast visualization, model selection, and causal simulation
+    \item \textbf{API:} Flask REST with 9 endpoints (predict, explain, explain/lime, health, historical, models, simulate, satellite, shadow) served at both root and \texttt{/v1/} prefix
+    \item \textbf{Security:} API key authentication (opt-in), rate limiting (60 req/min per IP), request ID tracing
+    \item \textbf{Frontend:} Next.js dashboard with 11 interactive React components including ErrorBoundary for fault isolation
     \item \textbf{Deployment:} Backend on Render (Python, Gunicorn), Frontend on Vercel (Next.js, CDN-cached)
 \end{itemize}
 
@@ -928,10 +929,12 @@ The project includes a pytest suite covering all pipeline stages:
 \toprule
 \textbf{Module} & \textbf{Coverage Scope} \\
 \midrule
-\texttt{test\_api.py} & Flask endpoint correctness: health response structure, predict returns 72 hours, model selection, historical data respects parameters \\
-\texttt{test\_data\_pipeline.py} & Data ingestion (API mocking), async retry logic, feature engineering output shape and column presence, null handling \\
-\texttt{test\_feature\_pipeline.py} & ClearML Dataset creation, Parquet write/read, feature store retrieval with time filtering \\
-\texttt{test\_training\_pipeline.py} & Model training runs to completion, metrics are finite, champion selection logic, model serialization round-trip \\
+\texttt{test\_api.py} & 31 Flask endpoint tests: health, predict, models, explain, simulate, historical, satellite, shadow, error handling \\
+\texttt{test\_data\_pipeline.py} & 14 tests: synthetic data generation, feature engineering, temporal encodings, wind decomposition, lag features \\
+\texttt{test\_e2e\_pipeline.py} & 8 end-to-end integration tests: ingest $\rightarrow$ transform $\rightarrow$ train $\rightarrow$ registry $\rightarrow$ predict $\rightarrow$ drift $\rightarrow$ anomaly \\
+\texttt{test\_feature\_pipeline.py} & ClearML Dataset creation, feature store retrieval \\
+\texttt{test\_training\_pipeline.py} & Model training completion, metrics are finite, evaluation pipeline \\
+\texttt{load\_test.py} & Locust load test configuration (50 concurrent users, weighted endpoints) \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -1013,6 +1016,8 @@ The Next.js dashboard is deployed on Vercel with the following configuration and
     \item \textbf{Build Command:} \texttt{npm run build}
     \item \textbf{Environment Variable:} \texttt{NEXT\_PUBLIC\_API\_URL} pointing to the Render backend
     \item \textbf{10 React Components:} ParticleWindEngine, ModelZooSelector, AtmosphericBentoGrid, VignetteAlert, ActualVsPredictedGraph, CausalPolicySimulator, EdgeInferenceEngine, SatelliteParticleMap, ShadowCanaryMonitor, LiquidNavigation
+    \item \textbf{ErrorBoundary:} React class component wrapping all pages for graceful error recovery
+    \item \textbf{12 Test Files:} Vitest + React Testing Library covering all components
 \end{itemize}
 
 \subsection{Frontend Component Architecture}
@@ -1067,7 +1072,7 @@ Security measures include: non-root execution, no build tools in runtime image, 
 
 \subsection{API Reference}
 
-The Flask backend exposes 8 endpoints:
+The Flask backend exposes 9 endpoints, each available at both root path and \texttt{/v1/} prefix. Authentication via \texttt{X-API-Key} header is optional (enabled when \texttt{API\_AUTH\_KEY} env var is set). Rate limiting: 60 requests/minute per IP.
 
 \begin{table}[H]
 \centering
@@ -1078,9 +1083,9 @@ The Flask backend exposes 8 endpoints:
 \textbf{Method} & \textbf{Endpoint} & \textbf{Description} \\
 \midrule
 \texttt{GET} & \texttt{/health} & Liveness and readiness check (uptime, model status) \\
-\texttt{POST} & \texttt{/predict} & 72-hour AQI forecast with confidence intervals \\
+\texttt{POST} & \texttt{/predict} & 72-hour AQI forecast with RMSE-based confidence intervals \\
 \texttt{POST} & \texttt{/explain} & SHAP feature contributions \\
-\texttt{POST} & \texttt{/explain/lime} & LIME local surrogate explanations \\
+\texttt{POST/GET} & \texttt{/explain/lime} & LIME local surrogate explanations \\
 \texttt{GET} & \texttt{/historical} & Historical AQI data (paginated) \\
 \texttt{GET} & \texttt{/models} & List all registered models with metrics \\
 \texttt{POST} & \texttt{/simulate} & Counterfactual policy simulation \\
@@ -1147,10 +1152,10 @@ Model Development & 9 trained models spanning 4 paradigms with Optuna Bayesian H
 Explainability & SHAP (TreeExplainer + GradientExplainer) + LIME (TabularExplainer) + Temporal Grad-CAM \\
 EDA & 19-stage analysis producing 20 visualizations and 26 statistical reports \\
 Automation & 6 GitHub Actions workflows: CI, hourly ingestion, daily training, deploy-api, deploy-frontend, live integration tests \\
-Frontend & Next.js dashboard with 10 interactive React components, model zoo selector, causal simulator, and particle engine \\
+Frontend & Next.js 16 dashboard with 11 interactive React components, ErrorBoundary, model zoo selector, causal simulator, and particle engine \\
 Deployment & Backend on Render + Frontend on Vercel + Docker for local/self-hosted use \\
-Testing & pytest suite across 4 test modules covering all pipeline stages \\
-Documentation & LaTeX technical report + README with Mermaid architecture diagrams \\
+Testing & pytest suite (70+ tests across 6 modules) + 12 frontend Vitest tests + Locust load tests \\
+Documentation & LaTeX technical report + OpenAPI 3.1 spec + CONTRIBUTING.md + README with architecture diagrams \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -1164,7 +1169,8 @@ Documentation & LaTeX technical report + README with Mermaid architecture diagra
     \item Demonstrated \textbf{Granger causality} linking temperature, wind speed, and pressure to AQI --- validating the scientific basis for using meteorological features
     \item Identified \textbf{thermal inversions} (low wind + cool temperatures) as the primary driver of hazardous events in Sargodha through comprehensive EDA
     \item Implemented \textbf{three complementary explainability methods} providing both global and local model interpretability at feature and temporal levels
-    \item Deployed a \textbf{production-ready system} with an interactive Next.js dashboard, REST API with 8 endpoints, and 6 automated CI/CD workflows
+    \item Deployed a \textbf{production-ready system} with an interactive Next.js dashboard, REST API with 9 endpoints (+ /v1/ versioning), API authentication, rate limiting, request tracing, Sentry error monitoring, and 6 automated CI/CD workflows
+    \item Achieved \textbf{100\% frontend component test coverage} with 12 Vitest test files and 70+ backend pytest tests including end-to-end pipeline integration tests
 \end{itemize}
 
 \subsection{Limitations}
@@ -1174,7 +1180,7 @@ Documentation & LaTeX technical report + README with Mermaid architecture diagra
     \item LightGBM/XGBoost Optuna HPO requires sufficient training samples; small datasets may cause convergence issues
     \item Free-tier deployment (Render) introduces cold-start latency ($\sim$30s after 15 minutes of inactivity)
     \item Model assumes stationarity of pollution sources; structural changes require retraining
-    \item Current confidence intervals use heuristic widening; formal conformal prediction would provide theoretical guarantees
+    \item Current confidence intervals use model RMSE scaled by $\sqrt{1+h/12}$ with proper z-scores (1.28 for 80\%, 1.96 for 95\%); formal conformal prediction would provide distribution-free theoretical guarantees
     \item The Bi-LSTM + Attention model underperforms classical models on this dataset (R\textsuperscript{2} = 0.59), likely due to the relatively small training set size for a deep learning approach
 \end{itemize}
 
@@ -1218,6 +1224,11 @@ Documentation & LaTeX technical report + README with Mermaid architecture diagra
 \texttt{LSTM\_NUM\_LAYERS} & 2 & LSTM layers \\
 \texttt{OPTUNA\_N\_TRIALS} & 50 & HPO budget \\
 \texttt{LOG\_LEVEL} & INFO & Logging verbosity \\
+\texttt{API\_AUTH\_KEY} & -- & API authentication key (empty = disabled) \\
+\texttt{SENTRY\_DSN} & -- & Sentry error tracking DSN \\
+\texttt{CORS\_ORIGINS} & Vercel domains & Comma-separated allowed origins \\
+\texttt{SERVER\_HOST} & 0.0.0.0 & API bind host \\
+\texttt{SERVER\_PORT} & 8000 & API bind port \\
 \bottomrule
 \end{longtable}
 
@@ -1231,18 +1242,27 @@ Documentation & LaTeX technical report + README with Mermaid architecture diagra
 +-- feature_pipeline/           ClearML Feature Store management
 +-- training_pipeline/          Model training, evaluation, explainability
 |   +-- models/                 9 model implementations
-|   +-- registry.py             Multi-model versioning (all 9 models)
+|   |   +-- baseline.py        Ridge / ElasticNet
+|   |   +-- ensemble_trees.py  GradientBoosting / RF / ExtraTrees / SVR
+|   |   +-- tree_ensemble.py   LightGBM + Optuna
+|   |   +-- xgboost_model.py   XGBoost + Optuna
+|   |   +-- deep_learning.py   Bi-LSTM + Multi-Head Attention
+|   |   +-- callbacks.py       EarlyStopping, Checkpoints
+|   |   +-- grad_cam.py        Temporal Grad-CAM
+|   +-- registry.py             Multi-model versioning + champion promotion
 +-- deployment/
-|   +-- api/                    Flask REST API (8 endpoints)
-|   +-- web_app/                Next.js dashboard (10 React components)
-+-- data/                       Feature store (Parquet) + backfill CSV
-+-- models/                     Trained model artifacts + registry manifest
-+-- tests/                      pytest test suite (4 modules)
+|   +-- api/                    Flask REST API (9 endpoints + /v1/ versioning)
+|   +-- web_app/                Next.js 16 dashboard (11 React components)
+|   +-- streamlit_app/          Streamlit dashboard (alternative UI)
++-- tests/                      pytest suite (70+ tests, 6 modules)
 +-- docs/                       This documentation
 +-- .github/workflows/          CI/CD (6 modular workflows)
++-- openapi.yaml                OpenAPI 3.1 specification
++-- CONTRIBUTING.md             Developer setup guide
 +-- Dockerfile                  Multi-stage build
 +-- docker-compose.yml          Container orchestration
 +-- render.yaml                 Render deployment config
++-- vercel.json                 Vercel frontend config
 +-- requirements.txt            Full Python dependencies
 +-- requirements-deploy.txt     Lightweight deploy dependencies
 \end{lstlisting}
