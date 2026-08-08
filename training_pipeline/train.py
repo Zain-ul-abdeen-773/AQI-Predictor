@@ -299,20 +299,35 @@ class TrainingOrchestrator:
         lookback = self.settings.lookback_window_hours
         horizon = self.settings.forecast_horizon_hours
 
-        # Create sequences
-        X_seq, y_seq = _BiLSTMAttention.create_sequences(X, y, lookback, horizon)
+        # Split BEFORE creating sequences to prevent data leakage
+        # (sequences near the boundary would otherwise contain future data in lookback)
+        split_idx = int(0.8 * len(X))
+        X_train_raw, X_val_raw = X[:split_idx], X[split_idx:]
+        y_train_raw, y_val_raw = y[:split_idx], y[split_idx:]
 
-        if len(X_seq) < 100:
+        # Create sequences independently from each split
+        X_train_seq, y_train_seq = _BiLSTMAttention.create_sequences(
+            X_train_raw, y_train_raw, lookback, horizon
+        )
+        X_val_seq, y_val_seq = _BiLSTMAttention.create_sequences(
+            X_val_raw, y_val_raw, lookback, horizon
+        )
+
+        min_sequences = 100
+        if len(X_train_seq) < min_sequences:
             logger.warning(
-                "Insufficient sequences (%d) for LSTM training. Need at least 100. Skipping LSTM.",
-                len(X_seq),
+                "Insufficient training sequences (%d) for LSTM. Need at least %d. Skipping LSTM.",
+                len(X_train_seq),
+                min_sequences,
             )
             return None, EvaluationMetrics(rmse=float("inf"), model_name="BiLSTM")
 
-        # Train/val split (temporal - no shuffling)
-        split_idx = int(0.8 * len(X_seq))
-        X_train_seq, X_val_seq = X_seq[:split_idx], X_seq[split_idx:]
-        y_train_seq, y_val_seq = y_seq[:split_idx], y_seq[split_idx:]
+        if len(X_val_seq) < 10:
+            logger.warning(
+                "Insufficient validation sequences (%d) for LSTM. Skipping LSTM.",
+                len(X_val_seq),
+            )
+            return None, EvaluationMetrics(rmse=float("inf"), model_name="BiLSTM")
 
         # Checkpoint directory
         checkpoint_dir = self.settings.models_dir / "checkpoints"

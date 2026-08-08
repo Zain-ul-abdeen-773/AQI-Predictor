@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import json
 import logging
-import pickle
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+import joblib
 
 from config.settings import Settings, get_settings
 from training_pipeline.evaluation import EvaluationMetrics
@@ -262,13 +263,11 @@ class ModelRegistryManager:
                         if "explainer" not in p.name:
                             shutil.copy(p, model_path)
             else:
-                with open(model_path, "wb") as f:
-                    pickle.dump(model, f)
+                joblib.dump(model, model_path)
 
         # Explainer
         if explainer:
-            with open(export_dir / "explainer.pkl", "wb") as f:
-                pickle.dump(explainer, f)
+            joblib.dump(explainer, export_dir / "explainer.pkl")
 
         # Metrics JSON
         (export_dir / "metrics.json").write_text(

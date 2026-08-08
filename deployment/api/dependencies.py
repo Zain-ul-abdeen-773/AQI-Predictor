@@ -58,14 +58,12 @@ class ModelService:
                 self.model_metadata = metadata
                 artifacts_dir = model_path.parent
 
-                # Load model - use safe deserialization where possible
-                import pickle
-
+                # Load model - prefer joblib (safer than raw pickle)
+                import joblib
                 import torch
 
                 try:
-                    with open(model_path, "rb") as f:
-                        data = pickle.load(f)  # noqa: S301 - trusted local artifacts only
+                    data = joblib.load(model_path)
                 except Exception:
                     data = torch.load(model_path, map_location="cpu", weights_only=True)
 
@@ -87,8 +85,7 @@ class ModelService:
                 # Load explainer
                 explainer_path = artifacts_dir / "explainer.pkl"
                 if explainer_path.exists():
-                    with open(explainer_path, "rb") as f:
-                        self.explainer = pickle.load(f)  # noqa: S301 - trusted local artifacts
+                    self.explainer = joblib.load(explainer_path)
                     logger.info("Loaded SHAP explainer from %s", explainer_path)
 
                 self._loaded = True
@@ -132,7 +129,7 @@ class ModelService:
     def _try_load_from_manifest(self, settings: Any) -> bool:
         """Load models from the local model_registry.json manifest."""
         try:
-            import pickle
+            import joblib
 
             from training_pipeline.registry import ModelRegistryManager
 
@@ -167,12 +164,11 @@ class ModelService:
 
                 try:
                     if model_file.suffix == ".pkl":
-                        with open(model_file, "rb") as f:
-                            model_obj = pickle.load(f)
+                        model_obj = joblib.load(model_file)
                     else:
                         import torch
 
-                        model_obj = torch.load(model_file, map_location="cpu", weights_only=False)
+                        model_obj = torch.load(model_file, map_location="cpu", weights_only=True)
 
                     self.models[model_id] = model_obj
                     self.models_metadata[model_id] = {
@@ -192,8 +188,7 @@ class ModelService:
                         # Load explainer if available
                         explainer_path = model_dir / "explainer.pkl"
                         if explainer_path.exists():
-                            with open(explainer_path, "rb") as f:
-                                self.explainer = pickle.load(f)
+                            self.explainer = joblib.load(explainer_path)
 
                     loaded_count += 1
                     logger.info("Loaded model %s from %s", model_id, model_file)

@@ -419,6 +419,9 @@ class AnomalyDetector:
             n_estimators=200,
         )
         self.model.fit(X)
+        # Store training statistics for z-score computation in detect()
+        self._train_mean = np.mean(X, axis=0)
+        self._train_std = np.std(X, axis=0) + 1e-8
         logger.info("Anomaly detector fitted on %d samples", len(X))
         return self
 
@@ -451,8 +454,8 @@ class AnomalyDetector:
                 "anomaly_score": float(scores[i]),
             }
             if is_anomaly and feature_names:
-                # Find contributing features (highest absolute z-scores)
-                z_scores = np.abs((X[i] - np.mean(X, axis=0)) / (np.std(X, axis=0) + 1e-8))
+                # Find contributing features using training set statistics (no data leakage)
+                z_scores = np.abs((X[i] - self._train_mean) / self._train_std)
                 top_features = np.argsort(z_scores)[-3:][::-1]
                 result["contributing_features"] = [
                     feature_names[idx] for idx in top_features if idx < len(feature_names)

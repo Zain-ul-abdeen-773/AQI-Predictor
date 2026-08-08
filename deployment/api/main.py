@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import numpy as np
@@ -42,6 +43,23 @@ from deployment.api.dependencies import (
 )
 
 logger = logging.getLogger(__name__)
+
+# --- Sentry Error Tracking (optional; set SENTRY_DSN env var to enable) ---
+_sentry_dsn = os.environ.get("SENTRY_DSN", "")
+if _sentry_dsn:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.flask import FlaskIntegration
+
+        sentry_sdk.init(
+            dsn=_sentry_dsn,
+            integrations=[FlaskIntegration()],
+            traces_sample_rate=0.1,
+            environment=os.environ.get("RENDER_SERVICE_NAME", "development"),
+        )
+        logger.info("Sentry error tracking initialized")
+    except ImportError:
+        logger.warning("sentry-sdk not installed; error tracking disabled")
 
 # --- App Initialization ---
 app = Flask(__name__)
@@ -88,6 +106,8 @@ def _check_rate_limit(ip: str) -> bool:
 @app.before_request
 def before_request():
     request.start_time = time.time()
+    # Assign unique request ID for tracing
+    request.request_id = request.headers.get("X-Request-ID", str(uuid.uuid4())[:8])
 
     # API key authentication (skip for public endpoints and OPTIONS preflight)
     if _API_AUTH_KEY and request.method != "OPTIONS":
@@ -109,9 +129,12 @@ def before_request():
 def after_request(response):
     if hasattr(request, "start_time"):
         duration = time.time() - request.start_time
+        request_id = getattr(request, "request_id", "")
         response.headers["X-Process-Time"] = f"{duration:.4f}"
+        response.headers["X-Request-ID"] = request_id
         logger.info(
-            "%s %s -> %d (%.3fs)",
+            "[%s] %s %s -> %d (%.3fs)",
+            request_id,
             request.method,
             request.path,
             response.status_code,
