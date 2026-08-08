@@ -55,8 +55,23 @@ class ModelRegistryManager:
     # Champion promotion heuristic
     # ------------------------------------------------------------------
     def should_promote_challenger(self, metrics: EvaluationMetrics) -> bool:
-        """Determine if the new model is better than the current champion."""
-        return True
+        """Determine if the new model is better than the current champion.
+
+        Compares the challenger's RMSE against the current champion from
+        the local manifest. Promotes if RMSE improves by at least 1%.
+        """
+        manifest = _load_manifest(self.settings.models_dir)
+        champion_id = manifest.get("champion")
+        if not champion_id:
+            return True  # No existing champion, always promote
+
+        champion_entry = manifest.get("models", {}).get(champion_id)
+        if not champion_entry:
+            return True
+
+        current_rmse = champion_entry.get("metrics", {}).get("rmse", float("inf"))
+        improvement_threshold = 0.99  # Require at least 1% RMSE improvement
+        return metrics.rmse < current_rmse * improvement_threshold
 
     # ------------------------------------------------------------------
     # Single‑model registration (kept for backward compat)

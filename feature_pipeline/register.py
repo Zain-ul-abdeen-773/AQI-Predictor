@@ -176,7 +176,9 @@ class FeatureStoreManager:
         """Retrieve the most recent N hours of features for inference.
 
         Uses an in-memory cache with TTL to avoid downloading
-        the full dataset from ClearML on every request.
+        the full dataset from ClearML on every request. Cache refresh
+        is atomic to prevent concurrent requests from triggering
+        duplicate downloads.
 
         Args:
             n_hours: Number of recent hours to retrieve.
@@ -184,14 +186,25 @@ class FeatureStoreManager:
         Returns:
             pd.DataFrame: Recent feature vectors.
         """
+        import threading
+
         now = time.time()
         cache_expired = (now - self._cache_ts) > self._cache_ttl
 
         if self._cache is None or cache_expired:
-            self._cache = self.get_training_data()
-            self._cache_ts = now
-            if not self._cache.empty:
-                logger.info("Feature cache refreshed: %d total rows", len(self._cache))
+            # Atomic refresh: only one thread fetches at a time
+            if not hasattr(self, "_refresh_lock"):
+                self._refresh_lock = threading.Lock()
+            if self._refresh_lock.acquire(blocking=False):
+                try:
+                    new_data = self.get_training_data()
+                    # Atomic swap — assign only after successful fetch
+                    self._cache = new_data
+                    self._cache_ts = time.time()
+                    if not self._cache.empty:
+                        logger.info("Feature cache refreshed: %d total rows", len(self._cache))
+                finally:
+                    self._refresh_lock.release()
 
         if self._cache is not None and not self._cache.empty:
             return self._cache.sort_values("timestamp").tail(n_hours).copy()

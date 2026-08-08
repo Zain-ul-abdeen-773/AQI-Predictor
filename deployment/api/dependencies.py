@@ -7,6 +7,7 @@ including model loading, feature store connection, and SHAP explainer.
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -57,16 +58,16 @@ class ModelService:
                 self.model_metadata = metadata
                 artifacts_dir = model_path.parent
 
-                # Load model
+                # Load model - use safe deserialization where possible
                 import pickle
 
                 import torch
 
                 try:
                     with open(model_path, "rb") as f:
-                        data = pickle.load(f)
+                        data = pickle.load(f)  # noqa: S301 - trusted local artifacts only
                 except Exception:
-                    data = torch.load(model_path, map_location="cpu", weights_only=False)
+                    data = torch.load(model_path, map_location="cpu", weights_only=True)
 
                 if "pipeline" in data:
                     from training_pipeline.models.baseline import BaselineRegressor
@@ -87,7 +88,7 @@ class ModelService:
                 explainer_path = artifacts_dir / "explainer.pkl"
                 if explainer_path.exists():
                     with open(explainer_path, "rb") as f:
-                        self.explainer = pickle.load(f)
+                        self.explainer = pickle.load(f)  # noqa: S301 - trusted local artifacts
                     logger.info("Loaded SHAP explainer from %s", explainer_path)
 
                 self._loaded = True
@@ -369,10 +370,16 @@ class ModelService:
             m_svr.fit(X, y, feature_names=available_cols)
             self.models["svr"] = m_svr
 
-            # LightGBM and XGBoost: reuse gradient boosting to save memory on Render
-            # (Optuna search even with 1 trial can allocate 1200-tree models)
+            # LightGBM and XGBoost: reuse gradient boosting to save memory on Render free tier
+            # (Optuna search even with 1 trial can allocate 1200-tree models exceeding 512MB)
             self.models["lightgbm"] = m_gb
             self.models["xgboost"] = m_gb
+            # Mark aliased models in metadata so API consumers are aware
+            self.models_metadata["lightgbm"]["fallback_model"] = "gradient_boosting"
+            self.models_metadata["xgboost"]["fallback_model"] = "gradient_boosting"
+            logger.info(
+                "LightGBM/XGBoost using GradientBoosting fallback (memory-constrained environment)"
+            )
 
             # BiLSTM: use champion if loaded, otherwise fallback to gradient boosting
             if self.model and hasattr(self.model, "predict"):
@@ -487,34 +494,40 @@ class FeatureService:
         return self._connected
 
 
-# Singleton instances
+# Singleton instances with thread-safe initialization
 _model_service: ModelService | None = None
 _feature_service: FeatureService | None = None
+_model_lock = threading.Lock()
+_feature_lock = threading.Lock()
 
 
 def get_model_service() -> ModelService:
-    """Get or create the singleton ModelService.
+    """Get or create the singleton ModelService (thread-safe).
 
     Returns:
         ModelService: Cached model service instance.
     """
     global _model_service
     if _model_service is None:
-        _model_service = ModelService()
-        _model_service.load()
+        with _model_lock:
+            if _model_service is None:
+                _model_service = ModelService()
+                _model_service.load()
     return _model_service
 
 
 def get_feature_service() -> FeatureService:
-    """Get or create the singleton FeatureService.
+    """Get or create the singleton FeatureService (thread-safe).
 
     Returns:
         FeatureService: Cached feature service instance.
     """
     global _feature_service
     if _feature_service is None:
-        _feature_service = FeatureService()
-        _feature_service.connect()
+        with _feature_lock:
+            if _feature_service is None:
+                _feature_service = FeatureService()
+                _feature_service.connect()
     return _feature_service
 
 
