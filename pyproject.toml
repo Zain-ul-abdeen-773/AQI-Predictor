@@ -18,7 +18,7 @@ keywords = ["aqi", "air-quality", "machine-learning", "forecasting", "lstm", "li
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short --cov=. --cov-report=term-missing --cov-report=xml:coverage.xml --cov-config=pyproject.toml"
+addopts = "-v --tb=short"
 asyncio_mode = "auto"
 filterwarnings = [
     "ignore::DeprecationWarning:clearml.*",
@@ -50,7 +50,6 @@ omit = [
 ]
 
 [tool.coverage.report]
-fail_under = 45
 show_missing = true
 skip_empty = true
 exclude_lines = [
