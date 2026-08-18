@@ -20,6 +20,8 @@
   <a href="openapi.yaml"><img src="https://img.shields.io/badge/OpenAPI_SPEC-6BA539?style=for-the-badge&logo=openapiinitiative&logoColor=white" alt="OpenAPI"/></a>
   &nbsp;
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/CONTRIBUTING-FF6F00?style=for-the-badge&logo=github&logoColor=white" alt="Contributing"/></a>
+  &nbsp;
+  <a href="https://deepwiki.com/Zain-ul-abdeen-773/AQI-Predictor"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"/></a>
 </p>
 
 <br/>
