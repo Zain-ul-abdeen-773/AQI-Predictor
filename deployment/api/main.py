@@ -92,6 +92,9 @@ _RATE_LIMIT_MAX_REQUESTS = 60  # requests per window
 def _check_rate_limit(ip: str) -> bool:
     """Return True if the request should be allowed."""
     now = time.time()
+    # Cap store size to prevent unbounded memory growth
+    if len(_rate_limit_store) > 10000:
+        _rate_limit_store.clear()
     if ip not in _rate_limit_store:
         _rate_limit_store[ip] = []
     # Prune old entries

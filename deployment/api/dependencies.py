@@ -60,21 +60,39 @@ class ModelService:
 
                 # Load model - prefer joblib (safer than raw pickle)
                 import joblib
-                import torch
 
                 try:
                     data = joblib.load(model_path)
                 except Exception:
-                    data = torch.load(model_path, map_location="cpu", weights_only=True)
+                    # Skip PyTorch models on memory-constrained environments (Render free tier)
+                    import os
 
-                if "pipeline" in data:
+                    if os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_NAME"):
+                        logger.warning(
+                            "Skipping PyTorch model load on Render free tier: %s", model_path
+                        )
+                        data = None
+                    else:
+                        import torch
+
+                        data = torch.load(model_path, map_location="cpu", weights_only=True)
+
+                if data is None:
+                    pass  # Will fall through to fallback below
+                elif "pipeline" in data:
                     from training_pipeline.models.baseline import BaselineRegressor
 
                     self.model = BaselineRegressor.load(model_path)
                 elif "model_state_dict" in data:  # PyTorch specific dict key
-                    from training_pipeline.models.deep_learning import BiLSTMRegressor
+                    # Skip BiLSTM on Render to save memory
+                    import os
 
-                    self.model = BiLSTMRegressor.load(model_path)
+                    if os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_NAME"):
+                        logger.info("Skipping BiLSTM load on Render (memory constraint)")
+                    else:
+                        from training_pipeline.models.deep_learning import BiLSTMRegressor
+
+                        self.model = BiLSTMRegressor.load(model_path)
                 else:
                     from training_pipeline.models.tree_ensemble import TreeEnsembleRegressor
 
@@ -82,9 +100,13 @@ class ModelService:
 
                     logger.info("Loaded champion model from %s", model_path)
 
-                # Load explainer
+                # Load explainer only if not on memory-constrained deployment
+                import os
+
                 explainer_path = artifacts_dir / "explainer.pkl"
-                if explainer_path.exists():
+                if explainer_path.exists() and not (
+                    os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_NAME")
+                ):
                     self.explainer = joblib.load(explainer_path)
                     logger.info("Loaded SHAP explainer from %s", explainer_path)
 
@@ -129,6 +151,8 @@ class ModelService:
     def _try_load_from_manifest(self, settings: Any) -> bool:
         """Load models from the local model_registry.json manifest."""
         try:
+            import os
+
             import joblib
 
             from training_pipeline.registry import ModelRegistryManager
@@ -139,6 +163,8 @@ class ModelService:
             if not registered:
                 logger.info("No models in registry manifest – will train fresh")
                 return False
+
+            is_render = bool(os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_NAME"))
 
             loaded_count = 0
             for entry in registered:
@@ -160,6 +186,11 @@ class ModelService:
                         break
 
                 if model_file is None:
+                    continue
+
+                # Skip PyTorch models on Render to save memory
+                if model_file.suffix == ".pt" and is_render:
+                    logger.info("Skipping PyTorch model %s on Render (memory constraint)", model_id)
                     continue
 
                 try:
@@ -185,9 +216,9 @@ class ModelService:
                     if entry.get("is_champion"):
                         self.default_model_id = model_id
                         self.model = model_obj
-                        # Load explainer if available
+                        # Load explainer if available and not on Render
                         explainer_path = model_dir / "explainer.pkl"
-                        if explainer_path.exists():
+                        if explainer_path.exists() and not is_render:
                             self.explainer = joblib.load(explainer_path)
 
                     loaded_count += 1
@@ -212,6 +243,10 @@ class ModelService:
         so the /models endpoint works. Actual prediction will return 503
         until models are properly trained via the training pipeline.
         """
+        import os
+
+        is_render = bool(os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_NAME"))
+
         # Always set metadata so /models endpoint responds correctly
         self.models_metadata = {
             "ridge": {
@@ -301,12 +336,6 @@ class ModelService:
 
             from feature_pipeline.register import FeatureStoreManager
             from training_pipeline.models.baseline import BaselineRegressor
-            from training_pipeline.models.ensemble_trees import (
-                ExtraTreesModel,
-                GradientBoostingModel,
-                RandomForestModel,
-                SVRModel,
-            )
             from training_pipeline.train import FEATURE_COLUMNS, TARGET_COLUMN
 
             manager = FeatureStoreManager(settings)
@@ -344,43 +373,64 @@ class ModelService:
             else:
                 y = df["aqi_value"].fillna(100.0).values.astype(np.float32)[:5]
 
-            # Train only lightweight models with minimal memory footprint (Render 512MB limit)
+            # Train only the champion model (Ridge) to minimize memory on Render free tier
             m_ridge = BaselineRegressor(model_type="ridge")
             m_ridge.fit(X, y, feature_names=available_cols)
             self.models["ridge"] = m_ridge
 
-            m_gb = GradientBoostingModel(n_estimators=50)
-            m_gb.fit(X, y, feature_names=available_cols)
-            self.models["gradient_boosting"] = m_gb
-
-            m_rf = RandomForestModel(n_estimators=50)
-            m_rf.fit(X, y, feature_names=available_cols)
-            self.models["random_forest"] = m_rf
-
-            m_et = ExtraTreesModel(n_estimators=50)
-            m_et.fit(X, y, feature_names=available_cols)
-            self.models["extra_trees"] = m_et
-
-            m_svr = SVRModel()
-            m_svr.fit(X, y, feature_names=available_cols)
-            self.models["svr"] = m_svr
-
-            # LightGBM and XGBoost: reuse gradient boosting to save memory on Render free tier
-            # (Optuna search even with 1 trial can allocate 1200-tree models exceeding 512MB)
-            self.models["lightgbm"] = m_gb
-            self.models["xgboost"] = m_gb
-            # Mark aliased models in metadata so API consumers are aware
-            self.models_metadata["lightgbm"]["fallback_model"] = "gradient_boosting"
-            self.models_metadata["xgboost"]["fallback_model"] = "gradient_boosting"
-            logger.info(
-                "LightGBM/XGBoost using GradientBoosting fallback (memory-constrained environment)"
-            )
-
-            # BiLSTM: use champion if loaded, otherwise fallback to gradient boosting
-            if self.model and hasattr(self.model, "predict"):
-                self.models["bilstm_attention"] = self.model
+            if is_render:
+                # On Render: only train Ridge, alias all others to it for memory savings
+                # Metadata is still served so the frontend model zoo displays correctly
+                for model_id in [
+                    "gradient_boosting",
+                    "extra_trees",
+                    "xgboost",
+                    "lightgbm",
+                    "random_forest",
+                    "svr",
+                    "bilstm_attention",
+                ]:
+                    self.models[model_id] = m_ridge
+                    self.models_metadata[model_id]["fallback_model"] = "ridge"
+                logger.info(
+                    "All models aliased to Ridge on Render (memory-constrained environment)"
+                )
             else:
-                self.models["bilstm_attention"] = m_gb
+                # Local/CI: train full model zoo
+                from training_pipeline.models.ensemble_trees import (
+                    ExtraTreesModel,
+                    GradientBoostingModel,
+                    RandomForestModel,
+                    SVRModel,
+                )
+
+                m_gb = GradientBoostingModel(n_estimators=50)
+                m_gb.fit(X, y, feature_names=available_cols)
+                self.models["gradient_boosting"] = m_gb
+
+                m_rf = RandomForestModel(n_estimators=50)
+                m_rf.fit(X, y, feature_names=available_cols)
+                self.models["random_forest"] = m_rf
+
+                m_et = ExtraTreesModel(n_estimators=50)
+                m_et.fit(X, y, feature_names=available_cols)
+                self.models["extra_trees"] = m_et
+
+                m_svr = SVRModel()
+                m_svr.fit(X, y, feature_names=available_cols)
+                self.models["svr"] = m_svr
+
+                # LightGBM and XGBoost: reuse gradient boosting to save memory
+                self.models["lightgbm"] = m_gb
+                self.models["xgboost"] = m_gb
+                self.models_metadata["lightgbm"]["fallback_model"] = "gradient_boosting"
+                self.models_metadata["xgboost"]["fallback_model"] = "gradient_boosting"
+
+                # BiLSTM: use champion if loaded, otherwise fallback to gradient boosting
+                if self.model and hasattr(self.model, "predict"):
+                    self.models["bilstm_attention"] = self.model
+                else:
+                    self.models["bilstm_attention"] = m_gb
 
             self._loaded = True
             logger.info("Initialized model zoo with lightweight training")

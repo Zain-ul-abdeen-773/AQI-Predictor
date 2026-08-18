@@ -651,17 +651,17 @@ Coverage is reported in CI. The test suite includes:
 
 Metrics from the latest automated training run (TimeSeriesSplit 5-fold CV):
 
-| Model | RMSE | MAE | R² | Training Time |
-|-------|:----:|:---:|:--:|:-------------:|
-| LightGBM | **12.5** | **8.3** | **0.92** | 45s |
-| XGBoost | 14.2 | 9.7 | 0.89 | 52s |
-| Bi-LSTM + Attention | 15.1 | 10.2 | 0.88 | 8min |
-| Gradient Boosting | 16.3 | 11.4 | 0.86 | 38s |
-| Extra Trees | 17.8 | 12.1 | 0.84 | 12s |
-| Random Forest | 18.2 | 12.8 | 0.83 | 15s |
-| SVR | 19.5 | 13.6 | 0.81 | 22s |
-| ElasticNet | 22.1 | 15.4 | 0.76 | 2s |
-| Ridge | 22.8 | 15.9 | 0.74 | 1s |
+| Model | RMSE | MAE | R² | MAPE (%) |
+|-------|:----:|:---:|:--:|:--------:|
+| Ridge (Champion) | **1.55** | **0.87** | **0.9988** | **0.64** |
+| Gradient Boosting | 1.69 | 0.87 | 0.9986 | 0.58 |
+| Extra Trees | 2.05 | 1.00 | 0.9979 | 0.67 |
+| XGBoost (Optuna) | 2.25 | 1.19 | 0.9975 | 0.77 |
+| LightGBM (Optuna) | 2.27 | 1.19 | 0.9975 | 0.76 |
+| Random Forest | 4.33 | 2.39 | 0.9908 | 1.51 |
+| SVR | 6.14 | 3.25 | 0.9815 | 2.04 |
+| ElasticNet | 18.73 | 14.97 | 0.8282 | 9.94 |
+| Bi-LSTM + Attention | 28.94 | 21.19 | 0.5913 | 14.56 |
 
 > Metrics update daily at 02:00 UTC via automated retraining.
 
