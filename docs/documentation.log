@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.6.30)  5 AUG 2026 01:02
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.6.30)  8 AUG 2026 17:50
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1248,7 +1248,7 @@ pdfTeX warning (ext4): destination with the same identifier (name{page.1}) has
 been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.44 ...Hub Actions Workflows}{24}{subsection.7.1}
+l.44 ...Hub Actions Workflows}{25}{subsection.7.1}
                                                   % [1])
 \tf@toc=\write5
 \openout5 = `documentation.toc'.
@@ -1275,25 +1275,26 @@ LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 3
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 [6]
-Overfull \hbox (2.39899pt too wide) in paragraph at lines 375--376
+Overfull \hbox (2.39899pt too wide) in paragraph at lines 376--377
 []\T1/lmr/bx/n/12 Deployment: \T1/lmr/m/n/12 Back-end on Ren-der (Python, Gu-ni
 -corn), Fron-tend on Ver-cel (Next.js,
  []
 
 Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on i
-nput line 403.
+nput line 404.
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <10.95> not available
-(Font)              Font shape `T1/lmtt/b/n' tried instead on input line 404.
-[7]
-<../eda/plots/aqi_category_distribution.png, id=450, 706.8006pt x 416.757pt>
+(Font)              Font shape `T1/lmtt/b/n' tried instead on input line 405.
+[7] [8{C:/Users/Zain/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-rm.enc
+}{C:/Users/Zain/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-mathit.enc}
+]
+<../eda/plots/aqi_category_distribution.png, id=456, 706.8006pt x 416.757pt>
 File: ../eda/plots/aqi_category_distribution.png Graphic file (type png)
 <use ../eda/plots/aqi_category_distribution.png>
 Package pdftex.def Info: ../eda/plots/aqi_category_distribution.png  used on in
-put line 489.
+put line 490.
 (pdftex.def)             Requested size: 386.96027pt x 228.16779pt.
- [8{C:/Users/Zain/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-rm.enc}{C
-:/Users/Zain/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-mathit.enc}]
-Overfull \hbox (12.66338pt too wide) in paragraph at lines 496--497
+
+Overfull \hbox (12.66338pt too wide) in paragraph at lines 497--498
 \T1/lmr/m/n/12 All pol-lu-tant dis-tri-bu-tions ex-hibit non-Gaussian be-hav-io
 r with heavy right tails. D'Agostino-
  []
@@ -1302,209 +1303,219 @@ r with heavy right tails. D'Agostino-
 File: ../eda/plots/pollutant_distributions.png Graphic file (type png)
 <use ../eda/plots/pollutant_distributions.png>
 Package pdftex.def Info: ../eda/plots/pollutant_distributions.png  used on inpu
-t line 500.
+t line 501.
 (pdftex.def)             Requested size: 455.24411pt x 282.14362pt.
-<../eda/plots/correlation_heatmap.png, id=460, 796.4154pt x 725.109pt>
+[9 <../eda/plots/aqi_category_distribution.png>]
+<../eda/plots/correlation_heatmap.png, id=465, 796.4154pt x 725.109pt>
 File: ../eda/plots/correlation_heatmap.png Graphic file (type png)
 <use ../eda/plots/correlation_heatmap.png>
 Package pdftex.def Info: ../eda/plots/correlation_heatmap.png  used on input li
-ne 511.
+ne 512.
 (pdftex.def)             Requested size: 409.71692pt x 373.03146pt.
-[9 <../eda/plots/aqi_category_distribution.png> <../eda/plots/pollutant_distrib
-utions.png>]
-<../eda/plots/aqi_scatter_top_features.png, id=467, 851.3406pt x 706.8006pt>
+ [10 <../eda/plots/pollutant_distributions.png>]
+<../eda/plots/aqi_scatter_top_features.png, id=471, 851.3406pt x 706.8006pt>
 File: ../eda/plots/aqi_scatter_top_features.png Graphic file (type png)
 <use ../eda/plots/aqi_scatter_top_features.png>
 Package pdftex.def Info: ../eda/plots/aqi_scatter_top_features.png  used on inp
-ut line 535.
+ut line 536.
 (pdftex.def)             Requested size: 455.24411pt x 377.95663pt.
- [10 <../eda/plots/correlation_heatmap.png>]
-<../eda/plots/temporal_patterns.png, id=473, 1140.4206pt x 848.4498pt>
+ [11 <../eda/plots/correlation_heatmap.png>]
+<../eda/plots/temporal_patterns.png, id=477, 1140.4206pt x 848.4498pt>
 File: ../eda/plots/temporal_patterns.png Graphic file (type png)
 <use ../eda/plots/temporal_patterns.png>
 Package pdftex.def Info: ../eda/plots/temporal_patterns.png  used on input line
- 546.
+ 547.
 (pdftex.def)             Requested size: 455.24411pt x 338.68774pt.
- [11 <../eda/plots/aqi_scatter_top_features.png>]
-<../eda/plots/hour_month_heatmap.png, id=479, 798.3426pt x 561.7788pt>
+ [12 <../eda/plots/aqi_scatter_top_features.png>]
+<../eda/plots/hour_month_heatmap.png, id=484, 798.3426pt x 561.7788pt>
 File: ../eda/plots/hour_month_heatmap.png Graphic file (type png)
 <use ../eda/plots/hour_month_heatmap.png>
 Package pdftex.def Info: ../eda/plots/hour_month_heatmap.png  used on input lin
-e 553.
+e 554.
 (pdftex.def)             Requested size: 386.96027pt x 272.29951pt.
-<../eda/plots/monthly_aqi_timeseries.png, id=480, 1140.4206pt x 344.9688pt>
+<../eda/plots/monthly_aqi_timeseries.png, id=485, 1140.4206pt x 344.9688pt>
 File: ../eda/plots/monthly_aqi_timeseries.png Graphic file (type png)
 <use ../eda/plots/monthly_aqi_timeseries.png>
 Package pdftex.def Info: ../eda/plots/monthly_aqi_timeseries.png  used on input
- line 562.
+ line 563.
 (pdftex.def)             Requested size: 386.96027pt x 117.05096pt.
- [12 <../eda/plots/temporal_patterns.png> <../eda/plots/hour_month_heatmap.png>
+ [13 <../eda/plots/temporal_patterns.png> <../eda/plots/hour_month_heatmap.png>
 ]
-<../eda/plots/seasonal_decomposition.png, id=488, 1140.4206pt x 849.8952pt>
+<../eda/plots/seasonal_decomposition.png, id=492, 1140.4206pt x 849.8952pt>
 File: ../eda/plots/seasonal_decomposition.png Graphic file (type png)
 <use ../eda/plots/seasonal_decomposition.png>
 Package pdftex.def Info: ../eda/plots/seasonal_decomposition.png  used on input
- line 569.
+ line 570.
 (pdftex.def)             Requested size: 455.24411pt x 339.26474pt.
-<../eda/plots/acf_pacf_analysis.png, id=489, 997.326pt x 565.1514pt>
+<../eda/plots/acf_pacf_analysis.png, id=493, 997.326pt x 565.1514pt>
 File: ../eda/plots/acf_pacf_analysis.png Graphic file (type png)
 <use ../eda/plots/acf_pacf_analysis.png>
 Package pdftex.def Info: ../eda/plots/acf_pacf_analysis.png  used on input line
- 587.
+ 588.
 (pdftex.def)             Requested size: 386.96027pt x 219.27847pt.
- [13 <../eda/plots/monthly_aqi_timeseries.png> <../eda/plots/seasonal_decomposi
+ [14 <../eda/plots/monthly_aqi_timeseries.png> <../eda/plots/seasonal_decomposi
 tion.png>]
-<../eda/plots/hourly_acf_168h.png, id=496, 994.4352pt x 272.6988pt>
+<../eda/plots/hourly_acf_168h.png, id=500, 994.4352pt x 272.6988pt>
 File: ../eda/plots/hourly_acf_168h.png Graphic file (type png)
 <use ../eda/plots/hourly_acf_168h.png>
 Package pdftex.def Info: ../eda/plots/hourly_acf_168h.png  used on input line 5
-94.
+95.
 (pdftex.def)             Requested size: 386.96027pt x 106.11491pt.
-<../eda/plots/rolling_volatility.png, id=497, 1140.4206pt x 708.246pt>
+<../eda/plots/rolling_volatility.png, id=501, 1140.4206pt x 708.246pt>
 File: ../eda/plots/rolling_volatility.png Graphic file (type png)
 <use ../eda/plots/rolling_volatility.png>
 Package pdftex.def Info: ../eda/plots/rolling_volatility.png  used on input lin
-e 603.
+e 604.
 (pdftex.def)             Requested size: 455.24411pt x 282.72061pt.
- [14 <../eda/plots/acf_pacf_analysis.png> <../eda/plots/hourly_acf_168h.png>]
-<../eda/plots/weather_pollutant_relationships.png, id=504, 993.9534pt x 777.625
+ [15 <../eda/plots/acf_pacf_analysis.png> <../eda/plots/hourly_acf_168h.png>]
+<../eda/plots/weather_pollutant_relationships.png, id=508, 993.9534pt x 777.625
 2pt>
 File: ../eda/plots/weather_pollutant_relationships.png Graphic file (type png)
 <use ../eda/plots/weather_pollutant_relationships.png>
 Package pdftex.def Info: ../eda/plots/weather_pollutant_relationships.png  used
- on input line 612.
+ on input line 613.
 (pdftex.def)             Requested size: 455.24411pt x 356.15753pt.
- [15 <../eda/plots/rolling_volatility.png>]
-<../eda/plots/pollution_wind_rose.png, id=510, 843.6318pt x 442.2924pt>
+ [16 <../eda/plots/rolling_volatility.png>]
+<../eda/plots/pollution_wind_rose.png, id=514, 843.6318pt x 442.2924pt>
 File: ../eda/plots/pollution_wind_rose.png Graphic file (type png)
 <use ../eda/plots/pollution_wind_rose.png>
 Package pdftex.def Info: ../eda/plots/pollution_wind_rose.png  used on input li
-ne 628.
+ne 629.
 (pdftex.def)             Requested size: 341.43307pt x 178.9992pt.
-
-[16 <../eda/plots/weather_pollutant_relationships.png>]
-<../eda/plots/granger_causality.png, id=516, 708.246pt x 343.0416pt>
+ [17 <../eda/plots/weather_pollutant_relationships.png>]
+<../eda/plots/granger_causality.png, id=520, 708.246pt x 343.0416pt>
 File: ../eda/plots/granger_causality.png Graphic file (type png)
 <use ../eda/plots/granger_causality.png>
 Package pdftex.def Info: ../eda/plots/granger_causality.png  used on input line
- 637.
+ 638.
 (pdftex.def)             Requested size: 341.43307pt x 165.3752pt.
-<../eda/plots/hypothesis_tests.png, id=517, 995.8806pt x 706.8006pt>
+<../eda/plots/hypothesis_tests.png, id=521, 995.8806pt x 706.8006pt>
 File: ../eda/plots/hypothesis_tests.png Graphic file (type png)
 <use ../eda/plots/hypothesis_tests.png>
 Package pdftex.def Info: ../eda/plots/hypothesis_tests.png  used on input line 
-644.
+645.
 (pdftex.def)             Requested size: 455.24411pt x 323.09387pt.
- [17 <../eda/plots/pollution_wind_rose.png> <../eda/plots/granger_causality.png
+ [18 <../eda/plots/pollution_wind_rose.png> <../eda/plots/granger_causality.png
 >]
-<../eda/plots/feature_importance_mutual_info.png, id=524, 708.7278pt x 561.7788
+<../eda/plots/feature_importance_mutual_info.png, id=529, 708.7278pt x 561.7788
 pt>
 File: ../eda/plots/feature_importance_mutual_info.png Graphic file (type png)
 <use ../eda/plots/feature_importance_mutual_info.png>
 Package pdftex.def Info: ../eda/plots/feature_importance_mutual_info.png  used 
-on input line 653.
+on input line 654.
 (pdftex.def)             Requested size: 341.43307pt x 270.63654pt.
- [18 <../eda/plots/hypothesis_tests.png> <../eda/plots/feature_importance_mutua
+ [19 <../eda/plots/hypothesis_tests.png> <../eda/plots/feature_importance_mutua
 l_info.png>]
-<../eda/plots/pair_plot_by_aqi_level.png, id=532, 1013.2254pt x 918.7926pt>
+<../eda/plots/pair_plot_by_aqi_level.png, id=536, 1013.2254pt x 918.7926pt>
 File: ../eda/plots/pair_plot_by_aqi_level.png Graphic file (type png)
 <use ../eda/plots/pair_plot_by_aqi_level.png>
 Package pdftex.def Info: ../eda/plots/pair_plot_by_aqi_level.png  used on input
- line 662.
+ line 663.
 (pdftex.def)             Requested size: 341.43307pt x 309.60947pt.
-<../eda/plots/outlier_boxplots.png, id=533, 1286.406pt x 566.5968pt>
+<../eda/plots/outlier_boxplots.png, id=537, 1286.406pt x 566.5968pt>
 File: ../eda/plots/outlier_boxplots.png Graphic file (type png)
 <use ../eda/plots/outlier_boxplots.png>
 Package pdftex.def Info: ../eda/plots/outlier_boxplots.png  used on input line 
-669.
+670.
 (pdftex.def)             Requested size: 455.24411pt x 200.50781pt.
-<../eda/plots/aqi_ecdf.png, id=534, 853.2678pt x 417.2388pt>
+<../eda/plots/aqi_ecdf.png, id=538, 853.2678pt x 417.2388pt>
 File: ../eda/plots/aqi_ecdf.png Graphic file (type png)
 <use ../eda/plots/aqi_ecdf.png>
-Package pdftex.def Info: ../eda/plots/aqi_ecdf.png  used on input line 678.
+Package pdftex.def Info: ../eda/plots/aqi_ecdf.png  used on input line 679.
 (pdftex.def)             Requested size: 409.71692pt x 200.34874pt.
- [19 <../eda/plots/pair_plot_by_aqi_level.png> <../eda/plots/outlier_boxplots.p
-ng>]
-Underfull \hbox (badness 10000) in paragraph at lines 729--729
+
+[20 <../eda/plots/pair_plot_by_aqi_level.png> <../eda/plots/outlier_boxplots.pn
+g>]
+Underfull \hbox (badness 10000) in paragraph at lines 730--730
 []|\T1/lmr/m/n/12 L2-regularized with fault-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 729--729
+Underfull \hbox (badness 10000) in paragraph at lines 730--730
 []|\T1/lmr/m/n/12 PyTorch, Multi-Head Self-
  []
 
-[20 <../eda/plots/aqi_ecdf.png>] [21] [22{C:/Users/Zain/AppData/Local/Programs/
-MiKTeX/fonts/enc/dvips/lm/lm-mathex.enc}] [23]
-Underfull \hbox (badness 3291) in paragraph at lines 892--892
+[21 <../eda/plots/aqi_ecdf.png>] [22] [23{C:/Users/Zain/AppData/Local/Programs/
+MiKTeX/fonts/enc/dvips/lm/lm-mathex.enc}] [24]
+Underfull \hbox (badness 3291) in paragraph at lines 893--893
 \T1/lmr/m/n/12 and Open-Weather APIs, ap-ply
  []
 
 
-Underfull \hbox (badness 2762) in paragraph at lines 892--892
+Underfull \hbox (badness 2762) in paragraph at lines 893--893
 \T1/lmr/m/n/12 37-feature en-gi-neer-ing, push to
  []
 
 
-Underfull \hbox (badness 1348) in paragraph at lines 892--892
+Underfull \hbox (badness 1348) in paragraph at lines 893--893
 []|\T1/lmr/m/n/12 Extract train-ing data, train all
  []
 
 
-Underfull \hbox (badness 5893) in paragraph at lines 892--892
+Underfull \hbox (badness 5893) in paragraph at lines 893--893
 []|\T1/lmr/m/n/12 Pre-deploy val-i-da-tion (end-point
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
+Underfull \hbox (badness 10000) in paragraph at lines 893--893
 \T1/lmr/m/n/12 sweep, \T1/lmtt/m/n/12 render.yaml \T1/lmr/m/n/12 syn-tax
  []
 
 
-Underfull \hbox (badness 7613) in paragraph at lines 892--892
+Underfull \hbox (badness 7613) in paragraph at lines 893--893
 \T1/lmr/m/n/12 check), trig-ger Ren-der de-ploy
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
+Underfull \hbox (badness 10000) in paragraph at lines 893--893
 \T1/lmr/m/n/12 hook, post-deploy health and
  []
 
 
-Underfull \hbox (badness 5802) in paragraph at lines 892--892
+Underfull \hbox (badness 5802) in paragraph at lines 893--893
 []|\T1/lmr/m/n/12 Pre-deploy build check (Type-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 892--892
+Underfull \hbox (badness 10000) in paragraph at lines 893--893
 []|\T1/lmr/m/n/12 Live API con-tract val-i-da-tion
  []
 
 
-Underfull \hbox (badness 4595) in paragraph at lines 892--892
+Underfull \hbox (badness 4595) in paragraph at lines 893--893
 \T1/lmr/m/n/12 against the pro-duc-tion Ren-der
  []
 
-[24] [25]
+[25] [26]
 (C:\Users\Zain\AppData\Local\Programs\MiKTeX\tex/latex/listings\lstlang1.sty
 File: lstlang1.sty 2025/11/14 1.11b listings language file
 )
 (C:\Users\Zain\AppData\Local\Programs\MiKTeX\tex/latex/listings\lstlang1.sty
 File: lstlang1.sty 2025/11/14 1.11b listings language file
 )
-[26] [27]
-Overfull \hbox (5.84116pt too wide) in paragraph at lines 1015--1016
+[27] [28]
+Overfull \hbox (5.84116pt too wide) in paragraph at lines 1018--1019
 []\T1/lmr/bx/n/12 10 Re-act Com-po-nents: \T1/lmr/m/n/12 Par-ti-cleWindEngine, 
 Mod-el-ZooS-e-lec-tor, At-mo-spher-icBen-
  []
 
-[28] [29] [30] [31]
-Overfull \hbox (7.366pt too wide) in paragraph at lines 1174--1175
+[29] [30] [31] [32]
+Overfull \hbox (7.366pt too wide) in paragraph at lines 1180--1181
 []\T1/lmr/m/n/12 LightGBM/XGBoost Op-tuna HPO re-quires suf-fi-cient train-ing 
 sam-ples; small datasets
  []
 
-[32] [33] (documentation.aux)
+
+Underfull \hbox (badness 10000) in paragraph at lines 1227--1228
+[]|\T1/lmr/m/n/12 API au-then-ti-ca-tion key
+ []
+
+
+Underfull \hbox (badness 6125) in paragraph at lines 1229--1230
+[]|\T1/lmr/m/n/12 Comma-separated al-lowed
+ []
+
+[33] [34] [35] (documentation.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2025-12-24>
@@ -1513,10 +1524,10 @@ Package rerunfilecheck Info: File `documentation.out' has not changed.
 (rerunfilecheck)             Checksum: 35B43C457176719EB8CD58B69AF92234;10390.
  ) 
 Here is how much of TeX's memory you used:
- 41195 strings out of 467871
- 948842 string characters out of 5418860
- 1818370 words of memory out of 5000000
- 69152 multiletter control sequences out of 15000+600000
+ 41243 strings out of 467871
+ 949465 string characters out of 5418860
+ 1814468 words of memory out of 5000000
+ 69189 multiletter control sequences out of 15000+600000
  697055 words of font info for 81 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  84i,20n,94p,736b,2041s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -1538,9 +1549,9 @@ Data/Local/Programs/MiKTeX/fonts/type1/public/lm/lmsy8.pfb><C:/Users/Zain/AppDa
 ta/Local/Programs/MiKTeX/fonts/type1/public/lm/lmtk10.pfb><C:/Users/Zain/AppDat
 a/Local/Programs/MiKTeX/fonts/type1/public/lm/lmtt10.pfb><C:/Users/Zain/AppData
 /Local/Programs/MiKTeX/fonts/type1/public/lm/lmtt12.pfb>
-Output written on documentation.pdf (34 pages, 6973845 bytes).
+Output written on documentation.pdf (36 pages, 6979888 bytes).
 PDF statistics:
- 887 PDF objects out of 1000 (max. 8388607)
- 279 named destinations out of 1000 (max. 500000)
+ 907 PDF objects out of 1000 (max. 8388607)
+ 290 named destinations out of 1000 (max. 500000)
  596 words of extra memory for PDF output out of 10000 (max. 10000000)
 

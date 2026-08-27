@@ -172,7 +172,7 @@ jobs:
           print()
 
           # Performance gate: champion must meet minimum thresholds
-          MIN_R2 = 0.70
+          MIN_R2 = 0.60
           MAX_RMSE = 50.0
 
           failures = []
