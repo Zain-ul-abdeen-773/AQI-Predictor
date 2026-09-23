@@ -146,7 +146,7 @@ export default function EditorialExplainabilityPage() {
         if (res && res.ok) {
           const data = await res.json();
           if (data?.contributions?.length > 0) {
-            const merged = data.contributions.map((item: any, idx: number) => ({
+            const merged = data.contributions.map((item: { feature_name: string; shap_value: number }, idx: number) => ({
               ...item,
               description: SHAP_FALLBACK[idx % SHAP_FALLBACK.length]?.description,
               regional_context: SHAP_FALLBACK[idx % SHAP_FALLBACK.length]?.regional_context,
@@ -155,15 +155,15 @@ export default function EditorialExplainabilityPage() {
             setShapFeatures(merged);
           }
         }
-      } catch (_) {}
+      } catch (err) { console.error(err); }
     })();
   }, []);
 
   /* Fetch LIME */
   useEffect(() => {
     if (activeTab !== 'lime' || limeContribs.length > 0) return;
-    setLoading(true);
-    (async () => {
+    const fetchLime = async () => {
+      setLoading(true);
       try {
         const res = await fetch(`${API_BASE}/explain/lime`, { method: 'POST' }).catch(() => null);
         if (res && res.ok) {
@@ -172,10 +172,11 @@ export default function EditorialExplainabilityPage() {
           setLimeR2(data.local_r2 ?? null);
           setLimePred(data.predicted_value ?? null);
         }
-      } catch (_) {}
+      } catch (err) { console.error(err); }
       setLoading(false);
-    })();
-  }, [activeTab]);
+    };
+    fetchLime();
+  }, [activeTab, limeContribs.length]);
 
   const shapMax = Math.max(...shapFeatures.map(f => Math.abs(f.shap_value * sensitivity)), 30);
   const limeMax = Math.max(...limeContribs.map(c => Math.abs(c.weight)), 20);

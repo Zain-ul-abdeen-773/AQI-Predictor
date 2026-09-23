@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
+type ModelKey = 'bilstm' | 'lightgbm' | 'xgboost' | 'ridge';
+
 interface TelemetryPoint {
   time: string;
   actual: number;
@@ -96,7 +98,7 @@ export default function ActualVsPredictedGraph() {
 
           <select
             value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value as any)}
+            onChange={(e) => setSelectedModel(e.target.value as ModelKey)}
             className="bg-slate-800 border border-slate-700/80 rounded-md px-3.5 py-2 text-xs font-medium text-white focus:outline-none focus:border-blue-500 cursor-pointer shadow-2xs"
           >
             <option value="bilstm">Bi-LSTM + Attention (★ R² 0.945)</option>

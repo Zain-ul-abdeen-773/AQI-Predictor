@@ -162,7 +162,14 @@ export default function EditorialHomePage() {
   }, [models]);
 
   useEffect(() => {
-    syncData(activeModel);
+    let active = true;
+    const load = async () => {
+      if (active) {
+        await syncData(activeModel);
+      }
+    };
+    load();
+    return () => { active = false; };
   }, [activeModel, syncData]);
 
   return (

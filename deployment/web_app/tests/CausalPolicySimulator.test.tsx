@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import CausalPolicySimulator from '../components/CausalPolicySimulator';
 
 vi.mock('framer-motion', () => ({
@@ -34,9 +34,11 @@ describe('CausalPolicySimulator', () => {
     expect(screen.getByText('Run Intervention Simulation')).toBeInTheDocument();
   });
 
-  it('calls fetch when simulate is clicked', () => {
+  it('calls fetch when simulate is clicked', async () => {
     render(<CausalPolicySimulator apiBaseUrl="http://test" />);
-    fireEvent.click(screen.getByText('Run Intervention Simulation'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Run Intervention Simulation'));
+    });
     expect(global.fetch).toHaveBeenCalledWith('http://test/simulate', expect.anything());
   });
 });
