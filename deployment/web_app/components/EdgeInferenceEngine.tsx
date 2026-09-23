@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 interface EdgeInferenceEngineProps {
   onEdgePrediction?: (aqi: number) => void;
@@ -9,17 +9,7 @@ interface EdgeInferenceEngineProps {
 export default function EdgeInferenceEngine({ onEdgePrediction }: EdgeInferenceEngineProps) {
   const [edgeMode, setEdgeMode] = useState(false);
   const [latency, setLatency] = useState<number | null>(null);
-  const [wasmStatus, setWasmStatus] = useState<'idle' | 'loading' | 'ready'>('idle');
   const [edgeAqi, setEdgeAqi] = useState<number | null>(null);
-
-  useEffect(() => {
-    // Pre-initialize WebAssembly runtime context
-    setWasmStatus('loading');
-    const timer = setTimeout(() => {
-      setWasmStatus('ready');
-    }, 600);
-    return () => clearTimeout(timer);
-  }, []);
 
   const runClientSideInference = () => {
     const startTime = performance.now();

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 
 // Mock framer-motion
 vi.mock('framer-motion', () => ({
@@ -77,15 +77,23 @@ describe('EditorialHomePage (page.tsx)', () => {
     ) as unknown as typeof fetch;
   });
 
-  it('renders without crashing', () => {
-    const { container } = render(<EditorialHomePage />);
+  it('renders without crashing', async () => {
+    let container;
+    await act(async () => {
+      const result = render(<EditorialHomePage />);
+      container = result.container;
+    });
     expect(container).toBeTruthy();
   });
 
-  it('renders key child components', () => {
-    const { getByTestId } = render(<EditorialHomePage />);
-    expect(getByTestId('particle-wind-engine')).toBeInTheDocument();
-    expect(getByTestId('model-zoo-selector')).toBeInTheDocument();
-    expect(getByTestId('edge-inference-engine')).toBeInTheDocument();
+  it('renders key child components', async () => {
+    let getByTestId: (id: string) => HTMLElement;
+    await act(async () => {
+      const result = render(<EditorialHomePage />);
+      getByTestId = result.getByTestId;
+    });
+    expect(getByTestId!('particle-wind-engine')).toBeInTheDocument();
+    expect(getByTestId!('model-zoo-selector')).toBeInTheDocument();
+    expect(getByTestId!('edge-inference-engine')).toBeInTheDocument();
   });
 });

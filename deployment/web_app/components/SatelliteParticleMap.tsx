@@ -19,7 +19,6 @@ interface SatelliteParticleMapProps {
 export default function SatelliteParticleMap({ apiBaseUrl = 'http://localhost:8000' }: SatelliteParticleMapProps) {
   const [activeLayer, setActiveLayer] = useState<'no2' | 'aod' | 'wind'>('no2');
   const [grid, setGrid] = useState<GridPoint[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch(`${apiBaseUrl}/satellite/sentinel5p`)
@@ -48,8 +47,7 @@ export default function SatelliteParticleMap({ apiBaseUrl = 'http://localhost:80
           }
         }
         setGrid(pts);
-      })
-      .finally(() => setLoading(false));
+      });
   }, [apiBaseUrl]);
 
   const getColor = (val: number, type: 'no2' | 'aod' | 'wind') => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import SatelliteParticleMap from '../components/SatelliteParticleMap';
 
 describe('SatelliteParticleMap', () => {
@@ -11,13 +11,19 @@ describe('SatelliteParticleMap', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders without crashing', () => {
-    const { container } = render(<SatelliteParticleMap />);
+  it('renders without crashing', async () => {
+    let container;
+    await act(async () => {
+      const result = render(<SatelliteParticleMap />);
+      container = result.container;
+    });
     expect(container).toBeTruthy();
   });
 
   it('displays the heading and falls back to generated grid', async () => {
-    render(<SatelliteParticleMap />);
+    await act(async () => {
+      render(<SatelliteParticleMap />);
+    });
     expect(screen.getByText('Sargodha Atmospheric Particle Vector Grid')).toBeInTheDocument();
     await waitFor(() => {
       const nodes = screen.getAllByText(/°N/);
